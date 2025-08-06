@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { MONGO_URI, JWT_SECRET } from '../config';
+import { MONGO_URI, JWT_SECRET } from '../config/index.js';
 
 export interface SessionPayload {
   sub: string;    // the user ID

@@ -1,8 +1,8 @@
-import {AuthService} from '../services/AuthService';
+import {AuthService} from '../services/AuthService.js';
 import type { Request, Response } from 'express'; 
 
 
-export class authController{
+export class AuthController{
     private authService: AuthService;
 
     constructor(authService: AuthService){
@@ -11,15 +11,25 @@ export class authController{
 
 
     public async login(req: Request, res: Response){
-        const { username, email, password } = req.body;
-        
-        return this.authService.login(username, password);
-
+        try {
+            const { username, password } = req.body;
+            const token = await this.authService.login(username, password);
+            res.json({ token });
+        } catch (err: any) {
+          res.status(401).json({ error: err.message });
+        }
     }
 
     public async signup(req: Request, res: Response ) {
-        const { username, email, password } = req.body;
-        
-        token = await this.authService.signup(username, email, password);
+        try{
+            const { username, email, password } = req.body;
+            const token = await this.authService.signup(username, email, password);
+            res.status(201).json({ token });
+        }
+        catch(err: any) {
+            res.status(400).json({ error: err.message });
+
+        }
+
     }
 }

@@ -1,5 +1,5 @@
-import { UserModel } from '../models/User';
-import type { IUser } from "../models/User";
+import { UserModel } from '../models/User.js';
+import type { IUser } from "../models/User.js";
 
 
 export interface IUserRepository {

@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import type { IUserRepository } from '../repositories/UserRepository';
-import { SessionManager } from './SessionManager';
+import type { IUserRepository } from '../repositories/UserRepository.js';
+import { SessionManager } from './SessionManager.js';
 
 export class AuthService {
       private users: IUserRepository;
