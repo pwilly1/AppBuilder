@@ -9,13 +9,13 @@ const __dirname  = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 
-async function test() {
+async function signup() {
   try {
     const res = await axios.post(
       `http://localhost:${process.env.PORT}/auth/signup`,
       {
-        username: 'test1',
-        email:    'email',
+        username: 'test3',
+        email:    'email2',
         password: 'password'
       }
     );
@@ -25,4 +25,4 @@ async function test() {
   }
 }
 
-test();
+signup();

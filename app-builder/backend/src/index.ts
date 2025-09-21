@@ -6,6 +6,8 @@ import { AuthController } from './controllers/AuthController.js';
 import {AuthService} from './services/AuthService.js';
 import { MongoUserRepository } from './repositories/UserRepository.js';
 import {SessionManager} from './services/SessionManager.js';
+import { makeAuthRoutes } from './routes/AuthRoutes.js';
+
 
 
 const sessionMan = SessionManager.getInstance()
@@ -13,10 +15,9 @@ const userRepo = new MongoUserRepository();
 const authService = new AuthService(userRepo, sessionMan);
 const auth = new AuthController(authService);
 
-const app = express();
-app.use(express.json());
-app.post('/auth/signup', auth.signup.bind(auth)); //This line tells Express, When an HTTP POST arrives at /auth/signup, call the function signup.
-app.post('/auth/login', auth.login.bind(auth));
+const app = express(); 
+app.use(express.json());// express use allows me to use middleware for incoming requests
+app.use('/auth', makeAuthRoutes(auth));
 app.get('/', (_, res) => {
   res.send(' API running');
 });
