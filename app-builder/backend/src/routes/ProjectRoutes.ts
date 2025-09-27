@@ -1,6 +1,6 @@
 // routes/projectRoutes.ts
 import { Router } from 'express';
-import { ProjectManager } from './services/ProjectManager.js';
+import { ProjectManager } from '../services/ProjectManager.js';
 import { MongoProjectRepository } from '../repositories/MongoProjectRepository.js';
 
 const svc = new ProjectManager(new MongoProjectRepository());
