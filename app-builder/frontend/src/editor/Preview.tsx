@@ -1,5 +1,5 @@
-import { BlockRenderer } from 'shared/BlockRenderer';
-import type { Block } from 'shared/BlockTypes';
+import { BlockRenderer } from '../shared/BlockRenderer';
+import type { Block } from '../shared/BlockTypes';
 
 export function Preview({ blocks }: { blocks: Block[] }) {
   return (
