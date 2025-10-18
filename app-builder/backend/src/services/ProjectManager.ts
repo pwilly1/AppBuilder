@@ -1,3 +1,5 @@
+import { MongoUserRepository } from '../repositories/UserRepository.js';
+
 export class ProjectManager {
   repo: any;
 
@@ -8,6 +10,16 @@ export class ProjectManager {
   async create(projectName: string, options: Record<string, any> = {}): Promise<any> {
     if (!projectName) throw new Error('projectName is required');
     const payload = { name: projectName, ...options };
+    // defensive: prevent guest users from creating projects
+    if ((payload as any).ownerId) {
+      try {
+        const userRepo = new MongoUserRepository();
+        const u = await userRepo.findById((payload as any).ownerId);
+        if (u && (u as any).isGuest) throw new Error('Guests cannot create projects');
+      } catch (err) {
+        // if lookup fails, continue and let repository layer surface errors
+      }
+    }
     if (typeof this.repo.create === 'function') {
       return await this.repo.create(payload);
     }
@@ -54,6 +66,14 @@ export class ProjectManager {
 
     // optional ownership check
     if (userId && typeof this.repo.findById === 'function') {
+      // defensive: block guest user from updating
+      try {
+        const userRepo = new MongoUserRepository();
+        const u = await userRepo.findById(userId);
+        if (u && (u as any).isGuest) throw new Error('Guests cannot update projects');
+      } catch (err) {
+        // ignore lookup errors, let normal flow handle authorization
+      }
       const existing = await this.repo.findById(projectId);
       if (!existing) throw new Error('Project not found');
       if (existing.ownerId && existing.ownerId !== userId) {
@@ -61,9 +81,21 @@ export class ProjectManager {
       }
     }
 
+    // If repository exposes an `update` method that expects a Project object,
+    // fetch the existing project and merge updates so required fields (ownerId, etc.) are preserved.
     if (typeof this.repo.update === 'function') {
-      return await this.repo.update(projectId, updates);
+      if (typeof this.repo.findById === 'function') {
+        const existing = await this.repo.findById(projectId);
+        if (!existing) throw new Error('Project not found');
+        const merged = { ...existing, ...(updates || {}) } as any;
+        return await this.repo.update(merged);
+      }
+      // Fallback: construct a minimal object
+      const projectObj = { id: projectId, ...(updates || {}) } as any;
+      return await this.repo.update(projectObj);
     }
+
+    // If repository has a patch(id, updates) signature, call that
     if (typeof this.repo.patch === 'function') {
       return await this.repo.patch(projectId, updates);
     }

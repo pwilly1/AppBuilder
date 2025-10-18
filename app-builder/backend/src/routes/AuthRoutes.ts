@@ -10,6 +10,9 @@ export function makeAuthRoutes(ctrl: AuthController) {
   // POST /auth/login
   router.post('/login', ctrl.login.bind(ctrl));
 
+  // allow guest session creation by GET (frontend calls GET '/auth/createGuestSession')
+  router.get('/createGuestSession', ctrl.guest.bind(ctrl));
+
   // (optional) health check for debugging
   router.get('/health', (_, res) => res.json({ ok: true }));
 

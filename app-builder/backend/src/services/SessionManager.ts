@@ -29,6 +29,10 @@ export class SessionManager {
     return jwt.sign({userId}, this.secret, { expiresIn: '1h' });
   }
 
+  public createGuestSession(GuestID : string): string {
+    return jwt.sign(GuestID, this.secret, { expiresIn: '1h'});
+  }
+
 public verify(token: string): SessionPayload {
     try {
       return jwt.verify(token, this.secret) as SessionPayload;

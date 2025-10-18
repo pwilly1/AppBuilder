@@ -1,0 +1,28 @@
+import React, { useState } from 'react';
+import { login, setToken } from '../api';
+
+export default function Login({ onLogin }: { onLogin: () => void }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      const res: any = await login(username, password);
+      setToken(res.token);
+      onLogin();
+    } catch (err: any) {
+      setErr(err.message);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
+      {err ? <div style={{ color: 'red' }}>{err}</div> : null}
+      <input placeholder="username" value={username} onChange={e => setUsername(e.target.value)} />
+      <input placeholder="password" value={password} onChange={e => setPassword(e.target.value)} type="password" />
+      <button type="submit">Log in</button>
+    </form>
+  );
+}

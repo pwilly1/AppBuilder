@@ -16,8 +16,23 @@ export class AuthService {
     if (existing) throw new Error('Username already taken');
 
     const hash = await bcrypt.hash(password, 10);
-    const user = await this.users.create({ username, email, passwordHash: hash });
-    return this.sessions.createSession(user.id);
+    // create a normal (non-guest) user
+    const user = await this.users.create({ username, email, passwordHash: hash, isGuest: false } as any);
+    return this.sessions.createSession((user as any).id ?? (user as any)._id?.toString?.());
+  }
+  // Will fix this later
+  public async guest(){
+    // create a transient guest user record and return a session token for it
+    const unique = `guest_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+    const username = unique;
+    const email = `${unique}@guest.local`;
+    // create a random password hash so schema validation passes
+    const pw = Math.random().toString(36).slice(2);
+    const hash = await bcrypt.hash(pw, 8);
+    const user = await this.users.create({ username, email, passwordHash: hash, isGuest: true } as any);
+    // user may be a mongoose document; normalize id
+    const userId = (user as any).id ?? (user as any)._id?.toString?.();
+    return this.sessions.createSession(userId);
   }
 
   public async login(username: string, password: string) {
