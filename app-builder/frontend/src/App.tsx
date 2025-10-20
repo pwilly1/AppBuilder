@@ -4,6 +4,7 @@ import type { Project, Page, Block } from './shared/BlockTypes'
 import { PageRenderer } from './PageRenderer'
 import { PageList } from './PageList'
 import { AddBlock } from './AddBlock'
+import Inspector from './components/Inspector'
 import Login from './components/Login'
 import Signup from './components/Signup'
 import Projects from './components/Projects'
@@ -30,6 +31,7 @@ export default function App() {
   const [authed, setAuthed] = useState<boolean>(() => !!getToken());
   const [project, setProject] = useState<Project>(initialProject)
   const [selectedPageId, setSelectedPageId] = useState<string>(() => project.pages?.[0]?.id ?? '')
+  const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
 
   const page = useMemo(
     () => project.pages.find(p => p.id === selectedPageId),
@@ -163,7 +165,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'260px 1fr 320px', height:'100vh' }}>
+    <div className="app-grid">
       <div style={{ padding: 12 }}>
         <Projects onOpen={openProject} />
         <div style={{ marginTop: 12 }}>
@@ -172,7 +174,7 @@ export default function App() {
       </div>
       <div style={{ padding:16, overflow:'auto' }}>
         {page ? (
-          <PageRenderer page={page} onEditBlock={b => {
+          <PageRenderer page={page} onSelectBlock={b => setSelectedBlock(b)} onEditBlock={b => {
           const updated = { ...b };
           // show a simple editor depending on block type
           if (b.type === 'text') {
@@ -193,7 +195,10 @@ export default function App() {
           </div>
         )}
       </div>
-      <AddBlock onAdd={addBlock} />
+      <div>
+        <AddBlock onAdd={addBlock} />
+        <Inspector block={selectedBlock} onSave={(b:any)=>{ setSelectedBlock(null); editBlock(b); }} onClose={()=>setSelectedBlock(null)} />
+      </div>
     </div>
   )
 }

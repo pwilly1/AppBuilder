@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* App base styles */
+html, body, #root {
+	height: 100%;
+}
+body {
+	@apply bg-gray-50 text-slate-800 font-sans;
+}
+
+.app-grid {
+	@apply grid grid-cols-[260px_1fr_320px] h-screen gap-4;
+}
