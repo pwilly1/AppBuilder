@@ -1,15 +1,70 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* src/index.css (v4) */
+@import "tailwindcss";
+
+/* Define custom tokens so bg-primary / hover:bg-primary-600 work */
+@theme {
+  --color-primary:     #2563eb; /* bg-primary / text-primary */
+  --color-primary-600: #1d4ed8; /* hover:bg-primary-600 */
+}
 
 /* App base styles */
-html, body, #root {
-	height: 100%;
-}
-body {
-	@apply bg-gray-50 text-slate-800 font-sans;
+@layer base {
+  :root { --max-width: 1100px; }
+
+  html, body, #root { height: 100%; }
+
+  body { @apply bg-white text-slate-900 antialiased font-sans; }
 }
 
-.app-grid {
-	@apply grid grid-cols-[260px_1fr_320px] h-screen gap-4;
+/* Components and utilities */
+@layer components {
+  .card { @apply bg-white rounded-lg shadow-md p-4; }
+  .muted { @apply text-slate-500; }
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-md
+           bg-primary text-white hover:bg-primary-600 transition-colors;
+  }
 }
+
+/* Layout */
+.app-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr 360px;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  max-width: var(--max-width);
+  margin-left: auto;
+  margin-right: auto;
+  /* fill remaining viewport below header to avoid excessive whitespace */
+  min-height: calc(100vh - 120px);
+  align-items: start;
+}
+
+/* Editor mode: full-bleed layout with left column flush to viewport edge */
+.app-grid.editor-mode {
+  max-width: none;
+  width: 100vw;
+  padding-left: 0;
+  padding-right: 0;
+  gap: 0.75rem;
+  grid-template-columns: 260px 1fr 360px;
+}
+.app-grid.editor-mode > aside:first-child {
+  padding-left: 0;
+}
+.app-grid.editor-mode > aside:last-child {
+  padding-right: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .app-grid {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+    grid-auto-rows: auto;
+  }
+  .sidebar-hidden-mobile { display: none; }
+}
+
+/* small helpers */
+.fade-in { @apply transition-opacity duration-300 ease-out opacity-0; }
+.fade-in.show { @apply opacity-100; }

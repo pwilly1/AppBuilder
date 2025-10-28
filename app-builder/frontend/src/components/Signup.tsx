@@ -20,12 +20,14 @@ export default function Signup({ onSignup }: { onSignup: () => void }) {
   }
 
   return (
-    <form onSubmit={submit} style={{ display: 'grid', gap: 8 }}>
-      {err ? <div style={{ color: 'red' }}>{err}</div> : null}
-      <input placeholder="username" value={username} onChange={e => setUsername(e.target.value)} />
-      <input placeholder="email" value={email} onChange={e => setEmail(e.target.value)} />
-      <input placeholder="password" value={password} onChange={e => setPassword(e.target.value)} type="password" />
-      <button type="submit">Sign up</button>
+    <form onSubmit={submit} className="card">
+      {err ? <div className="text-red-500 text-sm mb-2">{err}</div> : null}
+      <div className="grid gap-2">
+        <input className="border rounded-md px-3 py-2 text-sm" placeholder="username" value={username} onChange={e => setUsername(e.target.value)} />
+        <input className="border rounded-md px-3 py-2 text-sm" placeholder="email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input className="border rounded-md px-3 py-2 text-sm" placeholder="password" value={password} onChange={e => setPassword(e.target.value)} type="password" />
+        <button className="btn" type="submit">Sign up</button>
+      </div>
     </form>
   );
 }

@@ -7,7 +7,9 @@ import { AddBlock } from './AddBlock'
 import Inspector from './components/Inspector'
 import Login from './components/Login'
 import Signup from './components/Signup'
-import Projects from './components/Projects'
+// Projects component no longer used in editor layout; dashboard lists projects instead
+// import Projects from './components/Projects'
+import Dashboard from './pages/Dashboard'
 import { getProject, updateProject, createProject, getToken, guest, setToken, listProjects } from './api'
 import { useEffect } from 'react'
 
@@ -29,6 +31,7 @@ const initialProject: Project = {
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean>(() => !!getToken());
+  const [view, setView] = useState<'dashboard'|'editor'>('dashboard')
   const [project, setProject] = useState<Project>(initialProject)
   const [selectedPageId, setSelectedPageId] = useState<string>(() => project.pages?.[0]?.id ?? '')
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
@@ -38,23 +41,7 @@ export default function App() {
     [project, selectedPageId]
   )
 
-  const renamePage = (id:string, title:string) => {
-    setProject(p => ({
-      ...p,
-      pages: p.pages.map(pg => pg.id===id ? { ...pg, title } : pg)
-    }))
-  }
-
-  const addPage = () => {
-    const title = prompt('Page title', 'New Page')?.trim()
-    if (!title) return
-    const id = crypto.randomUUID()
-    setProject(p => ({
-      ...p,
-      pages: [...p.pages, { id, title, path: `/${title.toLowerCase().replace(/\\s+/g,'-')}`, blocks: [] }]
-    }))
-    setSelectedPageId(id)
-  }
+  // page rename / add helpers intentionally removed (not used in current UI)
 
   const addBlock = (b: Block) => {
     setProject(p => ({
@@ -78,6 +65,7 @@ export default function App() {
 
     setProject(full);
     setSelectedPageId(full.pages[0].id);
+    setView('editor')
   }
 
   function editBlock(updated: Block) {
@@ -140,65 +128,101 @@ export default function App() {
 
   if (!authed) {
     return (
-      <div style={{ padding: 24 }}>
-        <h2>Please log in or sign up</h2>
-        <div style={{ display: 'flex', gap: 16 }}>
-          <Login onLogin={() => setAuthed(true)} />
-          <Signup onSignup={() => setAuthed(true)} />
-         <button onClick={async () => {
-              try {
-                const res: any = await guest();
-                if (res?.token) {
-                  setToken(res.token);
-                }
-                setAuthed(true);
-              } catch (err: any) {
-                alert('Guest login failed: ' + err.message);
-              }
-            }}
-          >
-            Continue as Guest
-          </button>
-         </div>
-       </div>
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-1">
+            <div className="card">
+              <h2 className="text-2xl font-bold">Welcome to AppBuilder</h2>
+              <p className="muted">Design landing pages and prototypes — instantly.</p>
+            </div>
+          </div>
+          <div className="md:col-span-2 space-y-4">
+            <div className="card">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Login onLogin={() => setAuthed(true)} />
+                <Signup onSignup={() => setAuthed(true)} />
+              </div>
+              <div className="mt-4 text-center">
+                <button className="btn" onClick={async () => {
+                  try {
+                    const res: any = await guest();
+                    if (res?.token) {
+                      setToken(res.token);
+                    }
+                    setAuthed(true);
+                  } catch (err: any) {
+                    alert('Guest login failed: ' + err.message);
+                  }
+                }}>Continue as Guest</button>
+              </div>
+            </div>
+            <div className="card muted text-sm">
+              <strong>Tip:</strong> Sign up to save projects and collaborate.
+            </div>
+          </div>
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="app-grid">
-      <div style={{ padding: 12 }}>
-        <Projects onOpen={openProject} />
-        <div style={{ marginTop: 12 }}>
-          <button onClick={saveProject}>Save project</button>
+    <div className="min-h-screen py-8">
+      <header className="max-w-6xl mx-auto px-4 mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-md bg-primary" />
+          <h1 className="text-xl font-semibold">AppBuilder</h1>
         </div>
-      </div>
-      <div style={{ padding:16, overflow:'auto' }}>
-        {page ? (
-          <PageRenderer page={page} onSelectBlock={b => setSelectedBlock(b)} onEditBlock={b => {
-          const updated = { ...b };
-          // show a simple editor depending on block type
-          if (b.type === 'text') {
-            const v = prompt('Edit text', String(b.props?.value ?? ''));
-            if (v == null) return;
-            updated.props = { ...updated.props, value: v } as any;
-          } else if (b.type === 'hero') {
-            const h = prompt('Headline', String(b.props?.headline ?? ''));
-            if (h == null) return;
-            updated.props = { ...updated.props, headline: h } as any;
-          }
-          editBlock(updated);
-          }} onDeleteBlock={deleteBlock} />
+        <div className="flex items-center gap-3">
+          {view === 'editor' ? (
+            <>
+              <button className="text-sm muted" onClick={() => setView('dashboard')}>← Dashboard</button>
+              <button className="btn" onClick={saveProject}>Save</button>
+            </>
+          ) : null}
+          <button className="text-sm muted">Account</button>
+        </div>
+      </header>
+  <main className={`app-grid ${view==='editor' ? 'editor-mode' : ''}`}>
+        {view === 'dashboard' ? (
+          <section className="col-span-3">
+            <Dashboard onOpen={openProject} />
+          </section>
         ) : (
-          <div style={{ padding: 24 }}>
-            <h3>No page selected</h3>
-            <p>Create a page or open a project with pages to start editing.</p>
-          </div>
+          <>
+            <aside className="sidebar-hidden-mobile">
+              <AddBlock onAdd={addBlock} />
+            </aside>
+
+            <section className="overflow-auto">
+              {page ? (
+                <PageRenderer page={page} onSelectBlock={b => setSelectedBlock(b)} onEditBlock={b => {
+                  const updated = { ...b };
+                  // show a simple editor depending on block type
+                  if (b.type === 'text') {
+                    const v = prompt('Edit text', String(b.props?.value ?? ''));
+                    if (v == null) return;
+                    updated.props = { ...updated.props, value: v } as any;
+                  } else if (b.type === 'hero') {
+                    const h = prompt('Headline', String(b.props?.headline ?? ''));
+                    if (h == null) return;
+                    updated.props = { ...updated.props, headline: h } as any;
+                  }
+                  editBlock(updated);
+                }} onDeleteBlock={deleteBlock} />
+              ) : (
+                <div className="card">
+                  <h3 className="text-lg font-medium">No page selected</h3>
+                  <p className="muted">Create a page or open a project with pages to start editing.</p>
+                </div>
+              )}
+            </section>
+
+            <aside>
+              <Inspector block={selectedBlock} onSave={(b:any)=>{ setSelectedBlock(null); editBlock(b); }} onClose={()=>setSelectedBlock(null)} />
+            </aside>
+          </>
         )}
-      </div>
-      <div>
-        <AddBlock onAdd={addBlock} />
-        <Inspector block={selectedBlock} onSave={(b:any)=>{ setSelectedBlock(null); editBlock(b); }} onClose={()=>setSelectedBlock(null)} />
-      </div>
+      </main>
     </div>
   )
 }

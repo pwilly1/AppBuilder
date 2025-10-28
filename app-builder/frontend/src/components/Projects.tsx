@@ -49,21 +49,27 @@ export default function Projects({ onOpen }: { onOpen?: (proj: any) => void }) {
   }
 
   return (
-    <div>
-      <h3>Your projects</h3>
-      {err ? <div style={{ color: 'red' }}>{err}</div> : null}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="New project name" />
-        <button onClick={create}>Create</button>
+    <div className="card">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold">Projects</h3>
+        <button className="text-sm muted" onClick={load}>Refresh</button>
       </div>
-      <ul>
+      {err ? <div className="text-red-500 text-sm mb-2">{err}</div> : null}
+      <div className="flex gap-2 mb-3">
+        <input className="flex-1 border rounded-md px-3 py-2 text-sm" value={newName} onChange={e => setNewName(e.target.value)} placeholder="New project name" />
+        <button className="btn" onClick={create}>Create</button>
+      </div>
+      <ul className="space-y-2">
         {projects.map(p => (
-          <li key={p.id} style={{ marginBottom: 8 }}>
-            <strong>{p.name}</strong>
+          <li key={p.id} className="flex items-center justify-between">
             <div>
-              <button onClick={() => open(p.id)}>Open</button>
-              <button onClick={() => rename(p.id)}>Rename</button>
-              <button onClick={() => remove(p.id)}>Delete</button>
+              <div className="text-sm font-medium">{p.name}</div>
+              <div className="text-xs muted">{p.id}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button className="text-sm text-primary hover:underline" onClick={() => open(p.id)}>Open</button>
+              <button className="text-sm muted" onClick={() => rename(p.id)}>Rename</button>
+              <button className="text-sm text-red-500" onClick={() => remove(p.id)}>Delete</button>
             </div>
           </li>
         ))}
