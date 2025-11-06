@@ -68,3 +68,30 @@
 /* small helpers */
 .fade-in { @apply transition-opacity duration-300 ease-out opacity-0; }
 .fade-in.show { @apply opacity-100; }
+
+/* Phone preview frame used by the page renderer */
+.phone-frame {
+  width: 390px; /* typical phone preview width */
+  height: 780px;
+  border-radius: 28px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 8px 24px rgba(2,6,23,0.08);
+}
+
+@media (max-width: 900px) {
+  .phone-frame { width: 100%; height: auto; border-radius: 12px; }
+}
+
+/* drag handle styling */
+.drag-handle { cursor: grab; background: rgba(255,255,255,0.9); border: 1px solid rgba(2,6,23,0.04); }
+.drag-handle:active { cursor: grabbing; }
+.drag-handle svg { display: block; }
+
+.move-handle { cursor: ew-resize; border: 1px solid rgba(2,6,23,0.06); }
+.move-handle:active { cursor: grabbing; }
+.move-handle { pointer-events: auto; }
+.phone-frame .group > .absolute.top-2.right-2 { z-index: 10; }
+
+.action-buttons { z-index: 220; pointer-events: auto; }
+.action-buttons button { pointer-events: auto; }

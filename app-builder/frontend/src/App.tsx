@@ -194,8 +194,8 @@ export default function App() {
             </aside>
 
             <section className="overflow-auto">
-              {page ? (
-                <PageRenderer page={page} onSelectBlock={b => setSelectedBlock(b)} onEditBlock={b => {
+        {page ? (
+          <PageRenderer page={page} onSelectBlock={b => setSelectedBlock(b)} onEditBlock={b => {
                   const updated = { ...b };
                   // show a simple editor depending on block type
                   if (b.type === 'text') {
@@ -208,7 +208,14 @@ export default function App() {
                     updated.props = { ...updated.props, headline: h } as any;
                   }
                   editBlock(updated);
-                }} onDeleteBlock={deleteBlock} />
+                }} onDeleteBlock={deleteBlock} onReorder={(newBlocks) => {
+                  console.log('[App] onReorder received ids:', newBlocks.map((b:any)=>b.id))
+                  // update the current page's blocks order
+                  setProject(p => ({
+                    ...p,
+                    pages: p.pages.map(pg => pg.id === selectedPageId ? { ...pg, blocks: newBlocks } : pg)
+                  }))
+                }} />
               ) : (
                 <div className="card">
                   <h3 className="text-lg font-medium">No page selected</h3>
