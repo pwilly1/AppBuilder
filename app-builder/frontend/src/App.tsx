@@ -195,27 +195,19 @@ export default function App() {
 
             <section className="overflow-auto">
         {page ? (
-          <PageRenderer page={page} onSelectBlock={b => setSelectedBlock(b)} onEditBlock={b => {
-                  const updated = { ...b };
-                  // show a simple editor depending on block type
-                  if (b.type === 'text') {
-                    const v = prompt('Edit text', String(b.props?.value ?? ''));
-                    if (v == null) return;
-                    updated.props = { ...updated.props, value: v } as any;
-                  } else if (b.type === 'hero') {
-                    const h = prompt('Headline', String(b.props?.headline ?? ''));
-                    if (h == null) return;
-                    updated.props = { ...updated.props, headline: h } as any;
-                  }
-                  editBlock(updated);
-                }} onDeleteBlock={deleteBlock} onReorder={(newBlocks) => {
-                  console.log('[App] onReorder received ids:', newBlocks.map((b:any)=>b.id))
-                  // update the current page's blocks order
-                  setProject(p => ({
-                    ...p,
-                    pages: p.pages.map(pg => pg.id === selectedPageId ? { ...pg, blocks: newBlocks } : pg)
-                  }))
-                }} />
+          <PageRenderer
+            page={page}
+            onSelectBlock={b => setSelectedBlock(b)}
+            onUpdateBlock={editBlock}
+            onReorder={(newBlocks) => {
+              console.log('[App] onReorder received ids:', newBlocks.map((b:any)=>b.id))
+              // update the current page's blocks order
+              setProject(p => ({
+                ...p,
+                pages: p.pages.map(pg => pg.id === selectedPageId ? { ...pg, blocks: newBlocks } : pg)
+              }))
+            }}
+          />
               ) : (
                 <div className="card">
                   <h3 className="text-lg font-medium">No page selected</h3>
@@ -225,7 +217,12 @@ export default function App() {
             </section>
 
             <aside>
-              <Inspector block={selectedBlock} onSave={(b:any)=>{ setSelectedBlock(null); editBlock(b); }} onClose={()=>setSelectedBlock(null)} />
+              <Inspector
+                block={selectedBlock}
+                onSave={(b:any)=>{ setSelectedBlock(null); editBlock(b); }}
+                onClose={()=>setSelectedBlock(null)}
+                onDelete={(id:string) => { setSelectedBlock(null); deleteBlock(id); }}
+              />
             </aside>
           </>
         )}

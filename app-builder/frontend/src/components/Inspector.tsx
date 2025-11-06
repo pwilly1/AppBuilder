@@ -2,7 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import type { Block } from '../shared/BlockTypes';
 
-export default function Inspector({ block, onSave, onClose }: { block?: Block | null; onSave?: (b: Block) => void; onClose?: () => void }) {
+export default function Inspector({ block, onSave, onClose, onDelete }: { block?: Block | null; onSave?: (b: Block) => void; onClose?: () => void; onDelete?: (id: string) => void }) {
   const { register, handleSubmit, reset } = useForm({ defaultValues: block?.props || {} });
 
   React.useEffect(() => {
@@ -53,6 +53,18 @@ export default function Inspector({ block, onSave, onClose }: { block?: Block | 
         )}
         <div className="mt-2">
           <button className="btn" type="submit">Save</button>
+          {onDelete ? (
+            <button
+              type="button"
+              className="ml-3 text-sm text-red-600 bg-white/60 px-3 py-1 rounded-md hover:bg-white"
+              onClick={() => {
+                if (!block) return;
+                const ok = confirm('Delete this block?');
+                if (!ok) return;
+                onDelete(block.id);
+              }}
+            >Delete</button>
+          ) : null}
         </div>
       </form>
     </div>

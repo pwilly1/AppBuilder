@@ -18,7 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { useEffect, useState } from 'react'
 
-function SortableItem({ block, onSelect, onEdit, onDelete }: { block: Block; onSelect?: (b: Block) => void; onEdit?: (b: Block) => void; onDelete?: (id: string) => void }) {
+function SortableItem({ block, onSelect, onUpdate }: { block: Block; onSelect?: (b: Block) => void; onUpdate?: (b: Block) => void }) {
   const { listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id })
   const style = {
     // include any live translate from dnd-kit plus an optional persisted offsetX from block props
@@ -71,21 +71,10 @@ function SortableItem({ block, onSelect, onEdit, onDelete }: { block: Block; onS
           <BlockRenderer block={block} />
         </div>
 
-        {/* Horizontal move handle: drag left/right to apply an X offset to the block */}
-        <MoveHandle block={block} onEdit={onEdit} />
+  {/* Horizontal move handle: drag left/right to apply an X offset to the block */}
+  <MoveHandle block={block} onUpdate={onUpdate} />
 
-        <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity action-buttons">
-          <button
-            className="text-sm text-slate-600 bg-white/60 px-2 py-1 rounded-md hover:bg-white"
-            onPointerDown={(e) => { e.stopPropagation(); }}
-            onClick={(e) => { e.stopPropagation(); onEdit?.(block); }}
-          >Edit</button>
-          <button
-            className="text-sm text-red-500 bg-white/60 px-2 py-1 rounded-md hover:bg-white"
-            onPointerDown={(e) => { e.stopPropagation(); }}
-            onClick={(e) => { e.stopPropagation(); onDelete?.(block.id); }}
-          >Delete</button>
-        </div>
+        {/* Action buttons removed — editing is done via the Inspector; deletion is available in the Inspector when a block is selected. */}
       </div>
     </div>
   )
@@ -99,7 +88,7 @@ function Gap({ index }: { index: number }) {
   )
 }
 
-function MoveHandle({ block, onEdit }: { block: Block; onEdit?: (b: Block) => void }) {
+function MoveHandle({ block, onUpdate }: { block: Block; onUpdate?: (b: Block) => void }) {
   const [moving, setMoving] = useState(false)
   const [startX, setStartX] = useState(0)
   const [startOffset, setStartOffset] = useState(0)
@@ -129,7 +118,8 @@ function MoveHandle({ block, onEdit }: { block: Block; onEdit?: (b: Block) => vo
     setMoving(false)
     // persist offset to block props
     const updated = { ...block, props: { ...block.props, offsetX } }
-    onEdit?.(updated)
+    // call the lightweight update callback (doesn't open the inspector)
+    onUpdate?.(updated)
     e.stopPropagation()
   }
 
@@ -152,7 +142,7 @@ function MoveHandle({ block, onEdit }: { block: Block; onEdit?: (b: Block) => vo
   )
 }
 
-export function PageRenderer({ page, onEditBlock, onDeleteBlock, onSelectBlock, onReorder }: { page: Page; onEditBlock?: (b: Block) => void; onDeleteBlock?: (id: string) => void; onSelectBlock?: (b: Block) => void; onReorder?: (newBlocks: Block[]) => void }) {
+export function PageRenderer({ page, onSelectBlock, onReorder, onUpdateBlock }: { page: Page; onSelectBlock?: (b: Block) => void; onReorder?: (newBlocks: Block[]) => void; onUpdateBlock?: (b: Block) => void }) {
   const sensors = useSensors(useSensor(PointerSensor))
 
   // local items state to avoid snapping back during drag — keep it in sync with incoming page.blocks
@@ -225,7 +215,7 @@ export function PageRenderer({ page, onEditBlock, onDeleteBlock, onSelectBlock, 
           <div className="phone-frame bg-white border border-slate-100 rounded-xl p-4 shadow-sm">
             {items.flatMap((b, i) => [
               <Gap key={`gap-${i}`} index={i} />,
-              <SortableItem key={b.id} block={b} onSelect={onSelectBlock} onEdit={onEditBlock} onDelete={onDeleteBlock} />
+              <SortableItem key={b.id} block={b} onSelect={onSelectBlock} onUpdate={onUpdateBlock} />
             ])}
             <Gap key={`gap-${items.length}`} index={items.length} />
           </div>

@@ -36,8 +36,12 @@ export class MongoProjectRepository implements ProjectRepository {
   async update(p: Project): Promise<Project> {
     // ensure id is a valid ObjectId before attempting update
     if (!mongoose.Types.ObjectId.isValid(p.id)) throw new Error('Invalid project id');
+    // Persist the full project object (except `id` which maps to _id).
+    // Use a defensive merge so callers can send partial updates but the
+    // repository will persist the merged/complete object.
+    const { id, ...rest } = p as any;
     const updated = await ProjectModel
-      .findByIdAndUpdate(p.id, { name: p.name, ownerId: p.ownerId }, { new: true })
+      .findByIdAndUpdate(p.id, rest, { new: true })
       .exec();
     if (!updated) throw new Error('Project not found');
     const obj = updated.toObject();
