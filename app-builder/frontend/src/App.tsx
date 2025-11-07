@@ -5,12 +5,12 @@ import { PageRenderer } from './PageRenderer'
 import { PageList } from './PageList'
 import { AddBlock } from './AddBlock'
 import Inspector from './components/Inspector'
-import Login from './components/Login'
-import Signup from './components/Signup'
+import Landing from './components/Landing'
+import Account from './pages/Account'
 // Projects component no longer used in editor layout; dashboard lists projects instead
 // import Projects from './components/Projects'
 import Dashboard from './pages/Dashboard'
-import { getProject, updateProject, createProject, getToken, guest, setToken, listProjects } from './api'
+import { getProject, updateProject, createProject, getToken, listProjects } from './api'
 import { useEffect } from 'react'
 
 
@@ -31,7 +31,7 @@ const initialProject: Project = {
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean>(() => !!getToken());
-  const [view, setView] = useState<'dashboard'|'editor'>('dashboard')
+  const [view, setView] = useState<'landing'|'dashboard'|'editor'|'account'>(() => !!getToken() ? 'dashboard' : 'landing')
   const [project, setProject] = useState<Project>(initialProject)
   const [selectedPageId, setSelectedPageId] = useState<string>(() => project.pages?.[0]?.id ?? '')
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
@@ -126,52 +126,22 @@ export default function App() {
     return () => { mounted = false };
   }, []);
 
-  if (!authed) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="w-full max-w-3xl grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-1">
-            <div className="card">
-              <h2 className="text-2xl font-bold">Welcome to AppBuilder</h2>
-              <p className="muted">Design landing pages and prototypes — instantly.</p>
-            </div>
-          </div>
-          <div className="md:col-span-2 space-y-4">
-            <div className="card">
-              <div className="grid md:grid-cols-2 gap-4">
-                <Login onLogin={() => setAuthed(true)} />
-                <Signup onSignup={() => setAuthed(true)} />
-              </div>
-              <div className="mt-4 text-center">
-                <button className="btn" onClick={async () => {
-                  try {
-                    const res: any = await guest();
-                    if (res?.token) {
-                      setToken(res.token);
-                    }
-                    setAuthed(true);
-                  } catch (err: any) {
-                    alert('Guest login failed: ' + err.message);
-                  }
-                }}>Continue as Guest</button>
-              </div>
-            </div>
-            <div className="card muted text-sm">
-              <strong>Tip:</strong> Sign up to save projects and collaborate.
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+  function logout() {
+    try { localStorage.removeItem('app_token'); } catch {}
+    setAuthed(false);
+    setView('landing');
   }
 
+  // no early return: show landing when not authed so the header and background
+  // remain consistent between landing and dashboard/editor views
+
   return (
-    <div className="min-h-screen py-8">
+    <div className="min-h-screen py-8 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-slate-100">
       <header className="max-w-6xl mx-auto px-4 mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <button type="button" className="flex items-center gap-3 cursor-pointer" onClick={() => setView('landing')} aria-label="Go to landing">
           <div className="h-8 w-8 rounded-md bg-primary" />
           <h1 className="text-xl font-semibold">AppBuilder</h1>
-        </div>
+        </button>
         <div className="flex items-center gap-3">
           {view === 'editor' ? (
             <>
@@ -179,13 +149,28 @@ export default function App() {
               <button className="btn" onClick={saveProject}>Save</button>
             </>
           ) : null}
-          <button className="text-sm muted">Account</button>
+          {authed ? (
+            <>
+              <button className="text-sm muted" onClick={() => setView('account')}>You</button>
+              <button className="text-sm muted" onClick={logout}>Logout</button>
+            </>
+          ) : (
+            <button className="text-sm muted" onClick={() => setView('landing')}>Account</button>
+          )}
         </div>
       </header>
   <main className={`app-grid ${view==='editor' ? 'editor-mode' : ''}`}>
-        {view === 'dashboard' ? (
+        {view === 'landing' || !authed ? (
+          <section className="col-span-3">
+            <Landing onLogin={() => { setAuthed(true); setView('dashboard'); }} />
+          </section>
+        ) : view === 'dashboard' ? (
           <section className="col-span-3">
             <Dashboard onOpen={openProject} />
+          </section>
+        ) : view === 'account' ? (
+          <section className="col-span-3">
+            <Account onBack={() => setView('dashboard')} />
           </section>
         ) : (
           <>

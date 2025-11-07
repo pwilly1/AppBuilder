@@ -39,6 +39,10 @@ export function guest(){
   return request('/auth/createGuestSession')
 }
 
+export function getMe() {
+  return request('/auth/me');
+}
+
 export function listProjects() {
   return request('/projects');
 }
