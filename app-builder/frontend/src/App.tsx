@@ -1,9 +1,8 @@
-import { Preview } from './editor/Preview'
+// import { Preview } from './editor/Preview' (not used)
 import { useMemo, useState, useEffect } from 'react'
 import type { Project, Page, Block } from './shared/BlockTypes'
 
 import { PageRenderer } from './PageRenderer'
-import { PageList } from './PageList'
 import { AddBlock } from './AddBlock'
 
 import Inspector from './components/Inspector'
@@ -39,6 +38,8 @@ export default function App() {
   const [authed, setAuthed] = useState<boolean>(() => !!getToken())
 
   const [project, setProject] = useState<Project>(initialProject)
+  const [history, setHistory] = useState<Project[]>(() => [JSON.parse(JSON.stringify(initialProject))])
+  const [historyIndex, setHistoryIndex] = useState<number>(0)
   const [selectedPageId, setSelectedPageId] = useState<string>(() => project.pages?.[0]?.id ?? '')
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
 
@@ -47,7 +48,7 @@ export default function App() {
   // page rename / add helpers intentionally removed (not used in current UI)
 
   const addBlock = (b: Block) => {
-    setProject((p) => ({
+    applyChange((p) => ({
       ...p,
       pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: [...pg.blocks, b] } : pg)),
     }))
@@ -67,21 +68,25 @@ export default function App() {
       full.pages = [{ id, title: 'Home', path: '/home', blocks: [] }]
     }
 
+    // replace current project and reset undo history
     setProject(full)
     setSelectedPageId(full.pages[0].id)
+    const snapshot = JSON.parse(JSON.stringify(full))
+    setHistory([snapshot])
+    setHistoryIndex(0)
 
     if (navigate) navigate('/editor')
   }
 
   function editBlock(updated: Block) {
-    setProject((p) => ({
+    applyChange((p) => ({
       ...p,
       pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: pg.blocks.map((b) => (b.id === updated.id ? updated : b)) } : pg)),
     }))
   }
 
   function deleteBlock(id: string) {
-    setProject((p) => ({
+    applyChange((p) => ({
       ...p,
       pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: pg.blocks.filter((b) => b.id !== id) } : pg)),
     }))
@@ -118,6 +123,54 @@ export default function App() {
 
       alert('Save failed: ' + err.message)
     }
+  }
+
+  // --- Undo / Redo history helpers ---
+  function applyChange(mutator: (p: Project) => Project) {
+    setProject((current) => {
+      const updated = mutator(JSON.parse(JSON.stringify(current)))
+      // trim future history
+      setHistory((h) => {
+        const base = h.slice(0, historyIndex + 1)
+        const next = base.concat([JSON.parse(JSON.stringify(updated))])
+        // cap history length
+        const MAX = 100
+        if (next.length > MAX) {
+          next.splice(0, next.length - MAX)
+        }
+        setHistoryIndex(next.length - 1)
+        return next
+      })
+      return updated
+    })
+  }
+
+  function canUndo() {
+    return historyIndex > 0
+  }
+
+  function canRedo() {
+    return historyIndex < history.length - 1
+  }
+
+  function undo() {
+    setHistoryIndex((i) => {
+      if (i <= 0) return i
+      const ni = i - 1
+      const snap = history[ni]
+      setProject(JSON.parse(JSON.stringify(snap)))
+      return ni
+    })
+  }
+
+  function redo() {
+    setHistoryIndex((i) => {
+      if (i >= history.length - 1) return i
+      const ni = i + 1
+      const snap = history[ni]
+      setProject(JSON.parse(JSON.stringify(snap)))
+      return ni
+    })
   }
 
   // validate token on mount: if token exists but is invalid/expired, force login
@@ -178,6 +231,14 @@ export default function App() {
           editBlock={editBlock}
           deleteBlock={deleteBlock}
           saveProject={saveProject}
+          undo={undo}
+          redo={redo}
+          canUndo={canUndo()}
+          canRedo={canRedo()}
+          onReorder={(newBlocks: any[]) => applyChange((p) => ({
+            ...p,
+            pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: newBlocks } : pg)),
+          }))}
         />
       </div>
     </BrowserRouter>
@@ -191,10 +252,6 @@ function AppContent(props: any) {
     authed,
     setAuthed,
     logout,
-    project,
-    setProject,
-    selectedPageId,
-    setSelectedPageId,
     selectedBlock,
     setSelectedBlock,
     page,
@@ -203,7 +260,33 @@ function AppContent(props: any) {
     editBlock,
     deleteBlock,
     saveProject,
+    onReorder,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = props
+
+  // keyboard shortcuts for undo/redo
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod) return
+      if (e.key === 'z' || e.key === 'Z') {
+        if (e.shiftKey) {
+          redo()
+        } else {
+          undo()
+        }
+        e.preventDefault()
+      } else if (e.key === 'y' || e.key === 'Y') {
+        redo()
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [undo, redo])
 
   return (
     <>
@@ -222,6 +305,12 @@ function AppContent(props: any) {
           {/* editor-specific controls */}
           {window.location.pathname === '/editor' ? (
             <>
+              <button className="text-sm muted" onClick={undo} disabled={!canUndo}>
+                Undo
+              </button>
+              <button className="text-sm muted" onClick={redo} disabled={!canRedo}>
+                Redo
+              </button>
               <button className="text-sm muted" onClick={() => navigate('/dashboard')}>
                 ← Dashboard
               </button>
@@ -294,12 +383,7 @@ function AppContent(props: any) {
                       page={page}
                       onSelectBlock={(b: any) => setSelectedBlock(b)}
                       onUpdateBlock={editBlock}
-                      onReorder={(newBlocks: any[]) =>
-                        setProject((p: Project) => ({
-                          ...p,
-                          pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: newBlocks } : pg)),
-                        }))
-                      }
+                      onReorder={(newBlocks: any[]) => onReorder(newBlocks)}
                     />
                   ) : (
                     <div className="card">
