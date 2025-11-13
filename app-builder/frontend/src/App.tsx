@@ -1,5 +1,5 @@
 // import { Preview } from './editor/Preview' (not used)
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import type { Project, Page, Block } from './shared/BlockTypes'
 
 import { PageRenderer } from './PageRenderer'
@@ -42,6 +42,11 @@ export default function App() {
   const [historyIndex, setHistoryIndex] = useState<number>(0)
   const [selectedPageId, setSelectedPageId] = useState<string>(() => project.pages?.[0]?.id ?? '')
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
+  const [isSaving, setIsSaving] = useState<boolean>(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
+  const autosaveTimer = useRef<number | null>(null)
+  const isFirstMount = useRef<boolean>(true)
 
   const page = useMemo(() => project.pages.find((p) => p.id === selectedPageId), [project, selectedPageId])
 
@@ -93,22 +98,23 @@ export default function App() {
   }
 
   async function saveProject() {
+    setIsSaving(true)
+    setSaveError(null)
     try {
-      // if project.id is a temporary local id (not a 24-char Mongo ObjectId), create it first
       const isObjectIdLike = typeof project.id === 'string' && /^[0-9a-fA-F]{24}$/.test(project.id)
 
       if (!isObjectIdLike) {
         const created: any = await createProject(project)
-        // replace local project with the created server project which includes real id
         setProject(created)
+        setLastSavedAt(Date.now())
         alert('Project created')
         return
       }
 
       await updateProject(project.id, project)
+      setLastSavedAt(Date.now())
       alert('Project saved')
     } catch (err: any) {
-      // if server returned 403, likely a guest attempted a forbidden action
       if (err?.status === 403) {
         try {
           localStorage.removeItem('app_token')
@@ -121,9 +127,62 @@ export default function App() {
         return
       }
 
-      alert('Save failed: ' + err.message)
+      setSaveError(err?.message ?? 'Save failed')
+      alert('Save failed: ' + (err?.message ?? 'Unknown error'))
+    } finally {
+      setIsSaving(false)
     }
   }
+
+  // Lightweight API-save used by autosave (no alerts)
+  async function apiSaveProjectSilent(proj: Project) {
+    if (!authed) throw new Error('Not authenticated')
+    const isObjectIdLike = typeof proj.id === 'string' && /^[0-9a-fA-F]{24}$/.test(proj.id)
+    if (!isObjectIdLike) {
+      const created: any = await createProject(proj)
+      return created
+    }
+    await updateProject(proj.id, proj)
+    return proj
+  }
+
+  // autosave: debounce project changes and persist automatically when authed
+  useEffect(() => {
+    // skip autosave on first mount/load
+    if (isFirstMount.current) {
+      isFirstMount.current = false
+      return
+    }
+
+    if (!authed) return
+
+    // clear previous timer
+    if (autosaveTimer.current) {
+      clearTimeout(autosaveTimer.current)
+    }
+
+    autosaveTimer.current = window.setTimeout(async () => {
+      setIsSaving(true)
+      try {
+        const res = await apiSaveProjectSilent(project)
+        if (res && res.id && res.id !== project.id) {
+          // if server returned a created project with real id, replace local project
+          setProject(res)
+        }
+        setLastSavedAt(Date.now())
+        setSaveError(null)
+      } catch (e: any) {
+        // keep error but don't block UX
+        setSaveError(e?.message ?? 'Autosave failed')
+      } finally {
+        setIsSaving(false)
+      }
+    }, 1500)
+
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
+    }
+  }, [project, authed])
 
   // --- Undo / Redo history helpers ---
   function applyChange(mutator: (p: Project) => Project) {
@@ -239,6 +298,9 @@ export default function App() {
             ...p,
             pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: newBlocks } : pg)),
           }))}
+          isSaving={isSaving}
+          lastSavedAt={lastSavedAt}
+          saveError={saveError}
         />
       </div>
     </BrowserRouter>
@@ -265,6 +327,9 @@ function AppContent(props: any) {
     redo,
     canUndo,
     canRedo,
+    isSaving,
+    lastSavedAt,
+    saveError,
   } = props
 
   // keyboard shortcuts for undo/redo
@@ -317,6 +382,10 @@ function AppContent(props: any) {
               <button className="btn" onClick={saveProject}>
                 Save
               </button>
+              <div className="text-sm muted ml-2">
+                {isSaving ? 'Saving…' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : null}
+                {saveError ? ` • ${saveError}` : null}
+              </div>
             </>
           ) : null}
 
