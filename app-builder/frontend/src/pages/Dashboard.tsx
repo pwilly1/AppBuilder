@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { listProjects, createProject } from '../api'
+import { listProjects, createProject, deleteProject } from '../api'
 import { BlockRenderer } from '../shared/BlockRenderer'
 
 function TopNav({ search, setSearch }: { search: string; setSearch: (s: string) => void }) {
@@ -35,7 +35,7 @@ function Sidebar() {
   )
 }
 
-function ProjectCard({ p, onOpen }: { p: any; onOpen: (proj: any) => void }) {
+function ProjectCard({ p, onOpen, onDelete }: { p: any; onOpen: (proj: any) => void; onDelete: (proj: any) => void }) {
   const firstBlock = p?.pages?.[0]?.blocks?.[0]
   const updated = p?.updatedAt ? new Date(p.updatedAt).toLocaleDateString() : (p?.createdAt ? new Date(p.createdAt).toLocaleDateString() : '')
   const progress = Math.min(100, (p?.pages?.[0]?.blocks?.length ?? 0) * 20)
@@ -52,14 +52,17 @@ function ProjectCard({ p, onOpen }: { p: any; onOpen: (proj: any) => void }) {
           )}
         </div>
       </div>
-      <div className="mt-3 flex items-start justify-between">
-        <div>
-          <div className="text-base font-semibold text-slate-800">{p.name}</div>
+      <div className="mt-3 flex items-start justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="text-base font-semibold text-slate-800 truncate" title={p.name}>{p.name}</div>
           <div className="text-xs muted mt-1">Updated {updated} · {p.ownerId ?? 'You'}</div>
         </div>
-        <div className="text-right">
+        <div className="flex flex-col items-end">
           <div className="text-sm font-medium text-primary">{progress}%</div>
-          <button className="mt-2 btn-sm" onClick={() => onOpen(p)}>Open</button>
+          <div className="flex gap-2 mt-2">
+            <button className="btn-sm" onClick={() => onOpen(p)}>Open</button>
+            <button className="btn-sm !bg-red-600/90 hover:!bg-red-700" onClick={() => onDelete(p)}>Delete</button>
+          </div>
         </div>
       </div>
     </div>
@@ -95,6 +98,13 @@ export default function Dashboard({ onOpen }: { onOpen: (proj: any) => void }) {
     } catch (e: any) { console.error(e) }
   }
 
+  async function remove(id: string) {
+    try {
+      await deleteProject(id)
+      setProjects(prev => prev.filter(p => p.id !== id))
+    } catch (e: any) { console.error(e) }
+  }
+
   const filtered = useMemo(() => projects.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()) || (p.ownerId || '').toLowerCase().includes(search.toLowerCase())), [projects, search])
 
   return (
@@ -118,7 +128,11 @@ export default function Dashboard({ onOpen }: { onOpen: (proj: any) => void }) {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {loading ? <div className="muted">Loading…</div> : (filtered.length ? filtered.map(p => (
-                  <ProjectCard key={p.id} p={p} onOpen={onOpen} />
+                  <ProjectCard key={p.id} p={p} onOpen={onOpen} onDelete={(proj: any) => {
+                    if (window.confirm(`Delete project "${proj.name}"? This cannot be undone.`)) {
+                      remove(proj.id)
+                    }
+                  }} />
                 )) : (
                   <div className="muted">No projects found</div>
                 ))}
