@@ -10,9 +10,9 @@ export default function Inspector({ block, onSave, onClose, onDelete }: { block?
   }, [block, reset]);
 
   if (!block) return (
-    <div className="card">
-      <h4 className="text-lg font-medium">Inspector</h4>
-      <p className="muted">Select a block to edit its properties.</p>
+    <div className="card bg-white border border-slate-200 rounded-xl p-4">
+      <h4 className="text-lg font-semibold text-slate-900">Inspector</h4>
+      <p className="text-sm text-slate-500">Select a block to edit its properties.</p>
     </div>
   );
 
@@ -26,37 +26,37 @@ export default function Inspector({ block, onSave, onClose, onDelete }: { block?
   };
 
   return (
-    <div className="card">
+    <div className="card bg-white border border-slate-200 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-lg font-semibold">Inspector</h4>
-        <button className="text-sm text-slate-500 hover:text-slate-700" onClick={onClose}>Close</button>
+        <h4 className="text-lg font-semibold text-slate-900">Inspector</h4>
+        <button className="text-sm text-slate-600 hover:text-slate-800" onClick={onClose}>Close</button>
       </div>
-      <p className="muted mb-3">Editing block: <strong className="text-slate-800">{block.type}</strong></p>
+      <p className="text-sm text-slate-600 mb-3">Editing block: <strong className="text-slate-900">{block.type}</strong></p>
       <form onSubmit={handleSubmit(submit)} className="grid gap-3">
         {block.type === 'text' && (
           <>
-            <label className="text-sm font-medium">Text</label>
-            <textarea className="w-full border rounded-md p-2 text-sm" {...register('value')} />
-            <label className="text-sm font-medium">Font size (px)</label>
-            <input type="number" className="w-24 border rounded-md p-2 text-sm" {...register('fontSize')} />
+            <label className="text-sm font-medium text-slate-800">Text</label>
+            <textarea className="w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('value')} />
+            <label className="text-sm font-medium text-slate-800">Font size (px)</label>
+            <input type="number" className="w-24 border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('fontSize')} />
           </>
         )}
         {block.type === 'hero' && (
           <>
-            <label className="text-sm font-medium">Headline</label>
-            <input className="w-full border rounded-md p-2 text-sm" {...register('headline')} />
-            <label className="text-sm font-medium">Subhead</label>
-            <input className="w-full border rounded-md p-2 text-sm" {...register('subhead')} />
-            <label className="text-sm font-medium">Headline size (px)</label>
-            <input type="number" className="w-24 border rounded-md p-2 text-sm" {...register('headlineSize')} />
+            <label className="text-sm font-medium text-slate-800">Headline</label>
+            <input className="w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('headline')} />
+            <label className="text-sm font-medium text-slate-800">Subhead</label>
+            <input className="w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('subhead')} />
+            <label className="text-sm font-medium text-slate-800">Headline size (px)</label>
+            <input type="number" className="w-24 border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('headlineSize')} />
           </>
         )}
         <div className="mt-2">
-          <button className="btn" type="submit">Save</button>
+          <button className="btn bg-slate-900 text-white hover:bg-slate-800" type="submit">Save</button>
           {onDelete ? (
             <button
               type="button"
-              className="ml-3 text-sm text-red-600 bg-white/60 px-3 py-1 rounded-md hover:bg-white"
+              className="ml-3 text-sm text-red-600 bg-white px-3 py-1 rounded-md border border-red-200 hover:bg-red-50"
               onClick={() => {
                 if (!block) return;
                 const ok = confirm('Delete this block?');

@@ -12,9 +12,10 @@ type DraggableProps = {
   containerRef: React.RefObject<HTMLDivElement | null>
   onSelect?: (b: Block) => void
   onUpdate?: (b: Block) => void
+  onSnapChange?: (snap: { h: boolean; v: boolean }) => void
 }
 
-function DraggableBlock({ block, index, containerRef, onSelect, onUpdate }: DraggableProps) {
+function DraggableBlock({ block, index, containerRef, onSelect, onUpdate, onSnapChange }: DraggableProps) {
   const elRef = useRef<HTMLDivElement | null>(null)
   const [dragging, setDragging] = useState(false)
   const [startPt, setStartPt] = useState<{x:number,y:number}>({ x: 0, y: 0 })
@@ -37,6 +38,8 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate }: Drag
     setStartPos(pos)
     setDragging(true)
     setMoved(false)
+    // reset guides when a new drag starts
+    onSnapChange?.({ h: false, v: false })
   }
 
   function move(e: React.PointerEvent) {
@@ -64,12 +67,15 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate }: Drag
     const containerCenterY = rect.height / 2
     const blockCenterX = nx + (bw / 2)
     const blockCenterY = ny + (bh / 2)
-    if (Math.abs(blockCenterX - containerCenterX) <= SNAP) {
+    const snapH = Math.abs(blockCenterX - containerCenterX) <= SNAP
+    const snapV = Math.abs(blockCenterY - containerCenterY) <= SNAP
+    if (snapH) {
       nx = containerCenterX - (bw / 2)
     }
-    if (Math.abs(blockCenterY - containerCenterY) <= SNAP) {
+    if (snapV) {
       ny = containerCenterY - (bh / 2)
     }
+    onSnapChange?.({ h: snapH, v: snapV })
 
     setPos({ x: Math.round(nx), y: Math.round(ny) })
     if (!moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) setMoved(true)
@@ -80,6 +86,8 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate }: Drag
     const target = e.currentTarget as Element
     ;(target as any).releasePointerCapture?.(e.pointerId)
     setDragging(false)
+    // hide guides when drag ends
+    onSnapChange?.({ h: false, v: false })
     // persist x/y to block props
     const updated: Block = { ...block, props: { ...block.props, x: pos.x, y: pos.y } as any }
     onUpdate?.(updated)
@@ -106,6 +114,8 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate }: Drag
 
 export function PageRenderer({ page, onSelectBlock, onReorder: _onReorder, onUpdateBlock }: { page: Page; onSelectBlock?: (b: Block) => void; onReorder?: (newBlocks: Block[]) => void; onUpdateBlock?: (b: Block) => void }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const [showHGuide, setShowHGuide] = useState(false)
+  const [showVGuide, setShowVGuide] = useState(false)
 
   return (
     <div className="mx-auto w-full flex justify-center">
@@ -114,6 +124,19 @@ export function PageRenderer({ page, onSelectBlock, onReorder: _onReorder, onUpd
         className="phone-frame bg-white border border-slate-100 rounded-xl p-4 shadow-sm relative"
         style={{ minHeight: 640, touchAction: 'none' }}
       >
+        {/* Snap assist guides */}
+        {showHGuide ? (
+          <div
+            className="absolute left-0 right-0 border-t border-dashed border-sky-400"
+            style={{ top: '50%' }}
+          />
+        ) : null}
+        {showVGuide ? (
+          <div
+            className="absolute top-0 bottom-0 border-l border-dashed border-sky-400"
+            style={{ left: '50%' }}
+          />
+        ) : null}
         {page.blocks.map((b, i) => (
           <DraggableBlock
             key={b.id}
@@ -122,6 +145,10 @@ export function PageRenderer({ page, onSelectBlock, onReorder: _onReorder, onUpd
             containerRef={containerRef}
             onSelect={onSelectBlock}
             onUpdate={onUpdateBlock}
+            onSnapChange={({ h, v }) => {
+              setShowHGuide(v)
+              setShowVGuide(h)
+            }}
           />
         ))}
       </div>
