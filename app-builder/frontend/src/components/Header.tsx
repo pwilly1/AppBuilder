@@ -28,7 +28,7 @@ export default function Header(props: Props) {
         aria-label="Go to landing"
       >
         <div className="h-8 w-8 rounded-md bg-primary" />
-        <h1 className="text-xl font-semibold">AppBuilder</h1>
+  <h1 className="text-xl font-semibold" title="Apptura">Apptura</h1>
       </button>
 
       <div className="flex items-center gap-3">

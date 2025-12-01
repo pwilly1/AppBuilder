@@ -6,7 +6,7 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
         <div className="text-center md:text-left">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-md">AppBuilder</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white drop-shadow-md">Apptura</h1>
           <p className="mt-4 text-slate-200 max-w-xl">Design landing pages and prototypes instantly. Drag, edit and preview — then save and share.</p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
             <button className="btn btn-primary" onClick={onLogin}>Get started</button>
