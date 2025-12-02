@@ -25,6 +25,27 @@ export default function useProject(setAuthed: (a: boolean) => void) {
 
   // derived
   const page = project.pages.find((p) => p.id === selectedPageId)
+  // utils
+  function slugify(input: string): string {
+    return input
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+  }
+
+  function uniquePath(base: string, pages: any[], excludeId?: string): string {
+    const baseSlug = base || 'page'
+    let candidate = `/${baseSlug}`
+    let n = 2
+    const taken = new Set(pages.filter(pg => pg.id !== excludeId).map(pg => pg.path))
+    while (taken.has(candidate)) {
+      candidate = `/${baseSlug}-${n++}`
+    }
+    return candidate
+  }
+
 
   // history helpers
   function applyChange(mutator: (p: Project) => Project) {
@@ -76,6 +97,53 @@ export default function useProject(setAuthed: (a: boolean) => void) {
       ...p,
       pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: [...pg.blocks, b] } : pg)),
     }))
+  }
+
+  // Pages API
+  function selectPage(id: string) {
+    setSelectedPageId(id)
+  }
+
+  function addPage(title?: string) {
+    const id = crypto.randomUUID()
+    applyChange((p) => {
+      const nextIndex = p.pages.length + 1
+      const pageTitle = (title && title.trim()) || `Page ${nextIndex}`
+      const path = uniquePath(slugify(pageTitle), p.pages)
+      const newPage = { id, title: pageTitle, path, blocks: [] }
+      return { ...p, pages: [...p.pages, newPage] }
+    })
+    setSelectedPageId(id)
+  }
+
+  function renamePage(id: string, title: string, autoUpdatePath = true) {
+    applyChange((p) => {
+      const newTitle = title?.trim() || 'Untitled'
+      const newPages = p.pages.map((pg) => {
+        if (pg.id !== id) return pg
+        const next: any = { ...pg, title: newTitle }
+        if (autoUpdatePath) {
+          const proposed = slugify(newTitle) || 'page'
+          next.path = uniquePath(proposed, p.pages, id)
+        }
+        return next
+      })
+      return { ...p, pages: newPages }
+    })
+  }
+
+  function deletePage(id: string) {
+    let nextSelected: string | null = null
+    applyChange((p) => {
+      if (p.pages.length <= 1) return p // guard: cannot delete last page
+      const idx = p.pages.findIndex((pg) => pg.id === id)
+      const remaining = p.pages.filter((pg) => pg.id !== id)
+      // choose neighbor or first
+      const pickIndex = Math.min(idx, Math.max(0, remaining.length - 1))
+      nextSelected = remaining[pickIndex]?.id ?? remaining[0].id
+      return { ...p, pages: remaining }
+    })
+    if (nextSelected) setSelectedPageId(nextSelected)
   }
 
   async function openProject(proj: any, navigate?: (path: string) => void) {
@@ -206,6 +274,10 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     selectedBlock,
     setSelectedBlock,
     addBlock,
+    addPage,
+    selectPage,
+    renamePage,
+    deletePage,
     openProject,
     editBlock,
     deleteBlock,

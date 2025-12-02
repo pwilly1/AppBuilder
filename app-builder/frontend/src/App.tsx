@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react'
-import type { Project } from './shared/BlockTypes'
+import React, { useState } from 'react'
 
 import Landing from './components/Landing'
 import Account from './pages/Account'
@@ -24,6 +23,10 @@ export default function App() {
     selectedBlock,
     setSelectedBlock,
     addBlock,
+    addPage,
+    selectPage,
+    renamePage,
+    deletePage,
     openProject,
     editBlock,
     deleteBlock,
@@ -58,6 +61,10 @@ export default function App() {
           setSelectedBlock={setSelectedBlock}
           page={page}
           addBlock={addBlock}
+          addPage={addPage}
+          selectPage={selectPage}
+          renamePage={renamePage}
+          deletePage={deletePage}
           openProject={openProject}
           editBlock={editBlock}
           deleteBlock={deleteBlock}
@@ -83,10 +90,16 @@ function AppContent(props: any) {
     authed,
     setAuthed,
     logout,
+    project,
+    selectedPageId,
     selectedBlock,
     setSelectedBlock,
     page,
     addBlock,
+    addPage,
+    selectPage,
+    renamePage,
+    deletePage,
     openProject,
     editBlock,
     deleteBlock,
@@ -172,6 +185,8 @@ function AppContent(props: any) {
             element={(
               <EditorLayout
                 page={page}
+                pages={project?.pages || []}
+                selectedPageId={selectedPageId}
                 addBlock={addBlock}
                 setSelectedBlock={setSelectedBlock}
                 editBlock={editBlock}
@@ -179,6 +194,10 @@ function AppContent(props: any) {
                 onReorder={onReorder}
                 selectedBlock={selectedBlock}
                 saveProject={saveProject}
+                addPage={addPage}
+                selectPage={selectPage}
+                renamePage={renamePage}
+                deletePage={deletePage}
               />
             )}
           />

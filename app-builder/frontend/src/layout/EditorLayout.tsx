@@ -1,10 +1,13 @@
-import React from 'react'
+// jsx runtime handles React import
 import { PageRenderer } from '../PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
+import PagesPanel from '../components/PagesPanel'
 
 type Props = {
   page: any
+  pages?: Array<{ id: string; title?: string; path?: string }>
+  selectedPageId?: string
   addBlock: (b: any) => void
   setSelectedBlock: (b: any) => void
   editBlock: (b: any) => void
@@ -12,16 +15,30 @@ type Props = {
   onReorder: (blocks: any[]) => void
   selectedBlock: any
   saveProject: () => void
+  addPage?: () => void
+  selectPage?: (id: string) => void
+  renamePage?: (id: string, title: string) => void
+  deletePage?: (id: string) => void
 }
 
 export default function EditorLayout(props: Props) {
-  const { page, addBlock, setSelectedBlock, editBlock, deleteBlock, onReorder, selectedBlock, saveProject } = props
+  const { page, pages = [], selectedPageId, addBlock, setSelectedBlock, editBlock, deleteBlock, onReorder, selectedBlock, addPage, selectPage, renamePage, deletePage } = props as any
 
   return (
     <>
       {/* Restore original structure/classes so existing CSS/layout rules still apply */}
       <aside className="sidebar-hidden-mobile">
         <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-sm p-4">
+          <div className="mb-4">
+            <PagesPanel
+              pages={pages}
+              selectedPageId={selectedPageId}
+              onSelect={(id) => selectPage?.(id)}
+              onAdd={() => addPage?.()}
+              onRename={(id, t) => renamePage?.(id, t)}
+              onDelete={(id) => deletePage?.(id)}
+            />
+          </div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-white/90">Blocks</h3>
           </div>
