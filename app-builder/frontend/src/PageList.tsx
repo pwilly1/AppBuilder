@@ -1,4 +1,4 @@
-import type { Page } from './shared/BlockTypes'
+import type { Page } from './shared/schema/types'
 
 export function PageList({
   pages, selectedId, onSelect, onRename, onAddPage

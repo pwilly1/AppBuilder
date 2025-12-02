@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Project, Block } from '../shared/BlockTypes'
+import type { Project, Block } from '../shared/schema/types'
 import { getProject, updateProject, createProject, getToken, listProjects } from '../api'
 
 export default function useProject(setAuthed: (a: boolean) => void) {

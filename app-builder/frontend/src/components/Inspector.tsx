@@ -1,6 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import type { Block } from '../shared/BlockTypes';
+import type { Block } from '../shared/schema/types';
 
 export default function Inspector({ block, onSave, onClose, onDelete }: { block?: Block | null; onSave?: (b: Block) => void; onClose?: () => void; onDelete?: (id: string) => void }) {
   const { register, handleSubmit, reset } = useForm({ defaultValues: block?.props || {} });

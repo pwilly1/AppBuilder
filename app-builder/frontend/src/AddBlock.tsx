@@ -1,5 +1,6 @@
 import React from 'react'
-import type { Block } from './shared/BlockTypes'
+import type { Block } from './shared/schema/types'
+import { createBlock } from './shared/schema/registry'
 
 type SectionProps = {
   title: string
@@ -37,10 +38,10 @@ export function AddBlock({ onAdd }: { onAdd: (b: Block)=>void }) {
       <div className="space-y-3">
         <CollapsibleSection title="Blocks" defaultOpen>
           <div className="grid gap-2">
-            <button className="btn bg-slate-900 text-white hover:bg-slate-800" onClick={()=>onAdd({ id: crypto.randomUUID(), type:'hero', props:{ headline:'New Hero', subhead:'' } as any })}>
+            <button className="btn bg-slate-900 text-white hover:bg-slate-800" onClick={()=>onAdd(createBlock('hero', { headline:'New Hero', subhead:'' }))}>
               Hero
             </button>
-            <button className="btn bg-slate-900 text-white hover:bg-slate-800" onClick={()=>onAdd({ id: crypto.randomUUID(), type:'text', props:{ value:'New text' } as any })}>
+            <button className="btn bg-slate-900 text-white hover:bg-slate-800" onClick={()=>onAdd(createBlock('text', { value:'New text' }))}>
               Text
             </button>
           </div>

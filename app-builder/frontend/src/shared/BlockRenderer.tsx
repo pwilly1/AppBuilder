@@ -1,5 +1,5 @@
-// shared/blocks-native/BlockRenderer.tsx
-import type { Block } from './BlockTypes';
+// Schema-first -> render adapter
+import type { Block } from '../shared/schema/types';
 import type { ReactElement } from 'react';
 import { Hero } from './blocks/Hero';
 import { TextBlock } from './blocks/TextBlock';

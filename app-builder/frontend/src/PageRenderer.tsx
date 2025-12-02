@@ -1,5 +1,5 @@
 import { BlockRenderer } from './shared/BlockRenderer'
-import type { Page, Block } from './shared/BlockTypes'
+import type { Page, Block } from './shared/schema/types'
 import { useEffect, useRef, useState } from 'react'
 
 
