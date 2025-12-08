@@ -1,4 +1,5 @@
 import {AuthService} from '../services/AuthService.js';
+// © 2025 Preston Willis. All rights reserved.
 import type { Request, Response } from 'express'; 
 
 

@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import mongoose from 'mongoose';
 import { Project, ProjectModel } from '../models/Project.js';
 import { ProjectRepository } from './ProjectRepository.js';

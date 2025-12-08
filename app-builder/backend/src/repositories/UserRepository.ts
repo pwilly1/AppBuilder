@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import { UserModel } from '../models/User.js';
 import type { IUser } from "../models/User.js";
 

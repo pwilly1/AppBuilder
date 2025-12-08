@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 export function setToken(token: string) {
   localStorage.setItem('app_token', token);
 }

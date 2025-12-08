@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 // jsx runtime handles React import
 import { PageRenderer } from '../PageRenderer'
 import { AddBlock } from '../AddBlock'

@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import type { Block } from '../shared/schema/types';

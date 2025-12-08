@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import { useState } from 'react'
 
 export type PageLite = { id: string; title?: string; path?: string }

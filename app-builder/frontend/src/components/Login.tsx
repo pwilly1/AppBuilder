@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+// © 2025 Preston Willis. All rights reserved.
 import { login, setToken } from '../api';
 
 export default function Login({ onLogin }: { onLogin: () => void }) {

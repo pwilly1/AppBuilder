@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import React from 'react'
 import { getMe } from '../api'
 

@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import { MongoUserRepository } from '../repositories/UserRepository.js';
 
 export class ProjectManager {

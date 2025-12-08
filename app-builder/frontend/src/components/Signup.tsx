@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import React, { useState } from 'react';
 import { signup } from '../api';
 import { setToken } from '../api';

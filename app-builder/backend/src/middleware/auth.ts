@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import type { Request, Response, NextFunction } from 'express';
 import { SessionManager } from '../services/SessionManager.js';
 import { MongoUserRepository } from '../repositories/UserRepository.js';

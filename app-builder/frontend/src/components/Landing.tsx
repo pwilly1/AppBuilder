@@ -1,6 +1,7 @@
 import Login from './Login'
 import Signup from './Signup'
 
+// © 2025 Preston Willis. All rights reserved.
 export default function Landing({ onLogin }: { onLogin: () => void }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">

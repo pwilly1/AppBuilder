@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+// © 2025 Preston Willis. All rights reserved.
 import type { Project, Block } from '../shared/schema/types'
 import { getProject, updateProject, createProject, getToken, listProjects } from '../api'
 

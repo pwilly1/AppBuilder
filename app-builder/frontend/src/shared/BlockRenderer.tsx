@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 // Schema-first -> render adapter
 import type { Block } from '../shared/schema/types';
 import type { ReactElement } from 'react';

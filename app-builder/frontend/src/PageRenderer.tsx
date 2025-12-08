@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import { BlockRenderer } from './shared/BlockRenderer'
 import type { Page, Block } from './shared/schema/types'
 import { useEffect, useRef, useState } from 'react'

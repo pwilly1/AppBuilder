@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import bcrypt from 'bcryptjs';
 import type { IUserRepository } from '../repositories/UserRepository.js';
 import { SessionManager } from './SessionManager.js';

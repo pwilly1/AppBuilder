@@ -1,5 +1,6 @@
 // Schema-first types (no React imports)
 
+// © 2025 Preston Willis. All rights reserved.
 export type BlockType = 'hero' | 'text' | 'image';
 
 export type Block<Props = Record<string, any>> = {

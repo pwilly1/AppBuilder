@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import { Schema, model, Document } from 'mongoose';
 
 export interface IUser extends Document {

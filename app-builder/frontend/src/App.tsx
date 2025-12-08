@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import React, { useState } from 'react'
 
 import Landing from './components/Landing'
@@ -9,6 +10,7 @@ import useProject from './hooks/useProject'
 import Header from './components/Header'
 import EditorLayout from './layout/EditorLayout'
 import { getToken } from './api'
+import Footer from './components/Footer'
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean>(() => !!getToken())
@@ -48,7 +50,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen py-8 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-slate-100">
+      <div className="min-h-screen py-8 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-slate-100 flex flex-col">
         <AppContent
           authed={authed}
           setAuthed={setAuthed}
@@ -78,6 +80,7 @@ export default function App() {
           lastSavedAt={lastSavedAt}
           saveError={saveError}
         />
+        <Footer />
       </div>
     </BrowserRouter>
   )

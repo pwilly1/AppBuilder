@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 import { Schema, model, Document, Types } from 'mongoose';
 
 // Lightweight types for stored pages/blocks. We store them as plain mixed objects

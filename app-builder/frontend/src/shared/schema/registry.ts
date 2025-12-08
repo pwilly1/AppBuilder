@@ -1,3 +1,4 @@
+// © 2025 Preston Willis. All rights reserved.
 // Block registry with defaults and factories (no React imports)
 import type { BlockType, Block } from './types'
 

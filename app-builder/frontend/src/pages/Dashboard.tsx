@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+// © 2025 Preston Willis. All rights reserved.
 import { listProjects, createProject, deleteProject } from '../api'
 import { BlockRenderer } from '../shared/BlockRenderer'
 
