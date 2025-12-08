@@ -1,6 +1,6 @@
-# AppBuilder Project
+# Apptura
 
-AppBuilder is a low-code app creation platform that lets users visually design, configure, and deploy mobile apps without writing extensive code.  
+Apptura is a low-code app creation platform that lets users visually design, configure, and deploy mobile apps without writing extensive code.  
 It uses a React + Tailwind front end, a Node.js/Express backend, and integrates AI to generate layouts and components.  
 A live preview keeps edits visible in real time.
 
