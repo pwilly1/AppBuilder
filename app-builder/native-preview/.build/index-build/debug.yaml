@@ -1,0 +1,107 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<native-preview-x86_64-unknown-windows-msvc-debug.module>"]
+  "native-preview-x86_64-unknown-windows-msvc-debug.module": ["<native-preview-x86_64-unknown-windows-msvc-debug.module>"]
+  "native-previewPackageDiscoveredTests-x86_64-unknown-windows-msvc-debug.module": ["<native-previewPackageDiscoveredTests-x86_64-unknown-windows-msvc-debug.module>"]
+  "native-previewPackageTests-x86_64-unknown-windows-msvc-debug.module": ["<native-previewPackageTests-x86_64-unknown-windows-msvc-debug.module>"]
+  "native-previewTests-x86_64-unknown-windows-msvc-debug.module": ["<native-previewTests-x86_64-unknown-windows-msvc-debug.module>"]
+  "test": ["<native-preview-x86_64-unknown-windows-msvc-debug.module>","<native-previewTests-x86_64-unknown-windows-msvc-debug.module>"]
+default: "main"
+nodes:
+  "C:\\AppBuilder\\app-builder\\native-preview\\Sources\\native-preview/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "C:\\AppBuilder\\app-builder\\native-preview\\Tests\\native-previewTests/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+commands:
+  "<native-preview-x86_64-unknown-windows-msvc-debug.module>":
+    tool: phony
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_preview.swiftmodule"]
+    outputs: ["<native-preview-x86_64-unknown-windows-msvc-debug.module>"]
+
+  "<native-previewPackageDiscoveredTests-x86_64-unknown-windows-msvc-debug.module>":
+    tool: phony
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewPackageDiscoveredTests.swiftmodule"]
+    outputs: ["<native-previewPackageDiscoveredTests-x86_64-unknown-windows-msvc-debug.module>"]
+
+  "<native-previewPackageTests-x86_64-unknown-windows-msvc-debug.module>":
+    tool: phony
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewPackageTests.swiftmodule"]
+    outputs: ["<native-previewPackageTests-x86_64-unknown-windows-msvc-debug.module>"]
+
+  "<native-previewTests-x86_64-unknown-windows-msvc-debug.module>":
+    tool: phony
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewTests.swiftmodule"]
+    outputs: ["<native-previewTests-x86_64-unknown-windows-msvc-debug.module>"]
+
+  "C.native-preview-x86_64-unknown-windows-msvc-debug.module":
+    tool: shell
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\Sources\\native-preview\\native_preview.swift","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\swift-version-2A252539E4A14B92.txt","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_preview.build\\sources"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_preview.swiftmodule"]
+    description: "Compiling Swift Module 'native_preview' (1 sources)"
+    args: ["C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Toolchains\\6.2.1+Asserts\\usr\\bin\\swiftc.exe","-module-name","native_preview","-emit-dependencies","-emit-module","-emit-module-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_preview.swiftmodule","-output-file-map","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_preview.build\\output-file-map.json","-parse-as-library","-incremental","@C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_preview.build\\sources","-I","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules","-target","x86_64-unknown-windows-msvc","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\ModuleCache","-parseable-output","-parse-as-library","-static","-emit-objc-header","-emit-objc-header-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_preview.build\\include\\native-preview-Swift.h","-swift-version","6","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-sdk","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\SDKs\\Windows.sdk\\","-libc","MD","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-use-ld=lld","-g","-use-ld=lld","-Xcc","-D_MT","-Xcc","-D_DLL","-Xcc","-Xclang","-Xcc","--dependent-lib=msvcrt","-Xcc","-gdwarf","-package-name","native_preview"]
+
+  "C.native-previewPackageDiscoveredTests-x86_64-unknown-windows-msvc-debug.module":
+    tool: shell
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native-previewPackageDiscoveredTests.derived\\all-discovered-tests.swift","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native-previewPackageDiscoveredTests.derived\\native-previewTests.swift","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\swift-version-2A252539E4A14B92.txt","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewTests.swiftmodule","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageDiscoveredTests.build\\sources"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewPackageDiscoveredTests.swiftmodule"]
+    description: "Compiling Swift Module 'native_previewPackageDiscoveredTests' (2 sources)"
+    args: ["C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Toolchains\\6.2.1+Asserts\\usr\\bin\\swiftc.exe","-module-name","native_previewPackageDiscoveredTests","-emit-dependencies","-emit-module","-emit-module-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewPackageDiscoveredTests.swiftmodule","-output-file-map","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageDiscoveredTests.build\\output-file-map.json","-parse-as-library","-incremental","@C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageDiscoveredTests.build\\sources","-I","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules","-target","x86_64-unknown-windows-msvc","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\ModuleCache","-parseable-output","-parse-as-library","-static","-emit-objc-header","-emit-objc-header-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageDiscoveredTests.build\\include\\native-previewPackageDiscoveredTests-Swift.h","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-sdk","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\SDKs\\Windows.sdk\\","-libc","MD","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-use-ld=lld","-g","-use-ld=lld","-Xcc","-D_MT","-Xcc","-D_DLL","-Xcc","-Xclang","-Xcc","--dependent-lib=msvcrt","-Xcc","-gdwarf","-package-name","native_preview"]
+
+  "C.native-previewPackageTests-x86_64-unknown-windows-msvc-debug.module":
+    tool: shell
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native-previewPackageTests.derived\\runner.swift","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\swift-version-2A252539E4A14B92.txt","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewTests.swiftmodule","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewPackageDiscoveredTests.swiftmodule","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\sources"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewPackageTests.swiftmodule"]
+    description: "Compiling Swift Module 'native_previewPackageTests' (1 sources)"
+    args: ["C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Toolchains\\6.2.1+Asserts\\usr\\bin\\swiftc.exe","-module-name","native_previewPackageTests","-emit-dependencies","-emit-module","-emit-module-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewPackageTests.swiftmodule","-output-file-map","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\output-file-map.json","-parse-as-library","-incremental","@C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\sources","-I","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules","-target","x86_64-unknown-windows-msvc","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\ModuleCache","-parseable-output","-parse-as-library","-static","-emit-objc-header","-emit-objc-header-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\include\\native-previewPackageTests-Swift.h","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-sdk","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\SDKs\\Windows.sdk\\","-libc","MD","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-use-ld=lld","-g","-use-ld=lld","-Xcc","-D_MT","-Xcc","-D_DLL","-Xcc","-Xclang","-Xcc","--dependent-lib=msvcrt","-Xcc","-gdwarf","-package-name","native_preview"]
+
+  "C.native-previewTests-x86_64-unknown-windows-msvc-debug.module":
+    tool: shell
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\Tests\\native-previewTests\\native_previewTests.swift","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\swift-version-2A252539E4A14B92.txt","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_preview.swiftmodule","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewTests.build\\sources"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewTests.swiftmodule"]
+    description: "Compiling Swift Module 'native_previewTests' (1 sources)"
+    args: ["C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Toolchains\\6.2.1+Asserts\\usr\\bin\\swiftc.exe","-module-name","native_previewTests","-emit-dependencies","-emit-module","-emit-module-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules\\native_previewTests.swiftmodule","-output-file-map","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewTests.build\\output-file-map.json","-parse-as-library","-incremental","@C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewTests.build\\sources","-I","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\Modules","-target","x86_64-unknown-windows-msvc","-incremental","-enable-batch-mode","-serialize-diagnostics","-Onone","-enable-testing","-Xfrontend","-enable-cross-import-overlays","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\ModuleCache","-parseable-output","-parse-as-library","-static","-swift-version","6","-Xfrontend","-experimental-lazy-typecheck","-Xfrontend","-experimental-skip-all-function-bodies","-Xfrontend","-experimental-allow-module-with-compiler-errors","-Xfrontend","-empty-abi-descriptor","-sdk","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\SDKs\\Windows.sdk\\","-libc","MD","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\XCTest-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-I","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows","-L","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Platforms\\6.2.1\\Windows.platform\\Developer\\Library\\Testing-6.2.1\\usr\\lib\\swift\\windows\\x86_64","-use-ld=lld","-g","-use-ld=lld","-Xcc","-D_MT","-Xcc","-D_DLL","-Xcc","-Xclang","-Xcc","--dependent-lib=msvcrt","-Xcc","-gdwarf","-package-name","native_preview"]
+
+  "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_preview.build\\sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","C:\\AppBuilder\\app-builder\\native-preview\\Sources\\native-preview\\native_preview.swift"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_preview.build\\sources"]
+    description: "Write auxiliary file C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_preview.build\\sources"
+
+  "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageDiscoveredTests.build\\sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native-previewPackageDiscoveredTests.derived\\all-discovered-tests.swift","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native-previewPackageDiscoveredTests.derived\\native-previewTests.swift"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageDiscoveredTests.build\\sources"]
+    description: "Write auxiliary file C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageDiscoveredTests.build\\sources"
+
+  "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native-previewPackageTests.derived\\runner.swift"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\sources"]
+    description: "Write auxiliary file C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\sources"
+
+  "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewTests.build\\sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","C:\\AppBuilder\\app-builder\\native-preview\\Tests\\native-previewTests\\native_previewTests.swift"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewTests.build\\sources"]
+    description: "Write auxiliary file C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewTests.build\\sources"
+
+  "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\swift-version-2A252539E4A14B92.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","C:\\Users\\prwil\\AppData\\Local\\Programs\\Swift\\Toolchains\\6.2.1+Asserts\\usr\\bin\\swiftc.exe"]
+    outputs: ["C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\swift-version-2A252539E4A14B92.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\swift-version-2A252539E4A14B92.txt"
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["C:\\AppBuilder\\app-builder\\native-preview\\Sources\\native-preview/","C:\\AppBuilder\\app-builder\\native-preview\\Tests\\native-previewTests/","C:\\AppBuilder\\app-builder\\native-preview\\Package.swift","C:\\AppBuilder\\app-builder\\native-preview\\Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+

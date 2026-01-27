@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\master.swiftdeps"
+  },
+  "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native-previewPackageTests.derived\\runner.swift": {
+    "dependencies": "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\runner.d",
+    "object": "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\runner.swift.o",
+    "swiftmodule": "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\runner~partial.swiftmodule",
+    "swift-dependencies": "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\runner.swiftdeps",
+    "diagnostics": "C:\\AppBuilder\\app-builder\\native-preview\\.build\\index-build\\x86_64-unknown-windows-msvc\\debug\\native_previewPackageTests.build\\runner.dia"
+  }
+}
