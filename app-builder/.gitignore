@@ -14,6 +14,20 @@ lerna-debug.log*
 dist/
 dist-ssr/
 
+# ─── Android / Gradle (native-preview)
+**/.gradle/
+**/local.properties
+**/build/
+**/.cxx/
+**/.externalNativeBuild/
+**/*.iml
+**/.kotlin/
+**/captures/
+
+# Keystores / signing (never commit)
+**/*.jks
+**/*.keystore
+
 # ─── Local env files
 *.local
 .env

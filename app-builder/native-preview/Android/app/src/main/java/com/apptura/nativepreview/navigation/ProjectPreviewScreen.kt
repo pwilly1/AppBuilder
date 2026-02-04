@@ -4,6 +4,7 @@ package com.apptura.nativepreview.navigation
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Scaffold
@@ -15,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.apptura.nativepreview.models.Project
 import com.apptura.nativepreview.renderers.BlockRenderer
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProjectPreviewScreen(project: Project) {
     val pageIndex = remember { mutableStateOf(0) }

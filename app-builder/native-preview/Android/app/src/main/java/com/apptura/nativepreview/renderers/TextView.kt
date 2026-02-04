@@ -14,7 +14,7 @@ import kotlinx.serialization.json.JsonPrimitive
 @Composable
 fun TextView(block: Block) {
     val value = (block.props["value"] as? JsonPrimitive)?.content ?: "Text"
-    val fontSize = (block.props["fontSize"] as? JsonPrimitive)?.double ?: 16.0
+    val fontSize = (block.props["fontSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 16.0
 
     Text(
         text = value,
