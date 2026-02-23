@@ -12,6 +12,7 @@ export interface ProjectPage {
 
 export interface Project extends Document {
   ownerId: string;
+  schemaVersion?: number;
   name: string;
   pages?: ProjectPage[];
   updatedAt: Date;
@@ -21,6 +22,7 @@ export interface Project extends Document {
 const ProjectSchema = new Schema<Project>(
   {
     ownerId: { type: String, required: true, index: true },
+    schemaVersion: { type: Number, default: 1 },
     name:    { type: String, required: true, trim: true },
     pages:   { type: Array as any, default: [] },
   },

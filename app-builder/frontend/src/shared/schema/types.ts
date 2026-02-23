@@ -1,7 +1,7 @@
 // Schema-first types (no React imports)
 
 // © 2025 Preston Willis. All rights reserved.
-export type BlockType = 'hero' | 'text' | 'image';
+export type BlockType = 'hero' | 'text' | 'navButton';
 
 export type Block<Props = Record<string, any>> = {
   id: string;
@@ -17,6 +17,7 @@ export type Page = {
 };
 
 export type Project = {
+  schemaVersion: number;
   id: string;
   name: string;
   pages: Page[];

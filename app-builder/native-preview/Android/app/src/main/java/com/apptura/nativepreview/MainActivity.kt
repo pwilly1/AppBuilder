@@ -50,8 +50,8 @@ class MainActivity : ComponentActivity() {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     val scope = rememberCoroutineScope()
 
-                    // For Android emulator to reach your host machine.
-                    // If you run on a physical device, change this to your computer's LAN IP.
+                    // For Android emulator to reach host machine.
+                    // If run on a physical device, change this to computer's LAN IP.
                     val baseUrl = "http://10.0.2.2:3000"
                     val isProbablyEmulator = remember {
                         Build.FINGERPRINT.contains("generic") ||

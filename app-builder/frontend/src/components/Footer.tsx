@@ -1,6 +1,4 @@
 // © 2025 Preston Willis. All rights reserved.
-import React from 'react'
-
 export default function Footer() {
   return (
     <footer className="w-full border-t border-slate-200 bg-white text-slate-600">

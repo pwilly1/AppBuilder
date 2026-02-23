@@ -5,6 +5,7 @@ import { getProject, updateProject, createProject, getToken, listProjects } from
 
 export default function useProject(setAuthed: (a: boolean) => void) {
   const initialProject: Project = {
+    schemaVersion: 1,
     id: 'proj1',
     name: 'My App',
     pages: [
@@ -152,6 +153,7 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     if (!full.pages) {
       full = await getProject(proj.id)
     }
+    if (!full.schemaVersion) full.schemaVersion = 1
     if (!full.pages || full.pages.length === 0) {
       const id = crypto.randomUUID()
       full.pages = [{ id, title: 'Home', path: '/home', blocks: [] }]

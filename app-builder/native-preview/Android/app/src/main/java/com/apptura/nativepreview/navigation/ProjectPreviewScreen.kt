@@ -43,7 +43,10 @@ fun ProjectPreviewScreen(project: Project) {
             } else {
                 val page = pages[pageIndex.value]
                 page.blocks.forEach { block ->
-                    BlockRenderer(block)
+                    BlockRenderer(block) { targetPageId ->
+                        val idx = pages.indexOfFirst { it.id == targetPageId }
+                        if (idx >= 0) pageIndex.value = idx
+                    }
                 }
             }
         }

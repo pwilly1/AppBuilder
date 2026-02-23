@@ -1,5 +1,4 @@
 // © 2025 Preston Willis. All rights reserved.
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 
 type Props = {

@@ -11,12 +11,14 @@ type DraggableProps = {
   block: Block
   index: number
   containerRef: React.RefObject<HTMLDivElement | null>
+  previewMode?: boolean
+  onNavigate?: (pageId: string) => void
   onSelect?: (b: Block) => void
   onUpdate?: (b: Block) => void
   onSnapChange?: (snap: { h: boolean; v: boolean }) => void
 }
 
-function DraggableBlock({ block, index, containerRef, onSelect, onUpdate, onSnapChange }: DraggableProps) {
+function DraggableBlock({ block, index, containerRef, previewMode, onNavigate, onSelect, onUpdate, onSnapChange }: DraggableProps) {
   const elRef = useRef<HTMLDivElement | null>(null)
   const [dragging, setDragging] = useState(false)
   const [startPt, setStartPt] = useState<{x:number,y:number}>({ x: 0, y: 0 })
@@ -33,6 +35,7 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate, onSnap
   }, [block.props?.x, block.props?.y])
 
   function begin(e: React.PointerEvent) {
+    if (previewMode) return
     const target = e.currentTarget as Element
     ;(target as any).setPointerCapture?.(e.pointerId)
     setStartPt({ x: e.clientX, y: e.clientY })
@@ -44,6 +47,7 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate, onSnap
   }
 
   function move(e: React.PointerEvent) {
+    if (previewMode) return
     if (!dragging) return
     const container = containerRef.current
     if (!container) return
@@ -83,6 +87,7 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate, onSnap
   }
 
   function end(e: React.PointerEvent) {
+    if (previewMode) return
     if (!dragging) return
     const target = e.currentTarget as Element
     ;(target as any).releasePointerCapture?.(e.pointerId)
@@ -101,19 +106,19 @@ function DraggableBlock({ block, index, containerRef, onSelect, onUpdate, onSnap
   return (
     <div
       ref={elRef}
-      className="absolute cursor-grab active:cursor-grabbing select-none"
+      className={previewMode ? 'absolute select-none' : 'absolute cursor-grab active:cursor-grabbing select-none'}
       style={{ transform: `translate(${pos.x}px, ${pos.y}px)`, zIndex: dragging ? 100 : 'auto' }}
-      onPointerDown={begin}
-      onPointerMove={move}
-      onPointerUp={end}
-      onPointerCancel={end}
+      onPointerDown={previewMode ? undefined : begin}
+      onPointerMove={previewMode ? undefined : move}
+      onPointerUp={previewMode ? undefined : end}
+      onPointerCancel={previewMode ? undefined : end}
     >
-      <BlockRenderer block={block} />
+      <BlockRenderer block={block} onNavigate={previewMode ? onNavigate : undefined} />
     </div>
   )
 }
 
-export function PageRenderer({ page, onSelectBlock, onReorder: _onReorder, onUpdateBlock }: { page: Page; onSelectBlock?: (b: Block) => void; onReorder?: (newBlocks: Block[]) => void; onUpdateBlock?: (b: Block) => void }) {
+export function PageRenderer({ page, previewMode, onNavigate, onSelectBlock, onReorder: _onReorder, onUpdateBlock }: { page: Page; previewMode?: boolean; onNavigate?: (pageId: string) => void; onSelectBlock?: (b: Block) => void; onReorder?: (newBlocks: Block[]) => void; onUpdateBlock?: (b: Block) => void }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [showHGuide, setShowHGuide] = useState(false)
   const [showVGuide, setShowVGuide] = useState(false)
@@ -123,16 +128,16 @@ export function PageRenderer({ page, onSelectBlock, onReorder: _onReorder, onUpd
       <div
         ref={containerRef}
         className="phone-frame bg-white border border-slate-100 rounded-xl p-4 shadow-sm relative"
-        style={{ minHeight: 640, touchAction: 'none' }}
+        style={{ minHeight: 640, touchAction: previewMode ? 'auto' : 'none' }}
       >
         {/* Snap assist guides */}
-        {showHGuide ? (
+        {!previewMode && showHGuide ? (
           <div
             className="absolute left-0 right-0 border-t border-dashed border-sky-400"
             style={{ top: '50%' }}
           />
         ) : null}
-        {showVGuide ? (
+        {!previewMode && showVGuide ? (
           <div
             className="absolute top-0 bottom-0 border-l border-dashed border-sky-400"
             style={{ left: '50%' }}
@@ -144,9 +149,12 @@ export function PageRenderer({ page, onSelectBlock, onReorder: _onReorder, onUpd
             block={b}
             index={i}
             containerRef={containerRef}
-            onSelect={onSelectBlock}
-            onUpdate={onUpdateBlock}
+            previewMode={previewMode}
+            onNavigate={onNavigate}
+            onSelect={previewMode ? undefined : onSelectBlock}
+            onUpdate={previewMode ? undefined : onUpdateBlock}
             onSnapChange={({ h, v }) => {
+              if (previewMode) return
               setShowHGuide(v)
               setShowVGuide(h)
             }}

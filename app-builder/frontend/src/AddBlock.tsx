@@ -45,6 +45,9 @@ export function AddBlock({ onAdd }: { onAdd: (b: Block)=>void }) {
             <button className="btn bg-slate-900 text-white hover:bg-slate-800" onClick={()=>onAdd(createBlock('text', { value:'New text' }))}>
               Text
             </button>
+            <button className="btn bg-slate-900 text-white hover:bg-slate-800" onClick={()=>onAdd(createBlock('navButton', { label:'Go', toPageId:'' }))}>
+              Nav Button
+            </button>
           </div>
         </CollapsibleSection>
         {/* Future folders */}

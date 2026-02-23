@@ -3,7 +3,9 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import type { Block } from '../shared/schema/types';
 
-export default function Inspector({ block, onSave, onClose, onDelete }: { block?: Block | null; onSave?: (b: Block) => void; onClose?: () => void; onDelete?: (id: string) => void }) {
+type PageLite = { id: string; title?: string; path?: string }
+
+export default function Inspector({ block, pages, onSave, onClose, onDelete }: { block?: Block | null; pages?: PageLite[]; onSave?: (b: Block) => void; onClose?: () => void; onDelete?: (id: string) => void }) {
   const { register, handleSubmit, reset } = useForm({ defaultValues: block?.props || {} });
 
   React.useEffect(() => {
@@ -50,6 +52,24 @@ export default function Inspector({ block, onSave, onClose, onDelete }: { block?
             <input className="w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('subhead')} />
             <label className="text-sm font-medium text-slate-800">Headline size (px)</label>
             <input type="number" className="w-24 border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('headlineSize')} />
+          </>
+        )}
+
+        {block.type === 'navButton' && (
+          <>
+            <label className="text-sm font-medium text-slate-800">Label</label>
+            <input className="w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('label')} />
+
+            <label className="text-sm font-medium text-slate-800">Target page</label>
+            <select className="w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('toPageId')}>
+              <option value="">Select a page…</option>
+              {(pages || []).map((pg) => (
+                <option key={pg.id} value={pg.id}>
+                  {pg.title || pg.id}
+                </option>
+              ))}
+            </select>
+            <div className="text-xs text-slate-500">This will switch to the selected page at runtime.</div>
           </>
         )}
         <div className="mt-2">

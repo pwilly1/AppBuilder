@@ -4,6 +4,7 @@ import { PageRenderer } from '../PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'
+import { useState } from 'react'
 
 type Props = {
   page: any
@@ -24,6 +25,7 @@ type Props = {
 
 export default function EditorLayout(props: Props) {
   const { page, pages = [], selectedPageId, addBlock, setSelectedBlock, editBlock, deleteBlock, onReorder, selectedBlock, addPage, selectPage, renamePage, deletePage } = props as any
+  const [previewMode, setPreviewMode] = useState(false)
 
   return (
     <>
@@ -49,9 +51,28 @@ export default function EditorLayout(props: Props) {
 
       <section className="overflow-auto">
         <div className="rounded-3xl bg-gradient-to-br from-slate-900/60 via-slate-800/50 to-slate-700/40 border border-white/10 shadow-lg p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm text-white/70">{previewMode ? 'Preview mode' : 'Edit mode'}</div>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                const next = !previewMode
+                setPreviewMode(next)
+                if (next) setSelectedBlock(null)
+              }}
+            >
+              {previewMode ? 'Edit' : 'Preview'}
+            </button>
+          </div>
           {page ? (
             <PageRenderer
               page={page}
+              previewMode={previewMode}
+              onNavigate={(targetPageId: string) => {
+                if (!previewMode) return
+                selectPage?.(targetPageId)
+              }}
               onSelectBlock={(b: any) => setSelectedBlock(b)}
               onUpdateBlock={editBlock}
               onReorder={(newBlocks: any[]) => onReorder(newBlocks)}
@@ -69,6 +90,7 @@ export default function EditorLayout(props: Props) {
         <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-sm p-4">
           <Inspector
             block={selectedBlock}
+            pages={pages}
             onSave={(b: any) => {
               setSelectedBlock(null)
               editBlock(b)

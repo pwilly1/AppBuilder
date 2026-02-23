@@ -2,7 +2,7 @@
 // Block registry with defaults and factories (no React imports)
 import type { BlockType, Block } from './types'
 
-export const BlockRegistry: Record<string, { displayName: string; defaultProps: Record<string, any> }> = {
+export const BlockRegistry: Record<BlockType, { displayName: string; defaultProps: Record<string, any> }> = {
   hero: {
     displayName: 'Hero',
     defaultProps: { headline: 'Headline', subhead: '' },
@@ -10,6 +10,10 @@ export const BlockRegistry: Record<string, { displayName: string; defaultProps: 
   text: {
     displayName: 'Text',
     defaultProps: { value: 'Text', fontSize: 16 },
+  },
+  navButton: {
+    displayName: 'Nav Button',
+    defaultProps: { label: 'Go', toPageId: '' },
   },
 }
 

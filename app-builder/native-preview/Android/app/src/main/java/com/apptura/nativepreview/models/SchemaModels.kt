@@ -33,6 +33,7 @@ data class Page(
 
 @Serializable
 data class Project(
+    val schemaVersion: Int? = null,
     val id: String? = null,
     val name: String? = null,
     val pages: List<Page> = emptyList()
