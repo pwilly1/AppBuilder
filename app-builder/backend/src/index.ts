@@ -2,7 +2,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import { MONGO_URI, PORT } from "./config/index.js";
-import { AuthController } from './controllers/AuthController.js';
+import { AuthController } from './controllers/authController.js';
 import {AuthService} from './services/AuthService.js';
 import { MongoUserRepository } from './repositories/UserRepository.js';
 import {SessionManager} from './services/SessionManager.js';

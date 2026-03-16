@@ -1,5 +1,8 @@
 import jwt from 'jsonwebtoken';
-import { MONGO_URI, JWT_SECRET } from '../config/index.js';
+import type { SignOptions } from 'jsonwebtoken';
+import { JWT_SECRET } from '../config/index.js';
+
+type SessionExpiry = NonNullable<SignOptions['expiresIn']>;
 
 export interface SessionPayload {
   sub: string;    // the user ID
@@ -10,11 +13,11 @@ export interface SessionPayload {
 export class SessionManager {
   private static session: SessionManager;
   private readonly secret: string;
-  private readonly expiresIn: string;
+  private readonly expiresIn: SessionExpiry;
 
   private constructor() {
     this.secret = JWT_SECRET;
-    this.expiresIn = process.env.JWT_EXPIRES_IN || '1h';
+    this.expiresIn = (process.env.JWT_EXPIRES_IN as SessionExpiry | undefined) ?? '1h';
 
   }
 
@@ -26,11 +29,11 @@ export class SessionManager {
   }
 
   public createSession(userId: string): string {
-    return jwt.sign({userId}, this.secret, { expiresIn: '1h' });
+    return jwt.sign({ userId }, this.secret, { expiresIn: this.expiresIn });
   }
 
   public createGuestSession(GuestID : string): string {
-    return jwt.sign(GuestID, this.secret, { expiresIn: '1h'});
+    return jwt.sign({ userId: GuestID }, this.secret, { expiresIn: this.expiresIn });
   }
 
 public verify(token: string): SessionPayload {

@@ -1,4 +1,4 @@
-# ─── Logs
+# Logs
 logs/
 *.log
 npm-debug.log*
@@ -7,14 +7,15 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# ─── Dependencies
+# Dependencies
 **/node_modules/
 
-# ─── Build outputs
+# Build outputs
 dist/
 dist-ssr/
+**/.build/
 
-# ─── Android / Gradle (native-preview)
+# Android / Gradle (native-preview)
 **/.gradle/
 **/local.properties
 **/build/
@@ -28,30 +29,30 @@ dist-ssr/
 **/*.jks
 **/*.keystore
 
-# ─── Local env files
+# Local env files
 *.local
 .env
 .env.*.local
 
-# ─── Lockfiles 
+# Lockfiles
 package-lock.json
 yarn.lock
 
-# ─── Editor directories & files
+# Editor directories & files
 .vscode/
 !.vscode/extensions.json
 .idea/
 
-# ─── OS files
+# OS files
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ─── Visual Studio / Windows
+# Visual Studio / Windows
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 
-# ─── Swap files
+# Swap files
 *.sw?

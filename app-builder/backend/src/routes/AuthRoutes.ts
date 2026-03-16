@@ -1,6 +1,6 @@
 // © 2025 Preston Willis. All rights reserved.
 import { Router } from 'express';
-import { AuthController } from '../controllers/AuthController.js'; 
+import { AuthController } from '../controllers/authController.js'; 
 import { requireAuth } from '../middleware/auth.js';
 
 export function makeAuthRoutes(ctrl: AuthController) {
