@@ -9,6 +9,7 @@ const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(ma
 
 type DraggableProps = {
   block: Block
+  projectId?: string
   index: number
   containerRef: React.RefObject<HTMLDivElement | null>
   previewMode?: boolean
@@ -18,7 +19,7 @@ type DraggableProps = {
   onSnapChange?: (snap: { h: boolean; v: boolean }) => void
 }
 
-function DraggableBlock({ block, index, containerRef, previewMode, onNavigate, onSelect, onUpdate, onSnapChange }: DraggableProps) {
+function DraggableBlock({ block, projectId, index, containerRef, previewMode, onNavigate, onSelect, onUpdate, onSnapChange }: DraggableProps) {
   const elRef = useRef<HTMLDivElement | null>(null)
   const [dragging, setDragging] = useState(false)
   const [startPt, setStartPt] = useState<{x:number,y:number}>({ x: 0, y: 0 })
@@ -113,12 +114,17 @@ function DraggableBlock({ block, index, containerRef, previewMode, onNavigate, o
       onPointerUp={previewMode ? undefined : end}
       onPointerCancel={previewMode ? undefined : end}
     >
-      <BlockRenderer block={block} onNavigate={previewMode ? onNavigate : undefined} />
+      <BlockRenderer
+        block={block}
+        projectId={projectId}
+        previewMode={previewMode}
+        onNavigate={previewMode ? onNavigate : undefined}
+      />
     </div>
   )
 }
 
-export function PageRenderer({ page, previewMode, onNavigate, onSelectBlock, onReorder: _onReorder, onUpdateBlock }: { page: Page; previewMode?: boolean; onNavigate?: (pageId: string) => void; onSelectBlock?: (b: Block) => void; onReorder?: (newBlocks: Block[]) => void; onUpdateBlock?: (b: Block) => void }) {
+export function PageRenderer({ page, projectId, previewMode, onNavigate, onSelectBlock, onReorder: _onReorder, onUpdateBlock }: { page: Page; projectId?: string; previewMode?: boolean; onNavigate?: (pageId: string) => void; onSelectBlock?: (b: Block) => void; onReorder?: (newBlocks: Block[]) => void; onUpdateBlock?: (b: Block) => void }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [showHGuide, setShowHGuide] = useState(false)
   const [showVGuide, setShowVGuide] = useState(false)
@@ -147,6 +153,7 @@ export function PageRenderer({ page, previewMode, onNavigate, onSelectBlock, onR
           <DraggableBlock
             key={b.id}
             block={b}
+            projectId={projectId}
             index={i}
             containerRef={containerRef}
             previewMode={previewMode}

@@ -1,4 +1,4 @@
-// Â© 2025 Preston Willis. All rights reserved.
+// © 2025 Preston Willis. All rights reserved.
 import React, { useState } from 'react'
 
 import Landing from './components/Landing'
@@ -50,7 +50,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen py-8 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-slate-100 flex flex-col">
+      <div className="flex min-h-screen flex-col text-slate-900">
         <AppContent
           authed={authed}
           setAuthed={setAuthed}
@@ -117,7 +117,6 @@ function AppContent(props: any) {
     saveError,
   } = props
 
-  // keyboard shortcuts for undo/redo
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const mod = e.ctrlKey || e.metaKey
@@ -187,6 +186,7 @@ function AppContent(props: any) {
             path="/editor"
             element={(
               <EditorLayout
+                projectId={project?.id}
                 page={page}
                 pages={project?.pages || []}
                 selectedPageId={selectedPageId}
@@ -211,4 +211,3 @@ function AppContent(props: any) {
     </>
   )
 }
-

@@ -64,3 +64,30 @@ export function deleteProject(id: string) {
 export function getProject(id: string) {
   return request(`/projects/${id}`);
 }
+
+export type ProjectFormSubmission = {
+  id: string;
+  blockId: string;
+  data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    message?: string;
+  };
+  submittedAt: string;
+};
+
+export function submitPublicProjectForm(
+  projectId: string,
+  blockId: string,
+  data: { name?: string; email?: string; phone?: string; message?: string }
+) {
+  return request(`/public/projects/${projectId}/forms/${blockId}/submissions`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export function listProjectFormSubmissions(projectId: string, blockId: string) {
+  return request(`/projects/${projectId}/forms/${blockId}/submissions`) as Promise<ProjectFormSubmission[]>;
+}

@@ -7,7 +7,7 @@ import {AuthService} from './services/AuthService.js';
 import { MongoUserRepository } from './repositories/UserRepository.js';
 import {SessionManager} from './services/SessionManager.js';
 import { makeAuthRoutes } from './routes/AuthRoutes.js';
-import { makeProjectRoutes } from './routes/ProjectRoutes.js';
+import { makeProjectRoutes, makePublicProjectRoutes } from './routes/ProjectRoutes.js';
 
 
 
@@ -28,6 +28,7 @@ app.use((req, res, next) => {
 });
 app.use('/auth', makeAuthRoutes(auth));
 app.use('/projects', makeProjectRoutes());
+app.use('/public', makePublicProjectRoutes());
 app.get('/', (_, res) => {
   res.send(' API running');
 });

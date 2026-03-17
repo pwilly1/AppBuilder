@@ -1,7 +1,13 @@
 // Schema-first types (no React imports)
 
 // © 2025 Preston Willis. All rights reserved.
-export type BlockType = 'hero' | 'text' | 'navButton';
+export type BlockType =
+  | 'hero'
+  | 'text'
+  | 'navButton'
+  | 'servicesList'
+  | 'contactForm'
+  | 'imageGallery';
 
 export type Block<Props = Record<string, any>> = {
   id: string;

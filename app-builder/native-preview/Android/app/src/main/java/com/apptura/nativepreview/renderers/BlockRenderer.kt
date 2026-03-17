@@ -10,6 +10,9 @@ fun BlockRenderer(block: Block, onNavigate: ((String) -> Unit)? = null) {
         "hero" -> HeroView(block)
         "text" -> TextView(block)
         "navButton" -> NavButtonView(block, onNavigate)
+        "servicesList" -> ServicesListView(block)
+        "contactForm" -> ContactFormView(block)
+        "imageGallery" -> ImageGalleryView(block)
         else -> Unit
     }
 }

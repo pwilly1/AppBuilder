@@ -10,11 +10,24 @@ export interface ProjectPage {
   blocks?: any[];
 }
 
+export interface ContactFormSubmission {
+  id: string;
+  blockId: string;
+  data: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    message?: string;
+  };
+  submittedAt: Date;
+}
+
 export interface Project extends Document {
   ownerId: string;
   schemaVersion?: number;
   name: string;
   pages?: ProjectPage[];
+  formSubmissions?: ContactFormSubmission[];
   updatedAt: Date;
   createdAt: Date;
 }
@@ -25,6 +38,7 @@ const ProjectSchema = new Schema<Project>(
     schemaVersion: { type: Number, default: 1 },
     name:    { type: String, required: true, trim: true },
     pages:   { type: Array as any, default: [] },
+    formSubmissions: { type: Array as any, default: [] },
   },
   { timestamps: true, versionKey: false }
 );

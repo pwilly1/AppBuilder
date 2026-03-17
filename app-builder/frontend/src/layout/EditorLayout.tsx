@@ -1,5 +1,4 @@
-// Â© 2025 Preston Willis. All rights reserved.
-// jsx runtime handles React import
+// © 2025 Preston Willis. All rights reserved.
 import { PageRenderer } from '../PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
@@ -7,6 +6,7 @@ import PagesPanel from '../components/PagesPanel'
 import { useState } from 'react'
 
 type Props = {
+  projectId?: string
   page: any
   pages?: Array<{ id: string; title?: string; path?: string }>
   selectedPageId?: string
@@ -24,14 +24,13 @@ type Props = {
 }
 
 export default function EditorLayout(props: Props) {
-  const { page, pages = [], selectedPageId, addBlock, setSelectedBlock, editBlock, deleteBlock, onReorder, selectedBlock, addPage, selectPage, renamePage, deletePage } = props as any
+  const { projectId, page, pages = [], selectedPageId, addBlock, setSelectedBlock, editBlock, deleteBlock, onReorder, selectedBlock, addPage, selectPage, renamePage, deletePage } = props as any
   const [previewMode, setPreviewMode] = useState(false)
 
   return (
     <>
-      {/* Restore original structure/classes so existing CSS/layout rules still apply */}
       <aside className="sidebar-hidden-mobile">
-        <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-sm p-4">
+        <div className="shell-panel rounded-[1.75rem] p-4">
           <div className="mb-4">
             <PagesPanel
               pages={pages}
@@ -42,17 +41,23 @@ export default function EditorLayout(props: Props) {
               onDelete={(id) => deletePage?.(id)}
             />
           </div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-white/90">Blocks</h3>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Library</div>
+              <h3 className="text-sm font-semibold text-slate-900">Blocks</h3>
+            </div>
           </div>
           <AddBlock onAdd={addBlock} />
         </div>
       </aside>
 
       <section className="overflow-auto">
-        <div className="rounded-3xl bg-gradient-to-br from-slate-900/60 via-slate-800/50 to-slate-700/40 border border-white/10 shadow-lg p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-sm text-white/70">{previewMode ? 'Preview mode' : 'Edit mode'}</div>
+        <div className="shell-panel rounded-[2rem] p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Canvas</div>
+              <div className="text-sm font-semibold text-slate-900">{previewMode ? 'Preview mode' : 'Edit mode'}</div>
+            </div>
             <button
               type="button"
               className="btn"
@@ -68,6 +73,7 @@ export default function EditorLayout(props: Props) {
           {page ? (
             <PageRenderer
               page={page}
+              projectId={projectId}
               previewMode={previewMode}
               onNavigate={(targetPageId: string) => {
                 if (!previewMode) return
@@ -78,16 +84,16 @@ export default function EditorLayout(props: Props) {
               onReorder={(newBlocks: any[]) => onReorder(newBlocks)}
             />
           ) : (
-            <div className="text-center py-12">
-              <h3 className="text-lg font-medium text-white/90">No page selected</h3>
-              <p className="text-sm text-white/60">Create a page or open a project with pages to start editing.</p>
+            <div className="py-12 text-center">
+              <h3 className="text-lg font-medium text-slate-900">No page selected</h3>
+              <p className="text-sm text-slate-500">Create a page or open a project with pages to start editing.</p>
             </div>
           )}
         </div>
       </section>
 
       <aside>
-        <div className="rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 shadow-sm p-4">
+        <div className="shell-panel rounded-[1.75rem] p-4">
           <Inspector
             block={selectedBlock}
             pages={pages}
