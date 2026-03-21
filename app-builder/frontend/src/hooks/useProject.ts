@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-// Â© 2025 Preston Willis. All rights reserved.
+// © 2025 Preston Willis. All rights reserved.
 import type { Project, Block } from '../shared/schema/types'
 import { getProject, updateProject, createProject, getToken, listProjects } from '../api'
+
+const LAST_PROJECT_ID_KEY = 'app_last_project_id'
 
 export default function useProject(setAuthed: (a: boolean) => void) {
   const initialProject: Project = {
@@ -16,7 +18,7 @@ export default function useProject(setAuthed: (a: boolean) => void) {
   const [project, setProject] = useState<Project>(initialProject)
   const [history, setHistory] = useState<Project[]>(() => [JSON.parse(JSON.stringify(initialProject))])
   const [historyIndex, setHistoryIndex] = useState<number>(0)
-  const [selectedPageId, setSelectedPageId] = useState<string>(() => project.pages?.[0]?.id ?? '')
+  const [selectedPageId, setSelectedPageId] = useState<string>(() => initialProject.pages?.[0]?.id ?? '')
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
 
   const [isSaving, setIsSaving] = useState<boolean>(false)
@@ -25,9 +27,8 @@ export default function useProject(setAuthed: (a: boolean) => void) {
   const autosaveTimer = useRef<number | null>(null)
   const isFirstMount = useRef<boolean>(true)
 
-  // derived
   const page = project.pages.find((p) => p.id === selectedPageId)
-  // utils
+
   function slugify(input: string): string {
     return input
       .toLowerCase()
@@ -41,15 +42,44 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     const baseSlug = base || 'page'
     let candidate = `/${baseSlug}`
     let n = 2
-    const taken = new Set(pages.filter(pg => pg.id !== excludeId).map(pg => pg.path))
+    const taken = new Set(pages.filter((pg) => pg.id !== excludeId).map((pg) => pg.path))
     while (taken.has(candidate)) {
       candidate = `/${baseSlug}-${n++}`
     }
     return candidate
   }
 
+  function rememberProjectId(projectId?: string | null) {
+    try {
+      if (projectId && /^[0-9a-fA-F]{24}$/.test(projectId)) {
+        localStorage.setItem(LAST_PROJECT_ID_KEY, projectId)
+      } else {
+        localStorage.removeItem(LAST_PROJECT_ID_KEY)
+      }
+    } catch {}
+  }
 
-  // history helpers
+  function normalizeProject(full: any) {
+    const next = { ...full }
+    if (!next.schemaVersion) next.schemaVersion = 1
+    if (!next.pages || next.pages.length === 0) {
+      const id = crypto.randomUUID()
+      next.pages = [{ id, title: 'Home', path: '/home', blocks: [] }]
+    }
+    return next
+  }
+
+  function applyLoadedProject(full: any) {
+    const normalized = normalizeProject(full)
+    setProject(normalized)
+    setSelectedPageId(normalized.pages[0].id)
+    const snapshot = JSON.parse(JSON.stringify(normalized))
+    setHistory([snapshot])
+    setHistoryIndex(0)
+    rememberProjectId(normalized.id)
+    return normalized
+  }
+
   function applyChange(mutator: (p: Project) => Project) {
     setProject((current) => {
       const updated = mutator(JSON.parse(JSON.stringify(current)))
@@ -93,7 +123,6 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     })
   }
 
-  // CRUD helpers
   const addBlock = (b: Block) => {
     applyChange((p) => ({
       ...p,
@@ -101,7 +130,6 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     }))
   }
 
-  // Pages API
   function selectPage(id: string) {
     setSelectedPageId(id)
   }
@@ -137,10 +165,9 @@ export default function useProject(setAuthed: (a: boolean) => void) {
   function deletePage(id: string) {
     let nextSelected: string | null = null
     applyChange((p) => {
-      if (p.pages.length <= 1) return p // guard: cannot delete last page
+      if (p.pages.length <= 1) return p
       const idx = p.pages.findIndex((pg) => pg.id === id)
       const remaining = p.pages.filter((pg) => pg.id !== id)
-      // choose neighbor or first
       const pickIndex = Math.min(idx, Math.max(0, remaining.length - 1))
       nextSelected = remaining[pickIndex]?.id ?? remaining[0].id
       return { ...p, pages: remaining }
@@ -153,19 +180,17 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     if (!full.pages) {
       full = await getProject(proj.id)
     }
-    if (!full.schemaVersion) full.schemaVersion = 1
-    if (!full.pages || full.pages.length === 0) {
-      const id = crypto.randomUUID()
-      full.pages = [{ id, title: 'Home', path: '/home', blocks: [] }]
+    const normalized = applyLoadedProject(full)
+
+    if (navigate) {
+      const isObjectIdLike = typeof normalized.id === 'string' && /^[0-9a-fA-F]{24}$/.test(normalized.id)
+      navigate(isObjectIdLike ? `/editor/${normalized.id}` : '/editor')
     }
+  }
 
-    setProject(full)
-    setSelectedPageId(full.pages[0].id)
-    const snapshot = JSON.parse(JSON.stringify(full))
-    setHistory([snapshot])
-    setHistoryIndex(0)
-
-    if (navigate) navigate('/editor')
+  async function loadProjectById(projectId: string) {
+    const full = await getProject(projectId)
+    return applyLoadedProject(full)
   }
 
   function editBlock(updated: Block) {
@@ -190,14 +215,16 @@ export default function useProject(setAuthed: (a: boolean) => void) {
       if (!isObjectIdLike) {
         const created: any = await createProject(project)
         setProject(created)
+        rememberProjectId(created?.id)
         setLastSavedAt(Date.now())
         return
       }
       await updateProject(project.id, project)
+      rememberProjectId(project.id)
       setLastSavedAt(Date.now())
     } catch (err: any) {
       if (err?.status === 403) {
-        try { localStorage.removeItem('app_token') } catch { }
+        try { localStorage.removeItem('app_token') } catch {}
         setAuthed(false)
         return
       }
@@ -212,13 +239,14 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     const isObjectIdLike = typeof proj.id === 'string' && /^[0-9a-fA-F]{24}$/.test(proj.id)
     if (!isObjectIdLike) {
       const created: any = await createProject(proj)
+      rememberProjectId(created?.id)
       return created
     }
     await updateProject(proj.id, proj)
+    rememberProjectId(proj.id)
     return proj
   }
 
-  // autosave
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false
@@ -250,7 +278,6 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     }))
   }
 
-  // token check (mirror of previous behavior)
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -259,8 +286,8 @@ export default function useProject(setAuthed: (a: boolean) => void) {
         await listProjects()
         if (mounted) setAuthed(true)
       } catch (err: any) {
-        if (err.message && err.message.toLowerCase().includes('unauthorized') || err.message === 'Unauthorized') {
-          try { localStorage.removeItem('app_token') } catch { }
+        if ((err.message && err.message.toLowerCase().includes('unauthorized')) || err.message === 'Unauthorized') {
+          try { localStorage.removeItem('app_token') } catch {}
         }
         if (mounted) setAuthed(false)
       }
@@ -282,6 +309,7 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     renamePage,
     deletePage,
     openProject,
+    loadProjectById,
     editBlock,
     deleteBlock,
     saveProject,

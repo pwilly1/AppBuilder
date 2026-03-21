@@ -38,7 +38,7 @@ export default function Header(props: Props) {
         </button>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {window.location.pathname === '/editor' ? (
+          {window.location.pathname.startsWith('/editor') ? (
             <>
               <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={undo} disabled={!canUndo}>
                 Undo
@@ -84,5 +84,3 @@ export default function Header(props: Props) {
     </header>
   )
 }
-
-

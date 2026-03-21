@@ -1,4 +1,4 @@
-// Â© 2025 Preston Willis. All rights reserved.
+// © 2025 Preston Willis. All rights reserved.
 import React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { Block } from '../shared/schema/types';
@@ -14,23 +14,47 @@ type InspectorProps = {
 };
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <label className="text-sm font-medium text-slate-800">{children}</label>;
+  return <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{children}</label>;
 }
 
 function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900 ${props.className ?? ''}`} />;
+  return <input {...props} className={`inspector-input ${props.className ?? ''}`} />;
 }
 
 function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} className={`w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900 ${props.className ?? ''}`} />;
+  return <textarea {...props} className={`inspector-input min-h-[96px] resize-y ${props.className ?? ''}`} />;
 }
 
 function ToggleInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`h-4 w-4 rounded border-slate-300 text-slate-900 ${props.className ?? ''}`} />;
+  return <input {...props} className={`inspector-toggle ${props.className ?? ''}`} />;
 }
 
-function ArrayCard({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">{children}</div>;
+function FormSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+  return (
+    <section className="editor-section">
+      <div className="mb-3">
+        <div className="editor-section-title">{title}</div>
+        {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
+      </div>
+      <div className="grid gap-3">{children}</div>
+    </section>
+  );
+}
+
+function ArrayCard({ title, children, onRemove }: { title: string; children: React.ReactNode; onRemove?: () => void }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="text-sm font-semibold text-slate-900">{title}</div>
+        {onRemove ? (
+          <button type="button" className="text-xs font-semibold uppercase tracking-[0.14em] text-red-600 hover:text-red-700" onClick={onRemove}>
+            Remove
+          </button>
+        ) : null}
+      </div>
+      <div className="grid gap-3">{children}</div>
+    </div>
+  );
 }
 
 export default function Inspector({ block, pages, onSave, onClose, onDelete }: InspectorProps) {
@@ -44,196 +68,242 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
 
   if (!block) {
     return (
-      <div className="card bg-white border border-slate-200 rounded-xl p-4">
-        <h4 className="text-lg font-semibold text-slate-900">Inspector</h4>
-        <p className="text-sm text-slate-500">Select a block to edit its properties.</p>
+      <div className="editor-section">
+        <div className="editor-section-title">Nothing selected</div>
+        <h4 className="mt-2 text-xl font-semibold text-slate-900">Choose a block on the canvas</h4>
+        <p className="mt-2 text-sm text-slate-500">Once selected, its content and settings will appear here for editing.</p>
       </div>
     );
   }
 
   const submit = (vals: any) => {
-    const props = { ...vals } as any;
+    const props = { ...(block.props as Record<string, any>), ...vals } as any;
     if (props.fontSize) props.fontSize = Number(props.fontSize);
     if (props.headlineSize) props.headlineSize = Number(props.headlineSize);
     if (props.columns) props.columns = Number(props.columns);
-    const updated: Block = { ...block, props };
-    onSave?.(updated);
+    onSave?.({ ...block, props });
   };
 
+  const rawScaleX = typeof (block.props as any)?.scaleX === 'number' ? Number((block.props as any).scaleX) : typeof (block.props as any)?.scale === 'number' ? Number((block.props as any).scale) : 1;
+  const rawScaleY = typeof (block.props as any)?.scaleY === 'number' ? Number((block.props as any).scaleY) : typeof (block.props as any)?.scale === 'number' ? Number((block.props as any).scale) : 1;
+  const hasCustomScale = Math.abs(rawScaleX - 1) > 0.001 || Math.abs(rawScaleY - 1) > 0.001;
+
   return (
-    <div className="card bg-white border border-slate-200 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h4 className="text-lg font-semibold text-slate-900">Inspector</h4>
-        <button className="text-sm text-slate-600 hover:text-slate-800" onClick={onClose}>Close</button>
+    <div className="grid gap-4">
+      <div className="editor-section">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="editor-section-title">Selected block</div>
+            <h4 className="mt-1 text-xl font-semibold text-slate-900">{block.type}</h4>
+            <p className="mt-1 text-sm text-slate-500">Block ID: {block.id}</p>
+            <p className="mt-1 text-sm text-slate-500">Width scale: {rawScaleX.toFixed(2)}x</p>
+            <p className="mt-1 text-sm text-slate-500">Height scale: {rawScaleY.toFixed(2)}x</p>
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            {hasCustomScale ? (
+              <button
+                type="button"
+                className="ghost-btn !px-3 !py-2 text-xs font-semibold"
+                onClick={() => {
+                  const nextProps = { ...(block.props as Record<string, any>) };
+                  delete nextProps.scale;
+                  delete nextProps.scaleX;
+                  delete nextProps.scaleY;
+                  onSave?.({ ...block, props: nextProps });
+                }}
+              >
+                Reset Size
+              </button>
+            ) : null}
+            <button className="ghost-btn !px-3 !py-2 text-xs font-semibold" onClick={onClose}>Close</button>
+          </div>
+        </div>
       </div>
-      <p className="text-sm text-slate-600 mb-3">Editing block: <strong className="text-slate-900">{block.type}</strong></p>
-      <form onSubmit={handleSubmit(submit)} className="grid gap-3">
+
+      <form onSubmit={handleSubmit(submit)} className="grid gap-4">
         {block.type === 'text' && (
-          <>
-            <FieldLabel>Text</FieldLabel>
-            <TextArea {...register('value')} />
-            <FieldLabel>Font size (px)</FieldLabel>
-            <TextInput type="number" className="w-24" {...register('fontSize')} />
-          </>
+          <FormSection title="Content" description="Edit the text copy and its display size.">
+            <div className="grid gap-2">
+              <FieldLabel>Text</FieldLabel>
+              <TextArea {...register('value')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Font size (px)</FieldLabel>
+              <TextInput type="number" className="max-w-[120px]" {...register('fontSize')} />
+            </div>
+          </FormSection>
         )}
 
         {block.type === 'hero' && (
-          <>
-            <FieldLabel>Headline</FieldLabel>
-            <TextInput {...register('headline')} />
-            <FieldLabel>Subhead</FieldLabel>
-            <TextInput {...register('subhead')} />
-            <FieldLabel>Headline size (px)</FieldLabel>
-            <TextInput type="number" className="w-24" {...register('headlineSize')} />
-          </>
+          <FormSection title="Hero copy" description="Control the first headline users see on this page.">
+            <div className="grid gap-2">
+              <FieldLabel>Headline</FieldLabel>
+              <TextInput {...register('headline')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Subhead</FieldLabel>
+              <TextArea {...register('subhead')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Headline size (px)</FieldLabel>
+              <TextInput type="number" className="max-w-[120px]" {...register('headlineSize')} />
+            </div>
+          </FormSection>
         )}
 
         {block.type === 'navButton' && (
-          <>
-            <FieldLabel>Label</FieldLabel>
-            <TextInput {...register('label')} />
-
-            <FieldLabel>Target page</FieldLabel>
-            <select className="w-full border border-slate-300 rounded-md p-2 text-sm text-slate-900" {...register('toPageId')}>
-              <option value="">Select a page...</option>
-              {(pages || []).map((pg) => (
-                <option key={pg.id} value={pg.id}>
-                  {pg.title || pg.id}
-                </option>
-              ))}
-            </select>
-            <div className="text-xs text-slate-500">This will switch to the selected page at runtime.</div>
-          </>
+          <FormSection title="Navigation" description="Choose the label and where this button should take the user.">
+            <div className="grid gap-2">
+              <FieldLabel>Label</FieldLabel>
+              <TextInput {...register('label')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Target page</FieldLabel>
+              <select className="inspector-input" {...register('toPageId')}>
+                <option value="">Select a page...</option>
+                {(pages || []).map((page) => (
+                  <option key={page.id} value={page.id}>{page.title || page.id}</option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-slate-500">This button switches to the selected page in preview/runtime.</p>
+          </FormSection>
         )}
 
         {block.type === 'servicesList' && (
           <>
-            <FieldLabel>Section title</FieldLabel>
-            <TextInput {...register('title')} />
-            <div className="flex items-center justify-between mt-1">
-              <FieldLabel>Services</FieldLabel>
-              <button
-                type="button"
-                className="text-sm px-2 py-1 rounded-md bg-slate-900 text-white hover:bg-slate-800"
-                onClick={() => servicesArray.append({ name: 'New Service', description: '', price: '' })}
-              >
-                Add Service
-              </button>
-            </div>
-            <div className="grid gap-3">
-              {servicesArray.fields.map((field, index) => (
-                <ArrayCard key={field.id}>
-                  <div className="grid gap-2">
-                    <FieldLabel>Name</FieldLabel>
-                    <TextInput {...register(`items.${index}.name`)} />
-                    <FieldLabel>Description</FieldLabel>
-                    <TextArea rows={3} {...register(`items.${index}.description`)} />
-                    <FieldLabel>Price</FieldLabel>
-                    <TextInput {...register(`items.${index}.price`)} />
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        className="text-sm text-red-600 hover:text-red-700"
-                        onClick={() => servicesArray.remove(index)}
-                      >
-                        Remove
-                      </button>
+            <FormSection title="Section" description="Update the intro heading for this list.">
+              <div className="grid gap-2">
+                <FieldLabel>Section title</FieldLabel>
+                <TextInput {...register('title')} />
+              </div>
+            </FormSection>
+            <FormSection title="Services" description="Keep entries short and scannable.">
+              <div className="flex justify-end">
+                <button type="button" className="btn-sm" onClick={() => servicesArray.append({ name: 'New Service', description: '', price: '' })}>
+                  Add Service
+                </button>
+              </div>
+              <div className="grid gap-3">
+                {servicesArray.fields.map((field, index) => (
+                  <ArrayCard key={field.id} title={`Service ${index + 1}`} onRemove={() => servicesArray.remove(index)}>
+                    <div className="grid gap-2">
+                      <FieldLabel>Name</FieldLabel>
+                      <TextInput {...register(`items.${index}.name`)} />
                     </div>
-                  </div>
-                </ArrayCard>
-              ))}
-            </div>
+                    <div className="grid gap-2">
+                      <FieldLabel>Description</FieldLabel>
+                      <TextArea rows={3} {...register(`items.${index}.description`)} />
+                    </div>
+                    <div className="grid gap-2">
+                      <FieldLabel>Price</FieldLabel>
+                      <TextInput {...register(`items.${index}.price`)} />
+                    </div>
+                  </ArrayCard>
+                ))}
+              </div>
+            </FormSection>
           </>
         )}
 
         {block.type === 'contactForm' && (
           <>
-            <FieldLabel>Title</FieldLabel>
-            <TextInput {...register('title')} />
-            <FieldLabel>Subtitle</FieldLabel>
-            <TextArea rows={3} {...register('subtitle')} />
-            <FieldLabel>Destination email</FieldLabel>
-            <TextInput type="email" placeholder="owner@business.com" {...register('destinationEmail')} />
-            <FieldLabel>Submit label</FieldLabel>
-            <TextInput {...register('submitLabel')} />
-            <FieldLabel>Success message</FieldLabel>
-            <TextArea rows={3} {...register('successMessage')} />
+            <FormSection title="Form copy" description="Set the messaging customers see before they submit.">
+              <div className="grid gap-2">
+                <FieldLabel>Title</FieldLabel>
+                <TextInput {...register('title')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Subtitle</FieldLabel>
+                <TextArea rows={3} {...register('subtitle')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Submit label</FieldLabel>
+                <TextInput {...register('submitLabel')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Success message</FieldLabel>
+                <TextArea rows={3} {...register('successMessage')} />
+              </div>
+            </FormSection>
 
-            <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <label className="flex items-center gap-2 text-sm text-slate-800">
+            <FormSection title="Lead routing" description="Notifications go to this address after a successful submission.">
+              <div className="grid gap-2">
+                <FieldLabel>Destination email</FieldLabel>
+                <TextInput type="email" placeholder="owner@business.com" {...register('destinationEmail')} />
+              </div>
+            </FormSection>
+
+            <FormSection title="Visible fields" description="Decide which inputs appear in the form.">
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
                 <ToggleInput type="checkbox" {...register('showName')} />
                 Show name field
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-800">
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
                 <ToggleInput type="checkbox" {...register('showEmail')} />
                 Show email field
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-800">
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
                 <ToggleInput type="checkbox" {...register('showPhone')} />
                 Show phone field
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-800">
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
                 <ToggleInput type="checkbox" {...register('showMessage')} />
                 Show message field
               </label>
-            </div>
+            </FormSection>
           </>
         )}
 
         {block.type === 'imageGallery' && (
           <>
-            <FieldLabel>Section title</FieldLabel>
-            <TextInput {...register('title')} />
-            <FieldLabel>Columns</FieldLabel>
-            <TextInput type="number" min={1} max={3} className="w-24" {...register('columns')} />
-            <div className="flex items-center justify-between mt-1">
-              <FieldLabel>Images</FieldLabel>
-              <button
-                type="button"
-                className="text-sm px-2 py-1 rounded-md bg-slate-900 text-white hover:bg-slate-800"
-                onClick={() => galleryArray.append({ url: '', caption: 'New image' })}
-              >
-                Add Image
-              </button>
-            </div>
-            <div className="grid gap-3">
-              {galleryArray.fields.map((field, index) => (
-                <ArrayCard key={field.id}>
-                  <div className="grid gap-2">
-                    <FieldLabel>Image URL</FieldLabel>
-                    <TextInput {...register(`images.${index}.url`)} />
-                    <FieldLabel>Caption</FieldLabel>
-                    <TextInput {...register(`images.${index}.caption`)} />
-                    <div className="flex justify-end">
-                      <button
-                        type="button"
-                        className="text-sm text-red-600 hover:text-red-700"
-                        onClick={() => galleryArray.remove(index)}
-                      >
-                        Remove
-                      </button>
+            <FormSection title="Gallery settings" description="Control the gallery heading and layout density.">
+              <div className="grid gap-2">
+                <FieldLabel>Section title</FieldLabel>
+                <TextInput {...register('title')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Columns</FieldLabel>
+                <TextInput type="number" min={1} max={3} className="max-w-[120px]" {...register('columns')} />
+              </div>
+            </FormSection>
+            <FormSection title="Images" description="Add image URLs and short captions.">
+              <div className="flex justify-end">
+                <button type="button" className="btn-sm" onClick={() => galleryArray.append({ url: '', caption: 'New image' })}>
+                  Add Image
+                </button>
+              </div>
+              <div className="grid gap-3">
+                {galleryArray.fields.map((field, index) => (
+                  <ArrayCard key={field.id} title={`Image ${index + 1}`} onRemove={() => galleryArray.remove(index)}>
+                    <div className="grid gap-2">
+                      <FieldLabel>Image URL</FieldLabel>
+                      <TextInput {...register(`images.${index}.url`)} />
                     </div>
-                  </div>
-                </ArrayCard>
-              ))}
-            </div>
+                    <div className="grid gap-2">
+                      <FieldLabel>Caption</FieldLabel>
+                      <TextInput {...register(`images.${index}.caption`)} />
+                    </div>
+                  </ArrayCard>
+                ))}
+              </div>
+            </FormSection>
           </>
         )}
 
-        <div className="mt-2">
-          <button className="btn bg-slate-900 text-white hover:bg-slate-800" type="submit">Save</button>
+        <div className="editor-section flex items-center justify-between gap-3">
+          <button className="btn" type="submit">Save Changes</button>
           {onDelete ? (
             <button
               type="button"
-              className="ml-3 text-sm text-red-600 bg-white px-3 py-1 rounded-md border border-red-200 hover:bg-red-50"
+              className="ghost-btn !text-red-700"
               onClick={() => {
-                if (!block) return;
                 const ok = confirm('Delete this block?');
                 if (!ok) return;
                 onDelete(block.id);
               }}
             >
-              Delete
+              Delete Block
             </button>
           ) : null}
         </div>
@@ -241,3 +311,5 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
     </div>
   );
 }
+
+

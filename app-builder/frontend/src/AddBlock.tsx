@@ -29,32 +29,34 @@ function CollapsibleSection({ title, children, defaultOpen }: SectionProps) {
   )
 }
 
-const blockButton = 'btn-sm !justify-start !rounded-2xl !bg-white !px-4 !py-3 !text-slate-900 ring-1 ring-slate-200 hover:!bg-slate-50'
+const blockButton = 'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50'
 
-export function AddBlock({ onAdd }: { onAdd: (b: Block)=>void }) {
+function BlockEntry({ title, note, onClick }: { title: string; note: string; onClick: () => void }) {
+  return (
+    <button className={blockButton} onClick={onClick}>
+      <div>{title}</div>
+      <div className="mt-1 text-xs font-medium text-slate-500">{note}</div>
+    </button>
+  )
+}
+
+export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
   return (
     <div className="card">
       <div className="space-y-3">
-        <CollapsibleSection title="Blocks" defaultOpen>
+        <CollapsibleSection title="Core Content" defaultOpen>
           <div className="grid gap-2">
-            <button className={blockButton} onClick={()=>onAdd(createBlock('hero', { headline:'New Hero', subhead:'' }))}>
-              Hero
-            </button>
-            <button className={blockButton} onClick={()=>onAdd(createBlock('text', { value:'New text' }))}>
-              Text
-            </button>
-            <button className={blockButton} onClick={()=>onAdd(createBlock('navButton', { label:'Go', toPageId:'' }))}>
-              Nav Button
-            </button>
-            <button className={blockButton} onClick={()=>onAdd(createBlock('servicesList'))}>
-              Services List
-            </button>
-            <button className={blockButton} onClick={()=>onAdd(createBlock('contactForm'))}>
-              Contact Form
-            </button>
-            <button className={blockButton} onClick={()=>onAdd(createBlock('imageGallery'))}>
-              Image Gallery
-            </button>
+            <BlockEntry title="Hero" note="Intro headline and supporting copy" onClick={() => onAdd(createBlock('hero', { headline: 'New Hero', subhead: '' }))} />
+            <BlockEntry title="Text" note="Paragraphs or short body copy" onClick={() => onAdd(createBlock('text', { value: 'New text' }))} />
+            <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection title="Business Sections" defaultOpen>
+          <div className="grid gap-2">
+            <BlockEntry title="Services List" note="Pricing, packages, or offerings" onClick={() => onAdd(createBlock('servicesList'))} />
+            <BlockEntry title="Contact Form" note="Collect leads and customer requests" onClick={() => onAdd(createBlock('contactForm'))} />
+            <BlockEntry title="Image Gallery" note="Show work samples or photos" onClick={() => onAdd(createBlock('imageGallery'))} />
           </div>
         </CollapsibleSection>
       </div>

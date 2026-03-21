@@ -47,7 +47,7 @@
   }
 
   ::selection {
-    background: rgba(209, 107, 61, 0.22);
+    background: rgba(37, 99, 235, 0.22);
   }
 }
 
@@ -128,6 +128,84 @@
     background: rgba(23, 33, 45, 0.08);
     color: #314153;
   }
+
+  .field-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em];
+    color: rgba(232, 240, 255, 0.68);
+  }
+
+  .auth-tab {
+    @apply inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200;
+    color: rgba(226, 232, 240, 0.82);
+    background: transparent;
+  }
+
+  .auth-tab:hover {
+    color: #ffffff;
+  }
+
+  .auth-tab[data-active="true"] {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .auth-link {
+    @apply text-sm font-medium transition-colors duration-200;
+    color: rgba(147, 197, 253, 0.92);
+  }
+
+  .auth-link:hover {
+    color: #ffffff;
+  }
+
+  .editor-panel {
+    background: linear-gradient(180deg, rgba(248, 252, 255, 0.96) 0%, rgba(238, 245, 255, 0.92) 100%);
+    border: 1px solid rgba(53, 80, 128, 0.14);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(18px);
+  }
+
+  .editor-section {
+    @apply rounded-[1.4rem] border p-4;
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(53, 80, 128, 0.12);
+  }
+
+  .editor-section-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em];
+    color: rgba(54, 86, 136, 0.78);
+  }
+
+  .editor-kicker {
+    @apply text-xs font-medium;
+    color: var(--text-soft);
+  }
+
+  .editor-pill {
+    @apply inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em];
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--accent-deep);
+  }
+
+  .editor-ghost-surface {
+    @apply rounded-[1.4rem] border;
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(53, 80, 128, 0.1);
+  }
+
+  .inspector-input {
+    @apply w-full rounded-xl px-3 py-2.5 text-sm transition-colors duration-200 focus:outline-none focus:ring-2;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(84, 93, 104, 0.16);
+    color: var(--text-strong);
+    --tw-ring-color: rgba(37, 99, 235, 0.16);
+  }
+
+  .inspector-toggle {
+    @apply h-4 w-4 rounded border-slate-300;
+    accent-color: var(--accent);
+  }
 }
 
 .app-grid {
@@ -167,15 +245,53 @@
   width: 390px; /* typical phone preview width */
   height: 780px;
   border-radius: 32px;
-  overflow: auto;
+  overflow: hidden;
   -webkit-overflow-scrolling: touch;
   border: 10px solid rgba(18, 27, 37, 0.94);
   background: #fefbf5;
   box-shadow: 0 34px 68px rgba(15, 23, 32, 0.24);
 }
 
+.phone-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+}
+
+.editor-stage {
+  min-height: 860px;
+  border-radius: 2rem;
+  border: 1px solid rgba(53, 80, 128, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(232, 241, 255, 0.58) 100%),
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.08), transparent 36%);
+  position: relative;
+  overflow: hidden;
+}
+
+.editor-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+}
+
+.editor-stage > * {
+  position: relative;
+  z-index: 1;
+}
+
 @media (max-width: 900px) {
   .phone-frame { width: 100%; height: auto; border-radius: 18px; border-width: 6px; }
+  .editor-stage { min-height: auto; padding: 1rem; }
 }
 
 .drag-handle { cursor: grab; background: rgba(255, 251, 245, 0.9); border: 1px solid rgba(54, 67, 84, 0.08); }
