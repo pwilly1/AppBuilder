@@ -20,13 +20,13 @@ import com.apptura.nativepreview.renderers.BlockRenderer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProjectPreviewScreen(project: Project) {
+fun ProjectPreviewScreen(project: Project, baseUrl: String) {
     val pageIndex = remember { mutableStateOf(0) }
     val pages = project.pages
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(text = pages.getOrNull(pageIndex.value)?.name ?: "Preview") })
+            TopAppBar(title = { Text(text = pages.getOrNull(pageIndex.value)?.title ?: pages.getOrNull(pageIndex.value)?.name ?: "Preview") })
         }
     ) { padding ->
         val scroll = rememberScrollState()
@@ -43,7 +43,7 @@ fun ProjectPreviewScreen(project: Project) {
             } else {
                 val page = pages[pageIndex.value]
                 page.blocks.forEach { block ->
-                    BlockRenderer(block) { targetPageId ->
+                    BlockRenderer(block, projectId = project.id, baseUrl = baseUrl) { targetPageId ->
                         val idx = pages.indexOfFirst { it.id == targetPageId }
                         if (idx >= 0) pageIndex.value = idx
                     }

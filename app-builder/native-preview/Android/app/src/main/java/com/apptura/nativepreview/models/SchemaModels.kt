@@ -45,6 +45,14 @@ private data class TokenResponse(val token: String)
 @Serializable
 private data class LoginRequest(val username: String, val password: String)
 
+@Serializable
+data class PublicFormSubmissionRequest(
+    val name: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val message: String? = null
+)
+
 object ProjectLoader {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -90,6 +98,19 @@ object ProjectLoader {
     suspend fun loadFromBackend(baseUrl: String, projectId: String, token: String): Project {
         val body = httpGet(normalizeBaseUrl(baseUrl) + "/projects/" + projectId, token = token)
         return json.decodeFromString<Project>(body)
+    }
+
+    suspend fun submitPublicProjectForm(
+        baseUrl: String,
+        projectId: String,
+        blockId: String,
+        request: PublicFormSubmissionRequest
+    ) {
+        httpPostJson(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/forms/$blockId/submissions",
+            json.encodeToString(request),
+            token = null
+        )
     }
 
     private fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trim().removeSuffix("/")

@@ -290,7 +290,7 @@ class MainActivity : ComponentActivity() {
                                     .fillMaxWidth()
                                     .weight(1f)
                             ) {
-                                ProjectPreviewScreen(project!!)
+                                ProjectPreviewScreen(project!!, baseUrl = baseUrl)
                             }
                         }
                     }

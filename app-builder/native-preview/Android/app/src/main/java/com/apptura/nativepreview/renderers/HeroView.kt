@@ -18,9 +18,10 @@ import kotlinx.serialization.json.JsonPrimitive
 fun HeroView(block: Block) {
     val headline = (block.props["headline"] as? JsonPrimitive)?.content ?: "Headline"
     val subhead = (block.props["subhead"] as? JsonPrimitive)?.content ?: ""
+    val headlineSize = (block.props["headlineSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 28.0
 
     Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-        Text(text = headline, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text(text = headline, fontSize = headlineSize.sp, fontWeight = FontWeight.Bold)
         if (subhead.isNotEmpty()) {
             Text(text = subhead, fontSize = 18.sp)
         }
