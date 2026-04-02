@@ -1,4 +1,4 @@
-// � 2025 Preston Willis. All rights reserved.
+﻿// © 2025 Preston Willis. All rights reserved.
 import React, { useState } from 'react'
 
 import Landing from './components/Landing'
@@ -32,6 +32,7 @@ export default function App() {
     openProject,
     loadProjectById,
     editBlock,
+    updatePage,
     deleteBlock,
     saveProject,
     undo,
@@ -71,6 +72,7 @@ export default function App() {
           openProject={openProject}
           loadProjectById={loadProjectById}
           editBlock={editBlock}
+          updatePage={updatePage}
           deleteBlock={deleteBlock}
           saveProject={saveProject}
           undo={undo}
@@ -109,6 +111,7 @@ function AppContent(props: any) {
     openProject,
     loadProjectById,
     editBlock,
+    updatePage,
     deleteBlock,
     saveProject,
     onReorder,
@@ -197,6 +200,7 @@ function AppContent(props: any) {
                 addBlock={addBlock}
                 setSelectedBlock={setSelectedBlock}
                 editBlock={editBlock}
+                updatePage={updatePage}
                 deleteBlock={deleteBlock}
                 onReorder={onReorder}
                 selectedBlock={selectedBlock}
@@ -221,6 +225,7 @@ function AppContent(props: any) {
                 addBlock={addBlock}
                 setSelectedBlock={setSelectedBlock}
                 editBlock={editBlock}
+                updatePage={updatePage}
                 deleteBlock={deleteBlock}
                 onReorder={onReorder}
                 selectedBlock={selectedBlock}
@@ -252,6 +257,7 @@ function EditorScreen(props: any) {
     addBlock,
     setSelectedBlock,
     editBlock,
+    updatePage,
     deleteBlock,
     onReorder,
     selectedBlock,
@@ -284,6 +290,7 @@ function EditorScreen(props: any) {
       addBlock={addBlock}
       setSelectedBlock={setSelectedBlock}
       editBlock={editBlock}
+      updatePage={updatePage}
       deleteBlock={deleteBlock}
       onReorder={onReorder}
       selectedBlock={selectedBlock}

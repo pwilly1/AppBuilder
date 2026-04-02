@@ -1,4 +1,4 @@
-// � 2025 Preston Willis. All rights reserved.
+﻿// © 2025 Preston Willis. All rights reserved.
 import { useMemo, useState } from 'react'
 import { PageRenderer } from '../PageRenderer'
 import { AddBlock } from '../AddBlock'
@@ -13,6 +13,7 @@ type Props = {
   addBlock: (b: any) => void
   setSelectedBlock: (b: any) => void
   editBlock: (b: any) => void
+  updatePage: (page: any) => void
   deleteBlock: (id: string) => void
   onReorder: (blocks: any[]) => void
   selectedBlock: any
@@ -32,6 +33,7 @@ export default function EditorLayout(props: Props) {
     addBlock,
     setSelectedBlock,
     editBlock,
+    updatePage,
     deleteBlock,
     onReorder,
     selectedBlock,
@@ -139,6 +141,7 @@ export default function EditorLayout(props: Props) {
               }}
               onSelectBlock={(block: any) => setSelectedBlock(block)}
               onUpdateBlock={editBlock}
+              onUpdatePage={updatePage}
               onReorder={(newBlocks: any[]) => onReorder(newBlocks)}
             />
           ) : (
@@ -180,3 +183,5 @@ export default function EditorLayout(props: Props) {
     </>
   )
 }
+
+

@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-// � 2025 Preston Willis. All rights reserved.
+﻿import { useEffect, useRef, useState } from 'react'
+// ï¿½ 2025 Preston Willis. All rights reserved.
 import type { Project, Block } from '../shared/schema/types'
 import { getProject, updateProject, createProject, getToken, listProjects } from '../api'
+import { findFirstAvailablePlacement, getBlockGridConstraints } from '../shared/schema/gridLayout'
+import { migrateProjectToGridLayout } from '../shared/schema/gridMigration'
 
 const LAST_PROJECT_ID_KEY = 'app_last_project_id'
 
@@ -66,7 +68,7 @@ export default function useProject(setAuthed: (a: boolean) => void) {
       const id = crypto.randomUUID()
       next.pages = [{ id, title: 'Home', path: '/home', blocks: [] }]
     }
-    return next
+    return migrateProjectToGridLayout(next)
   }
 
   function applyLoadedProject(full: any) {
@@ -126,7 +128,19 @@ export default function useProject(setAuthed: (a: boolean) => void) {
   const addBlock = (b: Block) => {
     applyChange((p) => ({
       ...p,
-      pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: [...pg.blocks, b] } : pg)),
+      pages: p.pages.map((pg) => {
+        if (pg.id !== selectedPageId) return pg
+
+        const nextBlock = { ...b }
+        if (!nextBlock.layout?.grid) {
+          nextBlock.layout = {
+            ...(nextBlock.layout || {}),
+            grid: findFirstAvailablePlacement(pg.blocks, getBlockGridConstraints(nextBlock)),
+          }
+        }
+
+        return { ...pg, blocks: [...pg.blocks, nextBlock] }
+      }),
     }))
   }
 
@@ -197,6 +211,15 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     applyChange((p) => ({
       ...p,
       pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: pg.blocks.map((b) => (b.id === updated.id ? updated : b)) } : pg)),
+    }))
+    setSelectedBlock(updated)
+    setSaveError(null)
+  }
+
+  function updatePage(updatedPage: any) {
+    applyChange((p) => ({
+      ...p,
+      pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...updatedPage } : pg)),
     }))
   }
 
@@ -311,6 +334,7 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     openProject,
     loadProjectById,
     editBlock,
+    updatePage,
     deleteBlock,
     saveProject,
     undo,
@@ -323,3 +347,6 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     saveError,
   }
 }
+
+
+
