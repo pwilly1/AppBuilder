@@ -1,35 +1,55 @@
 # Adaptive Grid Layout System
 
 ## Status
-Draft v2
+Current working design and implementation reference
 
 ## Purpose
-This document defines the current intended layout direction for AppBuilder.
+This document describes the active layout architecture for AppBuilder as it exists in the current codebase.
 
-The design direction has changed from:
+The project moved away from:
+- section-first layout exploration
 - fixed subsection templates
-- section-specific `full / left / right` logic
+- universal `full / left / right` slot logic
 
-to:
+and is now centered on:
 - a full-canvas grid
-- fixed columns
-- dynamic rows
-- fixed row height
-- visual freeform resizing and movement inside bounded grid occupancy
-- runtime-safe structured layout as the canonical truth
+- structured grid occupancy as runtime truth
+- bounded render metadata inside occupied grid areas
+- drag/resize behavior that resolves into valid grid placement
 
-This document is a working design draft and is expected to evolve.
+## Current Implementation Snapshot
+
+### Implemented
+- full-canvas grid overlay in the editor
+- `8` columns
+- dynamic rows
+- `56px` fixed row height
+- `0` grid gap
+- `16px` padding
+- drag ghost preview
+- blocked placement denial
+- snapped placement commit on valid drop
+- resize quantization through the grid preview path
+- bounded inner movement using a dedicated handle
+- preview rendering from `layout.grid + render`
+- load-time migration from older non-grid projects
+
+### Not currently active
+- content auto-grow on save
+- semantic font-size resize for text-like blocks
+
+Those were explored and intentionally backed out. The current stable baseline is the grid foundation without those behaviors.
 
 ## Core Goal
-The editor should feel visually flexible and customizable, but the saved layout model must still be structured enough for:
+The editor should feel visually flexible and customizable, while the saved layout stays structured enough for:
 - web preview
 - Kotlin runtime
 - future export/codegen
 
-The grid is the structure.
-It replaces both:
-- raw freeform `x/y/scale` as runtime truth
-- overly rigid fixed subsection templates
+The grid is the active structure.
+It replaces:
+- raw freeform `x/y/scale` as long-term runtime truth
+- rigid template-only subsection models
 
 ## High-Level Model
 
@@ -41,52 +61,45 @@ The grid has:
 - dynamic rows
 - a fixed row height
 
-Blocks occupy rectangular grid areas using:
-- column start
-- row start
-- column span
-- row span
+Blocks occupy rectangular areas using:
+- `colStart`
+- `rowStart`
+- `colSpan`
+- `rowSpan`
 
 ### Editor Interaction Model
-The user should not feel like they are dragging only by rigid grid steps.
+The user should not feel locked to manual cell-by-cell editing.
 
 Instead:
-- the user resizes visually in freeform pixels
-- the user moves the block around visually
-- the editor interprets that visual intent
-- the system resolves it to the nearest valid grid occupancy
+- the user drags visually
+- the user resizes visually
+- the user can move a block inside its occupied area
+- the editor resolves that interaction into valid grid occupancy plus bounded render metadata
 
 This means:
-- freeform as input
-- grid as saved runtime output
+- visual editing as input
+- grid occupancy as canonical saved output
 
-## v1 Grid Decision
+## Current Grid Decision
 
 ### Columns
 The canvas uses:
 - **8 columns**
 
-Why:
-- more expressive than 4 columns
-- much less noisy than 12 columns
-- enough flexibility for small, medium, and large blocks on mobile
-
 ### Rows
 The canvas uses:
 - **dynamic rows**
 
-Rows are created as needed as content grows downward.
-
+Rows extend downward as needed.
 This means:
-- the page can become longer than one screen
+- the page can be taller than one screen
 - vertical scrolling is allowed
 
 ### Row Height
-The grid uses:
-- **80px fixed row height**
+The current grid uses:
+- **56px fixed row height**
 
-This is the starting value, not a permanently locked decision.
-It should be evaluated visually once the grid is implemented.
+This is the live implementation value in the shared grid constants.
 
 ## Why This Model
 This model is meant to balance:
@@ -107,9 +120,9 @@ This model is meant to balance:
 - the page grows vertically instead of overflowing unpredictably
 
 ## Canonical Saved Layout
-The runtime should save structured grid occupancy, not arbitrary pixel position.
+The runtime should save structured grid occupancy, not arbitrary global pixel positioning.
 
-Proposed direction:
+Current direction:
 
 ```ts
 layout: {
@@ -123,13 +136,13 @@ layout: {
 This is the runtime truth.
 
 ## Render Metadata
-The user may still visually resize a block to a custom pixel size.
+The user may still visually resize or nudge a block to a custom rendered size/offset within its occupied area.
 
-That custom render size may also be saved, but it should **not** become the primary layout truth.
+That render information may be saved, but it should **not** become the primary layout truth.
 
 Instead it should be treated as bounded render metadata inside the assigned grid occupancy.
 
-Possible direction:
+Current direction:
 
 ```ts
 render: {
@@ -145,11 +158,12 @@ render: {
 Important:
 - `layout` determines where the block is allowed to exist
 - `render` determines how the block sits inside that occupied area
+- `render` is clamped so the block stays within its occupied area
 
 ## Block Sizing Model
 
 ### User Experience
-The user can resize a block visually to a custom pixel size.
+The user can resize a block visually.
 
 Example:
 - `220px x 180px`
@@ -167,10 +181,6 @@ Example:
 This means:
 - the user gets visual flexibility
 - the runtime still gets structured spans
-
-### Important Rule
-The runtime should not depend on the raw pixel size alone.
-The raw visual size is only valid within the context of the occupied grid area.
 
 ## Default Alignment Inside Occupancy
 By default, a block should be:
@@ -203,8 +213,7 @@ If a user drags a block into occupied cells:
 
 There should be:
 - no overlap
-- no automatic pushing other blocks around in v1
-- no hidden reflow of neighboring blocks
+- no automatic pushing other blocks around
 
 ### Resize
 If a resize would cause the block to occupy already occupied cells:
@@ -212,24 +221,38 @@ If a resize would cause the block to occupy already occupied cells:
 
 This keeps the system easy to understand.
 
-## Content Growth Rules
+## Current Block Constraints
+The shared registry currently defines default/min/max spans per block family.
 
-### Text and other vertically growing content
-If content inside a block grows and the block needs more room:
-- the block should increase its `rowSpan`
-- it should not overflow
-- it should not overlap nearby content
+### Hero
+- default: `8 x 3`
+- min: `8 x 2`
+- max: `8 x 5`
 
-### If rows below are free
-- expand into more rows
+### Text
+- default: `4 x 2`
+- min: `2 x 1`
+- max: `8 x 6`
 
-### If rows below are blocked
-- deny the content change
-- or prompt the user to rearrange/rescale
+### Nav Button
+- default: `2 x 1`
+- min: `1 x 1`
+- max: `4 x 1`
 
-Suggested user-facing behavior:
-- show a message explaining that the block needs more space
-- ask the user to resize or rearrange nearby content
+### Services List
+- default: `8 x 3`
+- min: `4 x 2`
+- max: `8 x 6`
+
+### Image Gallery
+- default: `8 x 3`
+- min: `4 x 2`
+- max: `8 x 6`
+
+### Contact Form
+- default: `8 x 4`
+- min: `6 x 3`
+- max: `8 x 8`
 
 ## Why This Is Better Than Raw x/y/scale
 This grid model solves much of the old layout instability because:
@@ -274,46 +297,6 @@ The relevant grid should become more visible:
 - show rejected/occupied areas as invalid
 
 This is where the grid becomes an active editing tool.
-
-## Span Rules by Block Family
-The exact rules should remain adjustable, but v1 needs sensible defaults.
-
-### Hero
-- default: `8 x 3`
-- min: `8 x 2`
-- max: `8 x 5`
-- full-width only
-
-### Text
-- default: `3 x 2`
-- min: `2 x 1`
-- max: `8 x 6`
-- allowed to auto-grow vertically
-
-### Nav Button
-- default: `2 x 1`
-- min: `1 x 1`
-- max: `3 x 1`
-- should remain compact
-
-### Services List
-- default: `8 x 3`
-- min: `3 x 2`
-- max: `8 x 6`
-- allowed to grow vertically
-
-### Image Gallery
-- default: `8 x 3`
-- min: `3 x 2`
-- max: `8 x 6`
-
-### Contact Form
-- default: `8 x 4`
-- min: `4 x 3`
-- max: `8 x 8`
-- allowed to grow vertically
-
-These should be treated as a starting point, not final rules.
 
 ## Quantization Rules
 The system needs a deterministic way to convert visual size into grid occupancy.
@@ -367,14 +350,9 @@ The system needs:
 - occupancy validation
 - span quantization
 - collision checks
-- content growth rules
 - bounded movement rules
 
 This is still much better than raw `x/y`, but it is not trivial.
-
-### 3. Mixed content pressure
-Some blocks, especially text-heavy ones, can grow unpredictably.
-The growth rules must be implemented consistently or the system will feel arbitrary.
 
 ## v1 Non-Goals
 To keep the first implementation manageable, avoid:
@@ -384,41 +362,38 @@ To keep the first implementation manageable, avoid:
 - block families with no span constraints
 - multiple competing layout systems at once
 
-## Suggested v1 Scope
-v1 should support:
+## Current Scope
+The current stable baseline supports:
 - full-canvas 8-column grid
 - dynamic rows
-- 80px row height
+- 56px row height
 - visual free resize
 - snapped occupancy resolution
 - denied collisions
 - bounded inner movement
-- text/content auto-growth when space exists
-- user-facing rejection when it does not
-
-That is enough to validate the model before adding more advanced behavior.
+- preview/runtime-facing grid render rect resolution
+- migration of older projects into the grid model on load
 
 ## Open Questions
 These still need explicit decisions:
 
 1. What exact pixel gap exists between columns and rows?
 2. How much of the grid should be visible at rest?
-3. Should the user see the snapped span preview during resize in real time?
-4. Should inner movement use direct drag or alignment presets first?
-5. When text growth is blocked, do we deny the change immediately or allow temporary warning state?
+3. How much of the legacy freeform fallback should remain before Android catches up?
+4. Should text-like blocks eventually resize by semantic typography changes instead of transform scale?
+5. When content-growth is revisited, should it be per-block-type or global?
 
 ## Summary
 The current intended direction is:
 - full-canvas grid
 - 8 fixed columns
 - dynamic rows
-- 80px row height
+- 56px row height
 - grid occupancy as runtime truth
 - custom px render size as bounded render metadata
 - centered by default inside the occupied area
 - optional user movement within that area
 - collision denied
-- content growth handled by increasing row span when space allows
 
 This gives the editor more customization freedom while keeping the runtime model structured and portable.
 
