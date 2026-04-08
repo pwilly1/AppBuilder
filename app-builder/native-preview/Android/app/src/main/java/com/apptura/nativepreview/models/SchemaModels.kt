@@ -19,7 +19,32 @@ import android.content.Context
 data class Block(
     val id: String,
     val type: String,
-    val props: JsonObject = buildJsonObject { }
+    val props: JsonObject = buildJsonObject { },
+    val layout: BlockRuntimeLayout? = null,
+    val render: BlockRenderMetadata? = null
+)
+
+@Serializable
+data class GridPlacement(
+    val colStart: Int,
+    val rowStart: Int,
+    val colSpan: Int,
+    val rowSpan: Int
+)
+
+@Serializable
+data class BlockRuntimeLayout(
+    val grid: GridPlacement? = null
+)
+
+@Serializable
+data class BlockRenderMetadata(
+    val widthPx: Float? = null,
+    val heightPx: Float? = null,
+    val offsetX: Float? = null,
+    val offsetY: Float? = null,
+    val alignX: String? = null,
+    val alignY: String? = null
 )
 
 @Serializable
