@@ -1,7 +1,6 @@
 // © 2025 Preston Willis. All rights reserved.
 import { BlockRenderer } from './shared/BlockRenderer'
 import type { Page, Block } from './shared/schema/types'
-import { BlockRegistry } from './shared/schema/registry'
 import {
   clampRenderMetadataToPlacement,
   collidesWithBlocks,
@@ -50,7 +49,6 @@ type DraggableProps = {
   onGridPreviewChange?: (preview: { blockId: string; left: number; top: number; width: number; height: number } | null) => void
   dropPreviewValid?: boolean
   dropPreviewPlacement?: NonNullable<Block['layout']>['grid']
-  dropPreviewRect?: { left: number; top: number }
   onSelect?: (b: Block) => void
   onUpdate?: (b: Block) => void
   onSnapChange?: (snap: { h: boolean; v: boolean }) => void
@@ -69,7 +67,6 @@ function DraggableBlock({
   onGridPreviewChange,
   dropPreviewValid,
   dropPreviewPlacement,
-  dropPreviewRect,
   onSelect,
   onUpdate,
   onSnapChange,
@@ -324,7 +321,16 @@ function DraggableBlock({
     const finalX = alignedPreviewPos ? alignedPreviewPos.x : pos.x
     const finalY = alignedPreviewPos ? alignedPreviewPos.y : pos.y
     const currentProps = (block.props || {}) as Record<string, any>
-    const { width: _oldWidth, height: _oldHeight, scale: _oldScale, ...rest } = currentProps
+    const {
+      width: _oldWidth,
+      height: _oldHeight,
+      x: _oldX,
+      y: _oldY,
+      scale: _oldScale,
+      scaleX: _oldScaleX,
+      scaleY: _oldScaleY,
+      ...rest
+    } = currentProps
     const nextRender =
       nextGrid && finalWidth && finalHeight
         ? clampRenderMetadataToPlacement(
@@ -353,7 +359,7 @@ function DraggableBlock({
           }
         : block.layout,
       render: nextRender,
-      props: { ...rest, x: finalX, y: finalY, scaleX: nextScaleX, scaleY: nextScaleY } as any,
+      props: { ...rest } as any,
       editorPlacement: { x: finalX, y: finalY, scaleX: nextScaleX, scaleY: nextScaleY },
     })
   }
@@ -593,7 +599,6 @@ export function PageRenderer({
   onSelectBlock,
   onReorder: _onReorder,
   onUpdateBlock,
-  onUpdatePage,
 }: {
   page: Page
   projectId?: string
@@ -603,7 +608,6 @@ export function PageRenderer({
   onSelectBlock?: (b: Block | null) => void
   onReorder?: (newBlocks: Block[]) => void
   onUpdateBlock?: (b: Block) => void
-  onUpdatePage?: (page: Page) => void
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [showHGuide, setShowHGuide] = useState(false)
@@ -804,7 +808,6 @@ export function PageRenderer({
                 onGridPreviewChange={previewMode ? undefined : handleGridPreviewChange}
                 dropPreviewValid={gridPreview?.blockId === block.id ? gridPreview.valid : undefined}
                 dropPreviewPlacement={gridPreview?.blockId === block.id ? gridPreview.placement : block.layout?.grid}
-                dropPreviewRect={gridPreview?.blockId === block.id ? { left: gridPreview.rect.left, top: gridPreview.rect.top } : undefined}
                 onSelect={previewMode ? undefined : onSelectBlock}
                 onUpdate={previewMode ? undefined : onUpdateBlock}
                 onSnapChange={({ h, v }) => {

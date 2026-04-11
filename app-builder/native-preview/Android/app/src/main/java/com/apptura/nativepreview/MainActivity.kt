@@ -10,23 +10,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import com.apptura.nativepreview.navigation.ProjectPreviewScreen
-import com.apptura.nativepreview.models.ProjectLoader
-import com.apptura.nativepreview.models.Project
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -35,6 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.apptura.nativepreview.models.Project
+import com.apptura.nativepreview.models.ProjectLoader
+import com.apptura.nativepreview.navigation.ProjectPreviewScreen
 import kotlinx.coroutines.launch
 import java.io.PrintWriter
 import java.io.StringWriter
@@ -71,228 +72,106 @@ class MainActivity : ComponentActivity() {
                     var projects by remember { mutableStateOf<List<Project>>(emptyList()) }
                     var project by remember { mutableStateOf<Project?>(null) }
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(12.dp)
-                    ) {
-                        LaunchedEffect(Unit) {
-                            lastCrash = readAndClearLastCrash()
-                        }
+                    LaunchedEffect(Unit) {
+                        lastCrash = readAndClearLastCrash()
+                    }
 
-                        if (!lastCrash.isNullOrBlank()) {
-                            Text(text = "Last crash:")
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = lastCrash!!)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(
-                                enabled = !loading,
-                                onClick = { lastCrash = null }
-                            ) {
-                                Text("Dismiss")
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                        }
-
-                        Text(text = "Backend: $baseUrl")
-                        if (!isProbablyEmulator) {
-                            Text(text = "Note: 10.0.2.2 only works on the emulator. On a physical device, set baseUrl to your computer's LAN IP.")
-                        }
-                        if (backendStatus != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = backendStatus!!)
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Button(
-                                enabled = !loading,
-                                onClick = {
-                                    scope.launch {
-                                        loading = true
-                                        error = null
-                                        backendStatus = null
-                                        try {
-                                            val ok = ProjectLoader.healthCheck(baseUrl)
-                                            backendStatus = if (ok) "Backend OK" else "Backend health check failed"
-                                        } catch (e: Exception) {
-                                            error = e.message ?: "Failed to reach backend"
-                                        } finally {
-                                            loading = false
-                                        }
+                    if (project != null) {
+                        ProjectPreviewScreen(
+                            project = project!!,
+                            baseUrl = baseUrl,
+                            onExit = { project = null },
+                        )
+                    } else {
+                        MainMenuScreen(
+                            isProbablyEmulator = isProbablyEmulator,
+                            baseUrl = baseUrl,
+                            username = username,
+                            onUsernameChange = { username = it },
+                            password = password,
+                            onPasswordChange = { password = it },
+                            token = token,
+                            loading = loading,
+                            error = error,
+                            backendStatus = backendStatus,
+                            lastCrash = lastCrash,
+                            projects = projects,
+                            onDismissCrash = { lastCrash = null },
+                            onTestBackend = {
+                                scope.launch {
+                                    loading = true
+                                    error = null
+                                    backendStatus = null
+                                    try {
+                                        val ok = ProjectLoader.healthCheck(baseUrl)
+                                        backendStatus = if (ok) "Backend OK" else "Backend health check failed"
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Failed to reach backend"
+                                    } finally {
+                                        loading = false
                                     }
                                 }
-                            ) {
-                                Text(if (loading) "Testing…" else "Test backend")
-                            }
-
-                            if (token != null) {
-                                Spacer(modifier = Modifier.weight(1f))
-                                Button(
-                                    enabled = !loading,
-                                    onClick = {
-                                        token = null
-                                        project = null
-                                        projects = emptyList()
-                                        error = null
-                                        backendStatus = null
-                                        username = ""
-                                        password = ""
-                                    }
-                                ) {
-                                    Text("Logout")
+                            },
+                            onLogout = {
+                                token = null
+                                project = null
+                                projects = emptyList()
+                                error = null
+                                backendStatus = null
+                                username = ""
+                                password = ""
+                            },
+                            onLogin = {
+                                if (username.isBlank() || password.isBlank()) {
+                                    error = "Username and password are required"
+                                    return@MainMenuScreen
                                 }
-                            }
-                        }
-
-                        if (error != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = "Error: ${error}")
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        if (token == null) {
-                            Text(text = "Sign in", style = MaterialTheme.typography.titleMedium)
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            OutlinedTextField(
-                                value = username,
-                                onValueChange = { username = it.trim() },
-                                label = { Text("Username") },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            OutlinedTextField(
-                                value = password,
-                                onValueChange = { password = it },
-                                label = { Text("Password") },
-                                visualTransformation = PasswordVisualTransformation(),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Button(
-                                enabled = !loading,
-                                onClick = {
-                                    if (username.isBlank() || password.isBlank()) {
-                                        error = "Username and password are required"
-                                        return@Button
-                                    }
-                                    scope.launch {
-                                        loading = true
-                                        error = null
-                                        try {
-                                            val t = ProjectLoader.login(baseUrl, username, password)
-                                            token = t
-                                            projects = ProjectLoader.listProjects(baseUrl, t)
-                                        } catch (e: Exception) {
-                                            error = e.message ?: "Login failed"
-                                        } finally {
-                                            loading = false
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(if (loading) "Signing in…" else "Sign in")
-                            }
-                        } else if (project == null) {
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = "Your Projects",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Button(
-                                    enabled = !loading,
-                                    onClick = {
-                                        scope.launch {
-                                            loading = true
-                                            error = null
-                                            try {
-                                                projects = ProjectLoader.listProjects(baseUrl, token!!)
-                                            } catch (e: Exception) {
-                                                error = e.message ?: "Failed to load projects"
-                                            } finally {
-                                                loading = false
-                                            }
-                                        }
-                                    }
-                                ) {
-                                    Text("Refresh")
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            if (projects.isEmpty()) {
-                                Text("No projects found for this account")
-                            } else {
-                                LazyColumn(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    items(projects) { p ->
-                                        Row(modifier = Modifier.fillMaxWidth()) {
-                                            Text(
-                                                text = p.name ?: "Untitled",
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .padding(end = 12.dp)
-                                            )
-                                            Button(
-                                                enabled = !loading,
-                                                onClick = {
-                                                    val id = p.id
-                                                    if (id.isNullOrBlank()) {
-                                                        error = "Project has no id"
-                                                        return@Button
-                                                    }
-                                                    scope.launch {
-                                                        loading = true
-                                                        error = null
-                                                        try {
-                                                            project = ProjectLoader.loadFromBackend(baseUrl, id, token!!)
-                                                        } catch (e: Exception) {
-                                                            error = e.message ?: "Failed to load project"
-                                                        } finally {
-                                                            loading = false
-                                                        }
-                                                    }
-                                                }
-                                            ) {
-                                                Text(if (loading) "Loading…" else "Open")
-                                            }
-                                        }
+                                scope.launch {
+                                    loading = true
+                                    error = null
+                                    try {
+                                        val t = ProjectLoader.login(baseUrl, username, password)
+                                        token = t
+                                        projects = ProjectLoader.listProjects(baseUrl, t)
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Login failed"
+                                    } finally {
+                                        loading = false
                                     }
                                 }
-                            }
-                        } else {
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Button(
-                                    enabled = !loading,
-                                    onClick = { project = null },
-                                ) {
-                                    Text("Back")
+                            },
+                            onRefreshProjects = {
+                                scope.launch {
+                                    loading = true
+                                    error = null
+                                    try {
+                                        projects = ProjectLoader.listProjects(baseUrl, token!!)
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Failed to load projects"
+                                    } finally {
+                                        loading = false
+                                    }
                                 }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                            ) {
-                                ProjectPreviewScreen(project!!, baseUrl = baseUrl)
-                            }
-                        }
+                            },
+                            onOpenProject = { selected ->
+                                val id = selected.id
+                                if (id.isNullOrBlank()) {
+                                    error = "Project has no id"
+                                    return@MainMenuScreen
+                                }
+                                scope.launch {
+                                    loading = true
+                                    error = null
+                                    try {
+                                        project = ProjectLoader.loadFromBackend(baseUrl, id, token!!)
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Failed to load project"
+                                    } finally {
+                                        loading = false
+                                    }
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -324,5 +203,159 @@ class MainActivity : ComponentActivity() {
         val text = prefs.getString("last_crash", null)
         if (!text.isNullOrBlank()) prefs.edit().remove("last_crash").apply()
         return text
+    }
+}
+
+@Composable
+private fun MainMenuScreen(
+    isProbablyEmulator: Boolean,
+    baseUrl: String,
+    username: String,
+    onUsernameChange: (String) -> Unit,
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    token: String?,
+    loading: Boolean,
+    error: String?,
+    backendStatus: String?,
+    lastCrash: String?,
+    projects: List<Project>,
+    onDismissCrash: () -> Unit,
+    onTestBackend: () -> Unit,
+    onLogout: () -> Unit,
+    onLogin: () -> Unit,
+    onRefreshProjects: () -> Unit,
+    onOpenProject: (Project) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
+    ) {
+        if (!lastCrash.isNullOrBlank()) {
+            Text(text = "Last crash:")
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = lastCrash)
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                enabled = !loading,
+                onClick = onDismissCrash,
+            ) {
+                Text("Dismiss")
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        Text(text = "Backend: $baseUrl")
+        if (!isProbablyEmulator) {
+            Text(text = "Note: 10.0.2.2 only works on the emulator. On a physical device, set baseUrl to your computer's LAN IP.")
+        }
+        if (backendStatus != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = backendStatus)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Button(
+                enabled = !loading,
+                onClick = onTestBackend,
+            ) {
+                Text(if (loading) "Testing..." else "Test backend")
+            }
+
+            if (token != null) {
+                Spacer(modifier = Modifier.weight(1f))
+                Button(
+                    enabled = !loading,
+                    onClick = onLogout,
+                ) {
+                    Text("Logout")
+                }
+            }
+        }
+
+        if (error != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Error: $error")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (token == null) {
+            Text(text = "Sign in", style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = username,
+                onValueChange = { onUsernameChange(it.trim()) },
+                label = { Text("Username") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = { Text("Password") },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                enabled = !loading,
+                onClick = onLogin,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (loading) "Signing in..." else "Sign in")
+            }
+        } else {
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Your Projects",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Button(
+                    enabled = !loading,
+                    onClick = onRefreshProjects,
+                ) {
+                    Text("Refresh")
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (projects.isEmpty()) {
+                Text("No projects found for this account")
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(projects) { project ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = project.name ?: "Untitled",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 12.dp)
+                            )
+                            Button(
+                                enabled = !loading,
+                                onClick = { onOpenProject(project) },
+                            ) {
+                                Text(if (loading) "Loading..." else "Open")
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -7,7 +7,6 @@ import type {
   BlockGridConstraints,
   BlockRenderMetadata,
   BlockRuntimeLayout,
-  SectionKind,
 } from './types'
 
 export type BlockRegistryEntry = {
@@ -17,7 +16,6 @@ export type BlockRegistryEntry = {
   defaultLayout: Partial<BlockRuntimeLayout>
   gridConstraints: BlockGridConstraints
   defaultRender: Partial<BlockRenderMetadata>
-  recommendedSections: SectionKind[]
 }
 
 export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
@@ -32,7 +30,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    recommendedSections: ['hero', 'stack'],
     defaultProps: { headline: 'Headline', subhead: '' },
   },
   text: {
@@ -47,7 +44,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    recommendedSections: ['stack', 'split'],
     defaultProps: { value: 'Text', fontSize: 16 },
   },
   navButton: {
@@ -61,7 +57,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    recommendedSections: ['stack', 'split'],
     defaultProps: { label: 'Go', toPageId: '' },
   },
   servicesList: {
@@ -76,7 +71,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    recommendedSections: ['stack', 'split'],
     defaultProps: {
       title: 'Services',
       items: [
@@ -98,7 +92,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    recommendedSections: ['form', 'stack'],
     defaultProps: {
       title: 'Get in Touch',
       subtitle: 'Tell us what you need and we will follow up shortly.',
@@ -122,7 +115,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    recommendedSections: ['gallery', 'grid', 'stack'],
     defaultProps: {
       title: 'Gallery',
       columns: 2,

@@ -28,13 +28,14 @@ The document distinguishes between:
 - chronology-only entries, where only commit metadata is preserved in appendix form
 
 ## Executive Summary
-AppBuilder has moved through five clear phases:
+AppBuilder has moved through six clear phases:
 
 1. Platform foundation
 2. Web builder foundation
 3. Editing workflow maturation
 4. Native preview/runtime foundation
 5. Business-feature expansion and cross-surface alignment
+6. Grid-layout transition and shared runtime-contract alignment
 
 The platform today includes:
 - user authentication
@@ -45,16 +46,19 @@ The platform today includes:
 - business-oriented blocks
 - stored contact form submissions
 - optional email notifications
+- an active grid-based editor layout foundation
+- web preview rendering from `layout.grid + render`
 - Android preview/runtime support for the current block set
-- an active grid-based editor layout foundation in the current working tree
+- a first Android grid-based preview renderer pass
 
 The principal unresolved architecture issue is now this:
 
-- the web editor has moved toward grid-based layout (`layout.grid + render`)
+- the web editor and preview now use the grid model as the preferred layout path
+- the Android preview has begun using the same grid contract
 - legacy free-positioned fallback data still exists for compatibility
-- the Android runtime has not yet been fully updated to the same grid model
+- the remaining transition debt is now mostly legacy freeform fallback and runtime parity tuning
 
-That means the platform is now materially closer to a shared runtime layout model, but still mid-transition.
+That means the platform is now materially closer to a shared runtime layout model across web and Android, but still mid-transition.
 
 ---
 
@@ -74,6 +78,7 @@ That means the platform is now materially closer to a shared runtime layout mode
 | M10 | 2026-03-17 | Business blocks, form submissions, notifications, and major UI redesign added |
 | M11 | 2026-03-21 | Editor routing, persistence, resizing, and interaction model significantly expanded |
 | M12 | 2026-03-23 | Android runtime brought closer to web parity for form, gallery, and hero behavior |
+| M13 | 2026-04-02 to 2026-04-08 | Web editor shifted to grid-based layout and Android preview gained its first grid renderer |
 
 ---
 
@@ -500,6 +505,66 @@ That means the platform is now materially closer to a shared runtime layout mode
 
 ---
 
+### M13. Grid-Based Layout Transition Across Web And Android
+**Date Range**
+- 2026-04-02 to 2026-04-08
+
+**Verified Commits**
+- `9dfac88` - switch editor to grid-based placement and preview
+- `b038b97` - documentation edits
+- `0de159f` - implemented grid-based android preview renderer
+
+**Business Objective**
+- Replace the increasingly fragile free-positioned editor model with a structured grid contract that can be shared across web and Android preview surfaces.
+
+**Execution Summary**
+- Shifted the web editor from section/subsection experiments into a full-canvas grid model.
+- Introduced shared grid schema and math:
+  - `layout.grid`
+  - `render`
+  - grid placement math
+  - collision handling
+  - placement quantization
+  - migration helpers for older projects
+- Reworked the editor canvas so drag, resize, and preview behavior operate against snapped grid placement.
+- Updated web preview to render from the same grid/render contract.
+- Added project-load migration so older free-positioned blocks can be assigned grid placement automatically.
+- Added architecture and agent documentation so the new model is explicitly captured in-repo.
+- Implemented the first Android/Kotlin grid preview pass:
+  - Android schema support for `layout.grid` and `render`
+  - Android grid math utilities
+  - Android page preview switched from simple vertical stacking to a scrollable grid canvas
+
+**Representative Files**
+- `app-builder/frontend/src/PageRenderer.tsx`
+- `app-builder/frontend/src/editor/Preview.tsx`
+- `app-builder/frontend/src/hooks/useProject.ts`
+- `app-builder/frontend/src/shared/schema/types.ts`
+- `app-builder/frontend/src/shared/schema/registry.ts`
+- `app-builder/frontend/src/shared/schema/gridLayout.ts`
+- `app-builder/frontend/src/shared/schema/gridMigration.ts`
+- `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`
+- `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/layout/GridLayout.kt`
+- `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`
+- `AGENTS.md`
+- `docs/adaptive-subsection-system.md`
+
+**Why This Was Important**
+- The previous freeform/editor-only layout direction was becoming difficult to align with runtime rendering.
+- A shared grid contract is the clearest path toward stable cross-surface parity.
+- This milestone turned the grid model from a design direction into live implementation on both web and Android.
+
+**Outcome**
+- The web editor now has a real grid-based layout foundation.
+- Web preview now prefers the same grid/render model.
+- Android preview has its first grid-based renderer instead of only stacking blocks vertically.
+
+**Remaining Gap**
+- legacy free-positioned fallback still exists in the web codebase for compatibility
+- Android parity still needs block-by-block tuning against the web renderer
+
+---
+
 ## Current Platform State
 
 ### What The Product Supports Today
@@ -518,21 +583,24 @@ That means the platform is now materially closer to a shared runtime layout mode
   - services list
   - contact form
   - image gallery
+- grid-based page layout in the web editor
+- grid-based web preview rendering
 - stored contact form submissions
 - optional email notifications
 - Android preview/runtime support for the current block set
+- first-pass Android grid preview rendering
 
 ### What Is Structurally Strong
 - schema-driven block system
 - backend project abstraction
 - dashboard/editor product shell
 - Android preview integration with backend data
+- shared grid layout math is now present in both web and Android codepaths
 - business-focused MVP capability is now visible
 
 ### What Is Still Structurally Weak
 - legacy freeform layout fallback still coexists with the new grid model
 - Android runtime is not yet fully aligned to the grid layout contract
-- old section-based schema/helpers still exist in shared code
 - parity still requires some tactical compatibility work instead of one fully unified layout engine
 
 ---
@@ -546,6 +614,11 @@ The active editor direction is now a full-canvas grid model with:
 - grid occupancy saved in schema
 - bounded render metadata inside occupied areas
 
+This model is now active in:
+- web editor
+- web preview
+- Android preview (first pass)
+
 However, the project still carries legacy compatibility fields:
 - `x`
 - `y`
@@ -553,7 +626,7 @@ However, the project still carries legacy compatibility fields:
 - `scaleY`
 - `editorPlacement`
 
-Android also still needs a deliberate implementation pass to mirror the same grid model.
+Android also still needs parity tuning and broader adoption of the same rendering assumptions block-by-block.
 
 ### Why This Matters
 The product is no longer deciding whether to move away from freeform absolute layout.
@@ -584,13 +657,13 @@ Legacy freeform data should remain only as transitional compatibility support, n
 
 ### Short-Term
 - keep the grid editor stable
+- tune Android block-by-block parity against the web renderer
 - reduce dead transition code
 - avoid deepening legacy freeform dependence further
 
 ### Medium-Term
-- finish moving the web editor and preview fully onto grid/render truth
-- implement the same grid contract in Android/Kotlin
-- reduce or isolate legacy placement fallback
+- reduce or isolate legacy placement fallback in web
+- continue hardening the Android/Kotlin grid renderer
 
 ### Long-Term
 - unify:
@@ -642,6 +715,9 @@ This appendix preserves the full day-by-day Git chronology for reference.
 | 2026-03-17 | `dbf2685` | Add business blocks and form submissions flow, and redesign UI |
 | 2026-03-21 | `19ef2c5` | Improve editor UX with submissions flow, visual redesign, routing fixes, and resizable blocks, other misc. fixes |
 | 2026-03-23 | `0d87f46` | Improved editor interactions and aligned Android runtime with form, gallery, and hero updates |
+| 2026-04-02 | `9dfac88` | switch editor to grid-based placement and preview |
+| 2026-04-03 | `b038b97` | documentation edits |
+| 2026-04-08 | `0de159f` | implemented grid-based android preview renderer |
 
 ---
 

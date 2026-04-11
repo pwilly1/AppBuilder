@@ -52,48 +52,6 @@ export type BlockGridConstraints = {
   allowInnerMove?: boolean;
 };
 
-// A page is still top-to-bottom, but each section can reveal more granular slots.
-export type SectionKind =
-  | 'stack'
-  | 'hero'
-  | 'split'
-  | 'grid'
-  | 'gallery'
-  | 'form';
-
-export type SectionSlotKind =
-  | 'full'
-  | 'content'
-  | 'left'
-  | 'right'
-  | 'grid-cell'
-  | 'action-row';
-
-export type SectionLayout = {
-  columns?: 1 | 2 | 3;
-  contentWidth?: 'full' | 'contained' | 'narrow';
-  gap?: LayoutSpacing;
-  paddingTop?: LayoutSpacing;
-  paddingBottom?: LayoutSpacing;
-  paddingHorizontal?: LayoutSpacing;
-  align?: LayoutAlign;
-};
-
-export type SectionSlot = {
-  id: string;
-  kind: SectionSlotKind;
-  accepts: BlockLayoutClass[];
-  blockIds: string[];
-};
-
-export type PageSection = {
-  id: string;
-  kind: SectionKind;
-  title?: string;
-  slots: SectionSlot[];
-  layout?: SectionLayout;
-};
-
 // This is the long-term runtime contract the editor and native preview should share.
 export type BlockRuntimeLayout = {
   sectionId?: string;
@@ -130,7 +88,6 @@ export type Page = {
   title?: string;
   path?: string;
   blocks: Block[];
-  sections?: PageSection[];
 };
 
 export type Project = {

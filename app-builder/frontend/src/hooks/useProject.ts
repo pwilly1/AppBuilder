@@ -216,13 +216,6 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     setSaveError(null)
   }
 
-  function updatePage(updatedPage: any) {
-    applyChange((p) => ({
-      ...p,
-      pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...updatedPage } : pg)),
-    }))
-  }
-
   function deleteBlock(id: string) {
     applyChange((p) => ({
       ...p,
@@ -334,7 +327,6 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     openProject,
     loadProjectById,
     editBlock,
-    updatePage,
     deleteBlock,
     saveProject,
     undo,

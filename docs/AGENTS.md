@@ -50,7 +50,7 @@ Meaning:
 ## Important Current Constraints
 
 ### Do not reintroduce section-first layout as the main model
-Older section-based experiments still exist in some schema/helpers, but the active product direction is the grid model.
+The older section-first exploration has been retired from the shared frontend schema. Keep the active product direction centered on the grid model.
 
 ### Avoid making raw `x/y/scale` the runtime truth again
 Legacy fields still exist for compatibility:
@@ -89,11 +89,10 @@ When making layout decisions, prefer choices that can be implemented the same wa
 ### Historical/legacy layout helper
 - [runtimeLayout.ts](./app-builder/frontend/src/shared/schema/runtimeLayout.ts)
 
-This file is still used for fallback placement, but it also contains older section-based helpers that are no longer the active architecture.
+This file is still used for fallback placement for older projects. It is transitional support, not active architecture.
 
 ## Current Known Technical Debt
-- legacy section-era schema/helpers still exist alongside the grid model
-- legacy freeform placement data is still written during save for compatibility
+- legacy freeform fallback still exists for compatibility
 - some docs still need occasional sync with the current implementation
 - Android runtime still needs a deliberate grid-model implementation pass
 
@@ -109,8 +108,8 @@ These should be kept aligned with the actual code, especially:
 ## Safe Next-Step Priorities
 Good next steps:
 1. reduce legacy freeform fallback gradually
-2. clean out dead section-era code once the grid model is fully settled
-3. implement the same grid model in Android/Kotlin
+2. implement the same grid model in Android/Kotlin
+3. keep tightening editor/runtime parity across web and Android
 4. keep docs synchronized with the current implementation
 
 ## Risky Changes

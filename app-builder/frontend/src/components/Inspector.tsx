@@ -2,6 +2,7 @@
 import React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { Block } from '../shared/schema/types';
+import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 
 type PageLite = { id: string; title?: string; path?: string };
 
@@ -84,8 +85,9 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
     onSave?.({ ...block, props });
   };
 
-  const rawScaleX = typeof (block.props as any)?.scaleX === 'number' ? Number((block.props as any).scaleX) : typeof (block.props as any)?.scale === 'number' ? Number((block.props as any).scale) : 1;
-  const rawScaleY = typeof (block.props as any)?.scaleY === 'number' ? Number((block.props as any).scaleY) : typeof (block.props as any)?.scale === 'number' ? Number((block.props as any).scale) : 1;
+  const placement = getBlockEditorPlacement(block);
+  const rawScaleX = Number(placement.scaleX ?? 1);
+  const rawScaleY = Number(placement.scaleY ?? 1);
   const hasCustomScale = Math.abs(rawScaleX - 1) > 0.001 || Math.abs(rawScaleY - 1) > 0.001;
 
   return (
@@ -109,7 +111,13 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
                   delete nextProps.scale;
                   delete nextProps.scaleX;
                   delete nextProps.scaleY;
-                  onSave?.({ ...block, props: nextProps });
+                  delete nextProps.x;
+                  delete nextProps.y;
+                  const nextEditorPlacement = { ...(block.editorPlacement || {}) };
+                  delete nextEditorPlacement.scale;
+                  delete nextEditorPlacement.scaleX;
+                  delete nextEditorPlacement.scaleY;
+                  onSave?.({ ...block, props: nextProps, editorPlacement: nextEditorPlacement });
                 }}
               >
                 Reset Size
@@ -311,5 +319,6 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
     </div>
   );
 }
+
 
 
