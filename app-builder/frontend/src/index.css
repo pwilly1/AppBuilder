@@ -206,13 +206,30 @@
     @apply h-4 w-4 rounded border-slate-300;
     accent-color: var(--accent);
   }
+
+  .editor-side-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: 860px;
+    min-height: 860px;
+    overflow: hidden;
+  }
+
+  .editor-side-panel-body {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
 }
 
 .app-grid {
   display: grid;
-  grid-template-columns: 280px 1fr 360px;
+  grid-template-columns: 280px minmax(0, 1fr) 360px;
   gap: 1.1rem;
   padding: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
   max-width: var(--max-width);
   margin-left: auto;
   margin-right: auto;
@@ -222,11 +239,23 @@
 
 .app-grid.editor-mode {
   max-width: none;
-  width: 100vw;
+  width: 100%;
+  box-sizing: border-box;
   padding-left: 1rem;
   padding-right: 1rem;
   gap: 1rem;
-  grid-template-columns: 260px 1fr 360px;
+  grid-template-columns: 260px minmax(0, 1fr) 360px;
+}
+
+@media (max-width: 1120px) {
+  .app-grid.editor-mode {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-side-panel {
+    max-height: none;
+    min-height: auto;
+  }
 }
 
 @media (max-width: 900px) {

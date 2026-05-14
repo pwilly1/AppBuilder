@@ -17,10 +17,13 @@ import {
 } from './shared/schema/gridLayout'
 import { getBlockEditorPlacement } from './shared/schema/runtimeLayout'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { getHeroRootStyle, getHeroHeadlineStyle, getHeroSubheadStyle } from './shared/blocks/Hero'
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 const MIN_BLOCK_WIDTH = 120
 const MIN_BLOCK_HEIGHT = 72
+const MIN_TEXTLIKE_WIDTH = 24
+const MIN_TEXTLIKE_HEIGHT = 24
 const MIN_SCALE = 0.5
 const MAX_SCALE = 2.6
 
@@ -54,6 +57,271 @@ type DraggableProps = {
   onSnapChange?: (snap: { h: boolean; v: boolean }) => void
 }
 
+function InlineBlockEditor({
+  block,
+  width,
+  height,
+  onCommit,
+  onCancel,
+}: {
+  block: Block
+  width?: number
+  height?: number
+  onCommit: (props: Record<string, any>) => void
+  onCancel: () => void
+}) {
+  const [draft, setDraft] = useState<Record<string, any>>(() => ({ ...(block.props as Record<string, any>) }))
+  const textEditorRef = useRef<HTMLTextAreaElement | null>(null)
+  const heroEditorRef = useRef<HTMLDivElement | null>(null)
+  const heroHeadlineRef = useRef<HTMLDivElement | null>(null)
+  const heroSubheadRef = useRef<HTMLDivElement | null>(null)
+  const lastAcceptedHeroDraftRef = useRef<Record<string, any>>({ ...(block.props as Record<string, any>) })
+  const navInputRef = useRef<HTMLInputElement | null>(null)
+  const lastAcceptedNavLabelRef = useRef(String((block.props as Record<string, any>)?.label ?? 'Go'))
+
+  useEffect(() => {
+    setDraft({ ...(block.props as Record<string, any>) })
+    lastAcceptedHeroDraftRef.current = { ...(block.props as Record<string, any>) }
+    lastAcceptedNavLabelRef.current = String((block.props as Record<string, any>)?.label ?? 'Go')
+  }, [block])
+
+  useEffect(() => {
+    if (block.type !== 'hero') return
+    const frame = window.requestAnimationFrame(() => {
+      const headlineNode = heroHeadlineRef.current
+      const subheadNode = heroSubheadRef.current
+      if (headlineNode) headlineNode.textContent = String(lastAcceptedHeroDraftRef.current.headline ?? '')
+      if (subheadNode) subheadNode.textContent = String(lastAcceptedHeroDraftRef.current.subhead ?? '')
+      if (headlineNode) {
+        headlineNode.focus()
+        const selection = window.getSelection()
+        const range = document.createRange()
+        range.selectNodeContents(headlineNode)
+        range.collapse(false)
+        selection?.removeAllRanges()
+        selection?.addRange(range)
+      }
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [block.id, block.type])
+
+  const commit = () => onCommit(block.type === 'hero' ? lastAcceptedHeroDraftRef.current : draft)
+  const handleOverlayBlur: React.FocusEventHandler<HTMLDivElement> = (event) => {
+    const nextTarget = event.relatedTarget as Node | null
+    if (nextTarget && event.currentTarget.contains(nextTarget)) return
+    commit()
+  }
+
+  const readEditableText = (node: HTMLDivElement | null) => (node?.innerText ?? '').replace(/\r\n/g, '\n')
+
+  const moveCaretToEnd = (node: HTMLDivElement | null) => {
+    if (!node) return
+    const selection = window.getSelection()
+    const range = document.createRange()
+    range.selectNodeContents(node)
+    range.collapse(false)
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+  }
+
+  const applyHeroDraft = (field: 'headline' | 'subhead', node: HTMLDivElement | null) => {
+    if (!node) return
+
+    const nextDraft = {
+      ...lastAcceptedHeroDraftRef.current,
+      [field]: readEditableText(node),
+    }
+
+    const editor = heroEditorRef.current
+    const headlineNode = heroHeadlineRef.current
+    const subheadNode = heroSubheadRef.current
+    if (!editor || !headlineNode || !subheadNode) {
+      lastAcceptedHeroDraftRef.current = nextDraft
+      return
+    }
+
+    const editorStyles = window.getComputedStyle(editor)
+    const paddingTop = Number.parseFloat(editorStyles.paddingTop || '0') || 0
+    const paddingBottom = Number.parseFloat(editorStyles.paddingBottom || '0') || 0
+    const subheadStyles = window.getComputedStyle(subheadNode)
+    const subheadMarginTop = Number.parseFloat(subheadStyles.marginTop || '0') || 0
+    const usableHeight = editor.clientHeight - paddingTop - paddingBottom
+    const contentHeight = headlineNode.scrollHeight + subheadMarginTop + subheadNode.scrollHeight
+    const fitsHeight = contentHeight <= usableHeight + 1
+
+    if (fitsHeight) {
+      lastAcceptedHeroDraftRef.current = nextDraft
+      return
+    }
+
+    node.textContent = String(lastAcceptedHeroDraftRef.current[field] ?? '')
+    moveCaretToEnd(node)
+  }
+
+  if (block.type === 'text') {
+    return (
+      <div
+        className="absolute inset-0 z-[120] rounded-[1rem] bg-white/90 p-3 backdrop-blur-[1px]"
+        onPointerDown={(event) => event.stopPropagation()}
+        onBlur={handleOverlayBlur}
+      >
+        <textarea
+          ref={textEditorRef}
+          autoFocus
+          value={String(draft.value ?? '')}
+          onChange={(event) => {
+            const nextValue = event.target.value
+            const currentValue = String(draft.value ?? '')
+            const isShrinking = nextValue.length < currentValue.length
+            const fitsHeight = event.target.scrollHeight <= event.target.clientHeight + 1
+
+            if (fitsHeight || isShrinking) {
+              setDraft((current) => ({ ...current, value: nextValue }))
+              return
+            }
+
+            event.target.value = currentValue
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              onCancel()
+            }
+          }}
+          className="h-full w-full resize-none border-none bg-transparent text-slate-900 outline-none"
+          style={{
+            fontSize: Number(draft.fontSize ?? 16) || 16,
+            lineHeight: 1.45,
+            whiteSpace: 'pre-wrap',
+            overflowWrap: 'break-word',
+            overflowY: 'hidden',
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (block.type === 'hero') {
+    const heroRootStyle = getHeroRootStyle()
+    const heroHeadlineStyle = getHeroHeadlineStyle(Number(lastAcceptedHeroDraftRef.current.headlineSize ?? 28) || 28)
+    const heroSubheadStyle = getHeroSubheadStyle()
+    const heroEditCompensationPx = 4
+
+    return (
+      <div
+        ref={heroEditorRef}
+        className="absolute inset-0 z-[120] rounded-[1rem] bg-white/90 backdrop-blur-[1px]"
+        style={heroRootStyle}
+        onPointerDown={(event) => event.stopPropagation()}
+        onBlur={handleOverlayBlur}
+      >
+        <div
+          ref={heroHeadlineRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          onInput={(event) => applyHeroDraft('headline', event.currentTarget)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              onCancel()
+            }
+          }}
+          className="outline-none"
+          style={{
+            ...heroHeadlineStyle,
+            background: 'transparent',
+            width: `calc(100% + ${heroEditCompensationPx}px)`,
+            maxWidth: `calc(100% + ${heroEditCompensationPx}px)`,
+            marginRight: -heroEditCompensationPx,
+          }}
+        />
+        <div
+          ref={heroSubheadRef}
+          contentEditable
+          suppressContentEditableWarning
+          role="textbox"
+          onInput={(event) => applyHeroDraft('subhead', event.currentTarget)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault()
+              onCancel()
+            }
+          }}
+          className="outline-none"
+          style={{
+            ...heroSubheadStyle,
+            background: 'transparent',
+            width: `calc(100% + ${heroEditCompensationPx}px)`,
+            maxWidth: `calc(100% + ${heroEditCompensationPx}px)`,
+            marginRight: -heroEditCompensationPx,
+          }}
+        />
+      </div>
+    )
+  }
+
+  if (block.type === 'navButton') {
+    const disabled = !(draft.toPageId as string | undefined)
+    return (
+      <div
+        className="absolute inset-0 z-[120] flex items-start justify-start rounded-[1rem] bg-white/20 p-3"
+        onPointerDown={(event) => event.stopPropagation()}
+        onBlur={handleOverlayBlur}
+      >
+        <div
+          className="rounded-[10px] px-[14px] py-[10px]"
+          style={{ backgroundColor: disabled ? '#e5e7eb' : '#0f172a', maxWidth: width ? Math.max(80, width - 24) : undefined }}
+        >
+          <input
+            ref={navInputRef}
+            autoFocus
+            value={String(draft.label ?? 'Go')}
+            onChange={(event) => {
+              const nextLabel = event.target.value
+              const currentLabel = String(draft.label ?? 'Go')
+              const isShrinking = nextLabel.length < currentLabel.length
+              const fitsWidth = event.target.scrollWidth <= event.target.clientWidth + 1
+
+              if (fitsWidth || isShrinking) {
+                lastAcceptedNavLabelRef.current = nextLabel
+                setDraft((current) => ({ ...current, label: nextLabel }))
+                return
+              }
+
+              event.target.value = lastAcceptedNavLabelRef.current
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                onCancel()
+              }
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                commit()
+              }
+            }}
+            className="w-full border-none bg-transparent text-left font-semibold outline-none"
+            style={{
+              margin: 0,
+              padding: 0,
+              boxSizing: 'border-box',
+              fontFamily: 'inherit',
+              color: disabled ? '#475569' : '#ffffff',
+              fontSize: 14,
+              minWidth: 24,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
+
 function DraggableBlock({
   block,
   isActive,
@@ -71,6 +339,7 @@ function DraggableBlock({
   onUpdate,
   onSnapChange,
 }: DraggableProps) {
+  const usesContainerResize = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)
   const contentRef = useRef<HTMLDivElement | null>(null)
@@ -84,6 +353,8 @@ function DraggableBlock({
   const [startPt, setStartPt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [startPos, setStartPos] = useState<{ x: number; y: number }>({ x: placement.x, y: placement.y })
   const [startOffset, setStartOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [startBoxSize, setStartBoxSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
+  const [startContentSize, setStartContentSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
   const [pos, setPos] = useState<{ x: number; y: number }>({ x: placement.x, y: placement.y })
   const [startScale, setStartScale] = useState<{ x: number; y: number }>({ x: placement.scaleX, y: placement.scaleY })
   const [scaleX, setScaleX] = useState<number>(placement.scaleX)
@@ -91,14 +362,21 @@ function DraggableBlock({
   const [baseSize, setBaseSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
   const [renderSize, setRenderSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 })
   const [moved, setMoved] = useState(false)
+  const [inlineEditing, setInlineEditing] = useState(false)
   const resolvedRect = useMemo(() => resolveBlockRenderRect(block, gridMetrics), [block, gridMetrics])
+  const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
 
   useEffect(() => {
+    if (dragging || resizingMode || innerMoving) return
+
     const fallbackPlacement = getBlockEditorPlacement(block, index)
 
     if (resolvedRect) {
       setPos({ x: Math.round(resolvedRect.left), y: Math.round(resolvedRect.top) })
-      if (baseSize.width > 0 && baseSize.height > 0) {
+      if (usesContainerResize) {
+        setScaleX(1)
+        setScaleY(1)
+      } else if (baseSize.width > 0 && baseSize.height > 0) {
         setScaleX(Number((resolvedRect.width / baseSize.width).toFixed(3)))
         setScaleY(Number((resolvedRect.height / baseSize.height).toFixed(3)))
       } else {
@@ -109,19 +387,23 @@ function DraggableBlock({
     }
 
     setPos({ x: fallbackPlacement.x, y: fallbackPlacement.y })
-    setScaleX(fallbackPlacement.scaleX)
-    setScaleY(fallbackPlacement.scaleY)
-  }, [resolvedRect, block, index, baseSize.width, baseSize.height])
+    setScaleX(usesContainerResize ? 1 : fallbackPlacement.scaleX)
+    setScaleY(usesContainerResize ? 1 : fallbackPlacement.scaleY)
+  }, [resolvedRect, block, index, baseSize.width, baseSize.height, dragging, resizingMode, innerMoving, usesContainerResize])
 
   useEffect(() => {
     const node = contentRef.current
     if (!node || typeof ResizeObserver === 'undefined') return
 
     const observer = new ResizeObserver((entries) => {
+      if (usesContainerResize && resizingMode) return
+
       const entry = entries[0]
       if (!entry) return
-      const nextWidth = Math.max(MIN_BLOCK_WIDTH, Math.round(entry.contentRect.width))
-      const nextHeight = Math.max(MIN_BLOCK_HEIGHT, Math.round(entry.contentRect.height))
+      const minWidth = usesContainerResize ? MIN_TEXTLIKE_WIDTH : MIN_BLOCK_WIDTH
+      const minHeight = usesContainerResize ? MIN_TEXTLIKE_HEIGHT : MIN_BLOCK_HEIGHT
+      const nextWidth = Math.max(minWidth, Math.round(entry.contentRect.width))
+      const nextHeight = Math.max(minHeight, Math.round(entry.contentRect.height))
       setBaseSize((current) => {
         if (current.width === nextWidth && current.height === nextHeight) return current
         return { width: nextWidth, height: nextHeight }
@@ -130,7 +412,7 @@ function DraggableBlock({
 
     observer.observe(node)
     return () => observer.disconnect()
-  }, [])
+  }, [usesContainerResize, resizingMode])
 
   useEffect(() => {
     const node = contentRef.current
@@ -138,8 +420,10 @@ function DraggableBlock({
 
     const updateRenderSize = () => {
       const rect = node.getBoundingClientRect()
-      const nextWidth = Math.max(MIN_BLOCK_WIDTH, Math.round(rect.width))
-      const nextHeight = Math.max(MIN_BLOCK_HEIGHT, Math.round(rect.height))
+      const minWidth = usesContainerResize ? MIN_TEXTLIKE_WIDTH : MIN_BLOCK_WIDTH
+      const minHeight = usesContainerResize ? MIN_TEXTLIKE_HEIGHT : MIN_BLOCK_HEIGHT
+      const nextWidth = Math.max(minWidth, Math.round(rect.width))
+      const nextHeight = Math.max(minHeight, Math.round(rect.height))
       setRenderSize((current) => {
         if (current.width === nextWidth && current.height === nextHeight) return current
         return { width: nextWidth, height: nextHeight }
@@ -151,7 +435,7 @@ function DraggableBlock({
   }, [baseSize.width, baseSize.height, scaleX, scaleY, block.id, block.props, block.render])
 
   function begin(e: React.PointerEvent) {
-    if (previewMode) return
+    if (previewMode || inlineEditing) return
     const targetNode = e.target as Node
     if (
       innerMoveHandleRef.current?.contains(targetNode) ||
@@ -174,23 +458,39 @@ function DraggableBlock({
   }
 
   function beginResize(mode: ResizeMode, e: React.PointerEvent<HTMLButtonElement>) {
-    if (previewMode) return
+    if (previewMode || inlineEditing) return
     e.stopPropagation()
     const target = e.currentTarget as Element
     ;(target as any).setPointerCapture?.(e.pointerId)
+    const currentWidth = renderedWidth ?? elRef.current?.offsetWidth ?? baseSize.width ?? MIN_BLOCK_WIDTH
+    const currentHeight = renderedHeight ?? elRef.current?.offsetHeight ?? baseSize.height ?? MIN_BLOCK_HEIGHT
+    const contentNode = contentRef.current
+    const contentRoot = contentNode?.firstElementChild as HTMLElement | null
+    const contentWidth = Math.ceil(
+      contentRoot?.getBoundingClientRect().width ??
+        contentNode?.scrollWidth ??
+        currentWidth,
+    )
+    const contentHeight = Math.ceil(
+      contentRoot?.getBoundingClientRect().height ??
+        contentNode?.scrollHeight ??
+        currentHeight,
+    )
     setStartPt({ x: e.clientX, y: e.clientY })
     setStartScale({ x: scaleX, y: scaleY })
+    setStartBoxSize({ width: currentWidth, height: currentHeight })
+    setStartContentSize({ width: contentWidth, height: contentHeight })
     setResizingMode(mode)
     onDragStateChange?.(true)
-    const width = renderedWidth ?? elRef.current?.offsetWidth ?? 0
-    const height = renderedHeight ?? elRef.current?.offsetHeight ?? 0
+    const width = currentWidth
+    const height = currentHeight
     onGridPreviewChange?.({ blockId: block.id, left: pos.x, top: pos.y, width, height })
     setMoved(true)
     onSelect?.(block)
   }
 
   function beginInnerMove(e: React.PointerEvent<HTMLButtonElement>) {
-    if (previewMode || !block.layout?.grid) return
+    if (previewMode || inlineEditing || !block.layout?.grid) return
     e.stopPropagation()
     const target = e.currentTarget as Element
     ;(target as any).setPointerCapture?.(e.pointerId)
@@ -205,7 +505,7 @@ function DraggableBlock({
   }
 
   function move(e: React.PointerEvent) {
-    if (previewMode) return
+    if (previewMode || inlineEditing) return
 
     if (innerMoving) {
       const placement = block.layout?.grid
@@ -235,6 +535,41 @@ function DraggableBlock({
       const dy = e.clientY - startPt.y
       const baseWidth = Math.max(baseSize.width || MIN_BLOCK_WIDTH, MIN_BLOCK_WIDTH)
       const baseHeight = Math.max(baseSize.height || MIN_BLOCK_HEIGHT, MIN_BLOCK_HEIGHT)
+
+      if (usesContainerResize) {
+        const nextWidthRaw =
+          resizingMode === 'vertical' ? startBoxSize.width : startBoxSize.width + dx
+        const nextHeightRaw =
+          resizingMode === 'horizontal' ? startBoxSize.height : startBoxSize.height + dy
+        const minWidth =
+          resizingMode === 'vertical'
+            ? MIN_TEXTLIKE_WIDTH
+            : Math.max(MIN_TEXTLIKE_WIDTH, startContentSize.width)
+        const minHeight =
+          resizingMode === 'horizontal'
+            ? MIN_TEXTLIKE_HEIGHT
+            : Math.max(MIN_TEXTLIKE_HEIGHT, startContentSize.height)
+        const maxCanvasWidth = Math.max(MIN_BLOCK_WIDTH, gridMetrics.canvasWidth - GRID_PADDING * 2)
+        const maxCanvasHeight = Math.max(
+          MIN_BLOCK_HEIGHT,
+          (containerRef.current?.clientHeight ?? (gridMetrics.rowHeight ?? GRID_ROW_HEIGHT) * 24),
+        )
+        const nextWidth = clamp(nextWidthRaw, minWidth, maxCanvasWidth)
+        const nextHeight = clamp(nextHeightRaw, minHeight, maxCanvasHeight)
+
+        const nextScaleX = startBoxSize.width > 0 ? nextWidth / startBoxSize.width : 1
+        const nextScaleY = startBoxSize.height > 0 ? nextHeight / startBoxSize.height : 1
+        setScaleX(Number(nextScaleX.toFixed(3)))
+        setScaleY(Number(nextScaleY.toFixed(3)))
+        onGridPreviewChange?.({
+          blockId: block.id,
+          left: pos.x,
+          top: pos.y,
+          width: Math.round(nextWidth),
+          height: Math.round(nextHeight),
+        })
+        return
+      }
 
       if (resizingMode === 'horizontal') {
         const nextScaleX = clamp((baseWidth * startScale.x + dx) / baseWidth, MIN_SCALE, MAX_SCALE)
@@ -311,8 +646,12 @@ function DraggableBlock({
 
   function saveBlock(nextScaleX = scaleX, nextScaleY = scaleY, options: SaveBlockOptions = {}) {
     const usePreviewRect = options.usePreviewRect ?? true
-    const finalWidth = baseSize.width ? Math.round(baseSize.width * nextScaleX) : renderedWidth
-    const finalHeight = baseSize.height ? Math.round(baseSize.height * nextScaleY) : renderedHeight
+    const finalWidth = usesContainerResize
+      ? (renderedWidth ? Math.round(renderedWidth) : baseSize.width ? Math.round(baseSize.width * nextScaleX) : renderedWidth)
+      : (baseSize.width ? Math.round(baseSize.width * nextScaleX) : renderedWidth)
+    const finalHeight = usesContainerResize
+      ? (renderedHeight ? Math.round(renderedHeight) : baseSize.height ? Math.round(baseSize.height * nextScaleY) : renderedHeight)
+      : (baseSize.height ? Math.round(baseSize.height * nextScaleY) : renderedHeight)
     const nextGrid = dropPreviewPlacement ?? block.layout?.grid
     const alignedPreviewPos =
       usePreviewRect && nextGrid && finalWidth && finalHeight
@@ -360,12 +699,17 @@ function DraggableBlock({
         : block.layout,
       render: nextRender,
       props: { ...rest } as any,
-      editorPlacement: { x: finalX, y: finalY, scaleX: nextScaleX, scaleY: nextScaleY },
+      editorPlacement: {
+        x: finalX,
+        y: finalY,
+        scaleX: usesContainerResize ? 1 : nextScaleX,
+        scaleY: usesContainerResize ? 1 : nextScaleY,
+      },
     })
   }
 
   function end(e: React.PointerEvent) {
-    if (previewMode) return
+    if (previewMode || inlineEditing) return
 
     if (innerMoving) {
       const target = e.target as Element
@@ -424,21 +768,45 @@ function DraggableBlock({
   const liveWidth = renderSize.width || (baseSize.width ? Math.round(baseSize.width * scaleX) : undefined)
   const liveHeight = renderSize.height || (baseSize.height ? Math.round(baseSize.height * scaleY) : undefined)
   const renderedWidth = resizingMode
-    ? (baseSize.width ? Math.round(baseSize.width * scaleX) : liveWidth)
+    ? usesContainerResize
+      ? Math.round(startBoxSize.width * scaleX)
+      : (baseSize.width ? Math.round(baseSize.width * scaleX) : liveWidth)
     : resolvedRect?.width
       ? Math.round(resolvedRect.width)
       : liveWidth
   const renderedHeight = resizingMode
-    ? (baseSize.height ? Math.round(baseSize.height * scaleY) : liveHeight)
+    ? usesContainerResize
+      ? Math.round(startBoxSize.height * scaleY)
+      : (baseSize.height ? Math.round(baseSize.height * scaleY) : liveHeight)
     : resolvedRect?.height
       ? Math.round(resolvedRect.height)
       : liveHeight
   const contentWidth = resizingMode
-    ? (baseSize.width || undefined)
+    ? usesContainerResize
+      ? startBoxSize.width || renderedWidth
+      : (baseSize.width || undefined)
     : renderedWidth
       ? Math.max(1, Math.round(renderedWidth / Math.max(scaleX, 0.001)))
       : undefined
+  const contentHeight = usesContainerResize ? renderedHeight : undefined
   const showActiveFrame = Boolean(isActive || dragging || resizingMode || innerMoving)
+  const inlineEditorVisible = !previewMode && isActive && inlineEditing && supportsInlineEdit
+
+  function commitInlineEdit(nextProps: Record<string, any>) {
+    const normalizedProps =
+      block.type === 'hero'
+        ? {
+            headlineSize: Number(nextProps.headlineSize ?? (block.props as Record<string, any>)?.headlineSize ?? 28) || 28,
+            ...nextProps,
+          }
+        : nextProps
+
+    onUpdate?.({
+      ...block,
+      props: { ...(block.props as Record<string, any>), ...normalizedProps },
+    })
+    setInlineEditing(false)
+  }
 
   return (
     <div
@@ -454,6 +822,15 @@ function DraggableBlock({
       onPointerMove={previewMode ? undefined : move}
       onPointerUp={previewMode ? undefined : end}
       onPointerCancel={previewMode ? undefined : end}
+      onDoubleClick={
+        previewMode || !supportsInlineEdit
+          ? undefined
+          : (event) => {
+              event.stopPropagation()
+              setInlineEditing(true)
+              onSelect?.(block)
+            }
+      }
     >
       <div
         className={
@@ -472,7 +849,11 @@ function DraggableBlock({
           style={{
             width: contentWidth ?? 'max-content',
             maxWidth: contentWidth,
-            transform: `scale(${scaleX}, ${scaleY})`,
+            height: contentHeight,
+            display: usesContainerResize ? 'flex' : undefined,
+            flexDirection: usesContainerResize ? 'column' : undefined,
+            alignItems: usesContainerResize ? 'flex-start' : undefined,
+            transform: usesContainerResize ? undefined : `scale(${scaleX}, ${scaleY})`,
             transformOrigin: 'top left',
           }}
         >
@@ -483,6 +864,16 @@ function DraggableBlock({
             onNavigate={previewMode ? onNavigate : undefined}
           />
         </div>
+
+        {inlineEditorVisible ? (
+          <InlineBlockEditor
+            block={block}
+            width={renderedWidth}
+            height={renderedHeight}
+            onCommit={commitInlineEdit}
+            onCancel={() => setInlineEditing(false)}
+          />
+        ) : null}
 
         {!previewMode ? (
           <>

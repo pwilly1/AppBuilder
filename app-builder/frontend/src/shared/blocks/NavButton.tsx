@@ -1,34 +1,48 @@
-import { Pressable, Text, View } from 'react-native';
-
 export function NavButton({
   label,
   toPageId,
   onNavigate,
 }: {
-  label?: string;
-  toPageId?: string;
-  onNavigate?: (pageId: string) => void;
+  label?: string
+  toPageId?: string
+  onNavigate?: (pageId: string) => void
 }) {
-  const text = label || 'Go';
-  const disabled = !toPageId;
+  const text = label || 'Go'
+  const disabled = !toPageId
 
   return (
-    <View style={{ padding: 12 }}>
-      <Pressable
-        onPress={() => {
-          if (!toPageId) return;
-          onNavigate?.(toPageId);
+    <div
+      style={{
+        display: 'inline-flex',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
+        boxSizing: 'border-box',
+        padding: 12,
+        overflow: 'visible',
+      }}
+    >
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          if (!toPageId) return
+          onNavigate?.(toPageId)
         }}
         style={{
-          backgroundColor: disabled ? '#e5e7eb' : '#0f172a',
-          paddingVertical: 10,
-          paddingHorizontal: 14,
+          border: 'none',
           borderRadius: 10,
-          alignSelf: 'flex-start',
+          padding: '10px 14px',
+          backgroundColor: disabled ? '#e5e7eb' : '#0f172a',
+          color: disabled ? '#475569' : '#ffffff',
+          fontSize: 14,
+          fontWeight: 600,
+          lineHeight: 1.2,
+          whiteSpace: 'nowrap',
+          cursor: disabled ? 'default' : 'pointer',
         }}
       >
-        <Text style={{ color: disabled ? '#475569' : 'white', fontSize: 14, fontWeight: '600' }}>{text}</Text>
-      </Pressable>
-    </View>
-  );
+        {text}
+      </button>
+    </div>
+  )
 }

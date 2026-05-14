@@ -56,8 +56,8 @@ export default function EditorLayout(props: Props) {
   return (
     <>
       <aside className="sidebar-hidden-mobile">
-        <div className="editor-panel rounded-[1.9rem] p-4">
-          <div className="editor-section">
+        <div className="editor-panel editor-side-panel rounded-[1.9rem] p-4">
+          <div className="editor-section shrink-0">
             <div className="editor-section-title">Workspace</div>
             <div className="mt-2 text-lg font-semibold text-slate-900">Structure</div>
             <p className="editor-kicker mt-1">Organize pages first, then drop in blocks with a clear hierarchy.</p>
@@ -67,7 +67,7 @@ export default function EditorLayout(props: Props) {
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="editor-side-panel-body mt-4">
             <PagesPanel
               pages={pages}
               selectedPageId={selectedPageId}
@@ -76,21 +76,21 @@ export default function EditorLayout(props: Props) {
               onRename={(id, title) => renamePage?.(id, title)}
               onDelete={(id) => deletePage?.(id)}
             />
-          </div>
 
-          <div className="mt-4 editor-section">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="editor-section-title">Library</div>
-                <h3 className="mt-1 text-sm font-semibold text-slate-900">Block palette</h3>
+            <div className="mt-4 editor-section">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="editor-section-title">Library</div>
+                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Block palette</h3>
+                </div>
+                <span className="editor-kicker">Dragless add</span>
               </div>
-              <span className="editor-kicker">Dragless add</span>
+              <p className="editor-kicker mt-2">Pick the right section type first. Keep each page focused and short.</p>
             </div>
-            <p className="editor-kicker mt-2">Pick the right section type first. Keep each page focused and short.</p>
-          </div>
 
-          <div className="mt-4">
-            <AddBlock onAdd={addBlock} />
+            <div className="mt-4">
+              <AddBlock onAdd={addBlock} />
+            </div>
           </div>
         </div>
       </aside>
@@ -154,13 +154,13 @@ export default function EditorLayout(props: Props) {
       </section>
 
       <aside>
-        <div className="editor-panel rounded-[1.9rem] p-4">
-          <div className="editor-section">
+        <div className="editor-panel editor-side-panel rounded-[1.9rem] p-4">
+          <div className="editor-section shrink-0">
             <div className="editor-section-title">Inspector</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">Properties</div>
             <p className="editor-kicker mt-1">Edit content, navigation targets, and block-specific settings here.</p>
           </div>
-          <div className="mt-4">
+          <div className="editor-side-panel-body mt-4">
             <Inspector
               block={selectedBlock}
               pages={pages}
