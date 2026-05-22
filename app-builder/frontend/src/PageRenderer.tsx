@@ -789,8 +789,8 @@ function DraggableBlock({
       ? Math.max(1, Math.round(renderedWidth / Math.max(scaleX, 0.001)))
       : undefined
   const contentHeight = usesContainerResize ? renderedHeight : undefined
-  const showActiveFrame = Boolean(isActive || dragging || resizingMode || innerMoving)
-  const inlineEditorVisible = !previewMode && isActive && inlineEditing && supportsInlineEdit
+  const showActiveFrame = Boolean(isActive || inlineEditing || dragging || resizingMode || innerMoving)
+  const inlineEditorVisible = !previewMode && inlineEditing && supportsInlineEdit
 
   function commitInlineEdit(nextProps: Record<string, any>) {
     const normalizedProps =
