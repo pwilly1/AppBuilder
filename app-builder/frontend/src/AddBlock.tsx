@@ -46,7 +46,7 @@ export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
       <div className="space-y-3">
         <CollapsibleSection title="Core Content" defaultOpen>
           <div className="grid gap-2">
-            <BlockEntry title="Hero" note="Intro headline and supporting copy" onClick={() => onAdd(createBlock('hero', { headline: 'New Hero', subhead: '' }))} />
+            <BlockEntry title="Hero" note="Intro headline" onClick={() => onAdd(createBlock('hero', { headline: 'New Hero' }))} />
             <BlockEntry title="Text" note="Paragraphs or short body copy" onClick={() => onAdd(createBlock('text', { value: 'New text' }))} />
             <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
           </div>

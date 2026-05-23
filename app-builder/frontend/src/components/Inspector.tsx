@@ -149,10 +149,6 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
               <TextInput {...register('headline')} />
             </div>
             <div className="grid gap-2">
-              <FieldLabel>Subhead</FieldLabel>
-              <TextArea {...register('subhead')} />
-            </div>
-            <div className="grid gap-2">
               <FieldLabel>Headline size (px)</FieldLabel>
               <TextInput type="number" className="max-w-[120px]" {...register('headlineSize')} />
             </div>

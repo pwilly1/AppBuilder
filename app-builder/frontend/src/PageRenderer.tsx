@@ -17,7 +17,7 @@ import {
 } from './shared/schema/gridLayout'
 import { getBlockEditorPlacement } from './shared/schema/runtimeLayout'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getHeroRootStyle, getHeroHeadlineStyle, getHeroSubheadStyle } from './shared/blocks/Hero'
+import { getHeroRootStyle, getHeroHeadlineStyle } from './shared/blocks/Hero'
 
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 const MIN_BLOCK_WIDTH = 120
@@ -74,7 +74,6 @@ function InlineBlockEditor({
   const textEditorRef = useRef<HTMLTextAreaElement | null>(null)
   const heroEditorRef = useRef<HTMLDivElement | null>(null)
   const heroHeadlineRef = useRef<HTMLDivElement | null>(null)
-  const heroSubheadRef = useRef<HTMLDivElement | null>(null)
   const lastAcceptedHeroDraftRef = useRef<Record<string, any>>({ ...(block.props as Record<string, any>) })
   const navInputRef = useRef<HTMLInputElement | null>(null)
   const lastAcceptedNavLabelRef = useRef(String((block.props as Record<string, any>)?.label ?? 'Go'))
@@ -89,9 +88,7 @@ function InlineBlockEditor({
     if (block.type !== 'hero') return
     const frame = window.requestAnimationFrame(() => {
       const headlineNode = heroHeadlineRef.current
-      const subheadNode = heroSubheadRef.current
       if (headlineNode) headlineNode.textContent = String(lastAcceptedHeroDraftRef.current.headline ?? '')
-      if (subheadNode) subheadNode.textContent = String(lastAcceptedHeroDraftRef.current.subhead ?? '')
       if (headlineNode) {
         headlineNode.focus()
         const selection = window.getSelection()
@@ -124,18 +121,17 @@ function InlineBlockEditor({
     selection?.addRange(range)
   }
 
-  const applyHeroDraft = (field: 'headline' | 'subhead', node: HTMLDivElement | null) => {
+  const applyHeroDraft = (node: HTMLDivElement | null) => {
     if (!node) return
 
     const nextDraft = {
       ...lastAcceptedHeroDraftRef.current,
-      [field]: readEditableText(node),
+      headline: readEditableText(node),
     }
 
     const editor = heroEditorRef.current
     const headlineNode = heroHeadlineRef.current
-    const subheadNode = heroSubheadRef.current
-    if (!editor || !headlineNode || !subheadNode) {
+    if (!editor || !headlineNode) {
       lastAcceptedHeroDraftRef.current = nextDraft
       return
     }
@@ -143,18 +139,16 @@ function InlineBlockEditor({
     const editorStyles = window.getComputedStyle(editor)
     const paddingTop = Number.parseFloat(editorStyles.paddingTop || '0') || 0
     const paddingBottom = Number.parseFloat(editorStyles.paddingBottom || '0') || 0
-    const subheadStyles = window.getComputedStyle(subheadNode)
-    const subheadMarginTop = Number.parseFloat(subheadStyles.marginTop || '0') || 0
     const usableHeight = editor.clientHeight - paddingTop - paddingBottom
-    const contentHeight = headlineNode.scrollHeight + subheadMarginTop + subheadNode.scrollHeight
-    const fitsHeight = contentHeight <= usableHeight + 1
+    const contentHeight = headlineNode.scrollHeight
+    const fitsHeight = contentHeight <= usableHeight + 4
 
     if (fitsHeight) {
       lastAcceptedHeroDraftRef.current = nextDraft
       return
     }
 
-    node.textContent = String(lastAcceptedHeroDraftRef.current[field] ?? '')
+    node.textContent = String(lastAcceptedHeroDraftRef.current.headline ?? '')
     moveCaretToEnd(node)
   }
 
@@ -204,7 +198,6 @@ function InlineBlockEditor({
   if (block.type === 'hero') {
     const heroRootStyle = getHeroRootStyle()
     const heroHeadlineStyle = getHeroHeadlineStyle(Number(lastAcceptedHeroDraftRef.current.headlineSize ?? 28) || 28)
-    const heroSubheadStyle = getHeroSubheadStyle()
     const heroEditCompensationPx = 4
 
     return (
@@ -220,7 +213,7 @@ function InlineBlockEditor({
           contentEditable
           suppressContentEditableWarning
           role="textbox"
-          onInput={(event) => applyHeroDraft('headline', event.currentTarget)}
+          onInput={(event) => applyHeroDraft(event.currentTarget)}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.preventDefault()
@@ -230,27 +223,6 @@ function InlineBlockEditor({
           className="outline-none"
           style={{
             ...heroHeadlineStyle,
-            background: 'transparent',
-            width: `calc(100% + ${heroEditCompensationPx}px)`,
-            maxWidth: `calc(100% + ${heroEditCompensationPx}px)`,
-            marginRight: -heroEditCompensationPx,
-          }}
-        />
-        <div
-          ref={heroSubheadRef}
-          contentEditable
-          suppressContentEditableWarning
-          role="textbox"
-          onInput={(event) => applyHeroDraft('subhead', event.currentTarget)}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              onCancel()
-            }
-          }}
-          className="outline-none"
-          style={{
-            ...heroSubheadStyle,
             background: 'transparent',
             width: `calc(100% + ${heroEditCompensationPx}px)`,
             maxWidth: `calc(100% + ${heroEditCompensationPx}px)`,

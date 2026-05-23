@@ -30,7 +30,7 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    defaultProps: { headline: 'Headline', subhead: '', headlineSize: 28 },
+    defaultProps: { headline: 'Headline', headlineSize: 28 },
   },
   text: {
     displayName: 'Text',
