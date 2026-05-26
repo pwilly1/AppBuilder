@@ -27,6 +27,33 @@ const MIN_TEXTLIKE_HEIGHT = 24
 const MIN_SCALE = 0.5
 const MAX_SCALE = 2.6
 
+function measureResizeContentMinWidth(root: HTMLElement | null) {
+  if (!root || !document.body) return null
+
+  const clone = root.cloneNode(true) as HTMLElement
+  clone.style.position = 'fixed'
+  clone.style.left = '-10000px'
+  clone.style.top = '0'
+  clone.style.visibility = 'hidden'
+  clone.style.pointerEvents = 'none'
+  clone.style.width = 'max-content'
+  clone.style.maxWidth = 'none'
+  clone.style.height = 'auto'
+
+  clone.querySelectorAll<HTMLElement>('*').forEach((child) => {
+    child.style.width = 'max-content'
+    child.style.maxWidth = 'none'
+    child.style.whiteSpace = 'pre'
+  })
+
+  document.body.appendChild(clone)
+  const width = Math.ceil(clone.getBoundingClientRect().width)
+  clone.remove()
+
+  // Keep a small guard band so grid rounding does not force a last-word wrap.
+  return width > 0 ? width + 12 : null
+}
+
 type ResizeMode = 'uniform' | 'horizontal' | 'vertical'
 type GridPreview = {
   blockId: string
@@ -438,8 +465,10 @@ function DraggableBlock({
     const currentHeight = renderedHeight ?? elRef.current?.offsetHeight ?? baseSize.height ?? MIN_BLOCK_HEIGHT
     const contentNode = contentRef.current
     const contentRoot = contentNode?.firstElementChild as HTMLElement | null
+    const resizeContentMinWidth = usesContainerResize ? measureResizeContentMinWidth(contentRoot) : null
     const contentWidth = Math.ceil(
-      contentRoot?.getBoundingClientRect().width ??
+      resizeContentMinWidth ??
+        contentRoot?.getBoundingClientRect().width ??
         contentNode?.scrollWidth ??
         currentWidth,
     )
