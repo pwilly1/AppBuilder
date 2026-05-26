@@ -625,12 +625,15 @@ function DraggableBlock({
       ? (renderedHeight ? Math.round(renderedHeight) : baseSize.height ? Math.round(baseSize.height * nextScaleY) : renderedHeight)
       : (baseSize.height ? Math.round(baseSize.height * nextScaleY) : renderedHeight)
     const nextGrid = dropPreviewPlacement ?? block.layout?.grid
+    const snappedGridRect = resizingMode && usePreviewRect && nextGrid ? getPlacementRect(nextGrid, gridMetrics) : null
+    const renderWidth = snappedGridRect ? Math.round(snappedGridRect.width) : finalWidth
+    const renderHeight = snappedGridRect ? Math.round(snappedGridRect.height) : finalHeight
     const alignedPreviewPos =
-      usePreviewRect && nextGrid && finalWidth && finalHeight
-        ? getAlignedPositionForPlacement(nextGrid, finalWidth, finalHeight, gridMetrics)
+      usePreviewRect && nextGrid && renderWidth && renderHeight
+        ? getAlignedPositionForPlacement(nextGrid, renderWidth, renderHeight, gridMetrics)
         : null
-    const finalX = alignedPreviewPos ? alignedPreviewPos.x : pos.x
-    const finalY = alignedPreviewPos ? alignedPreviewPos.y : pos.y
+    const finalX = snappedGridRect ? Math.round(snappedGridRect.left) : alignedPreviewPos ? alignedPreviewPos.x : pos.x
+    const finalY = snappedGridRect ? Math.round(snappedGridRect.top) : alignedPreviewPos ? alignedPreviewPos.y : pos.y
     const currentProps = (block.props || {}) as Record<string, any>
     const {
       width: _oldWidth,
@@ -643,22 +646,32 @@ function DraggableBlock({
       ...rest
     } = currentProps
     const nextRender =
-      nextGrid && finalWidth && finalHeight
+      snappedGridRect
+        ? {
+            ...(block.render || {}),
+            alignX: 'center' as const,
+            alignY: 'center' as const,
+            widthPx: renderWidth,
+            heightPx: renderHeight,
+            offsetX: 0,
+            offsetY: 0,
+          }
+        : nextGrid && renderWidth && renderHeight
         ? clampRenderMetadataToPlacement(
             {
               ...(block.render || {}),
-              widthPx: finalWidth,
-              heightPx: finalHeight,
-              offsetX: computeCenteredOffset(finalX, finalWidth, nextGrid, gridMetrics, 'x'),
-              offsetY: computeCenteredOffset(finalY, finalHeight, nextGrid, gridMetrics, 'y'),
+              widthPx: renderWidth,
+              heightPx: renderHeight,
+              offsetX: computeCenteredOffset(finalX, renderWidth, nextGrid, gridMetrics, 'x'),
+              offsetY: computeCenteredOffset(finalY, renderHeight, nextGrid, gridMetrics, 'y'),
             },
             nextGrid,
             gridMetrics,
           )
         : {
             ...(block.render || {}),
-            widthPx: finalWidth,
-            heightPx: finalHeight,
+            widthPx: renderWidth,
+            heightPx: renderHeight,
           }
 
     onUpdate?.({
@@ -705,11 +718,8 @@ function DraggableBlock({
         return
       }
       if (dropPreviewPlacement) {
-        const finalWidth = baseSize.width ? Math.round(baseSize.width * scaleX) : renderedWidth
-        const finalHeight = baseSize.height ? Math.round(baseSize.height * scaleY) : renderedHeight
-        if (finalWidth && finalHeight) {
-          setPos(getAlignedPositionForPlacement(dropPreviewPlacement, finalWidth, finalHeight, gridMetrics))
-        }
+        const placementRect = getPlacementRect(dropPreviewPlacement, gridMetrics)
+        setPos({ x: Math.round(placementRect.left), y: Math.round(placementRect.top) })
       }
       saveBlock(scaleX, scaleY, { usePreviewRect: true })
       return
