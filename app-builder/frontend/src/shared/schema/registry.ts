@@ -25,8 +25,8 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultLayout: { width: 'full', align: 'center', spacingTop: 'lg', spacingBottom: 'md' },
     gridConstraints: {
       defaultSpan: { cols: 8, rows: 3 },
-      minSpan: { cols: 8, rows: 2 },
-      maxSpan: { cols: 8, rows: 5 },
+      minSpan: { cols: 1, rows: 1 },
+      maxSpan: { cols: 8, rows: 24 },
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
@@ -38,8 +38,8 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultLayout: { width: 'content', align: 'center', spacingTop: 'sm', spacingBottom: 'sm' },
     gridConstraints: {
       defaultSpan: { cols: 4, rows: 2 },
-      minSpan: { cols: 2, rows: 1 },
-      maxSpan: { cols: 8, rows: 6 },
+      minSpan: { cols: 1, rows: 1 },
+      maxSpan: { cols: 8, rows: 24 },
       allowAutoGrowRows: true,
       allowInnerMove: true,
     },
@@ -53,7 +53,7 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     gridConstraints: {
       defaultSpan: { cols: 2, rows: 1 },
       minSpan: { cols: 1, rows: 1 },
-      maxSpan: { cols: 4, rows: 1 },
+      maxSpan: { cols: 8, rows: 24 },
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
