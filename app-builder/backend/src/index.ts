@@ -1,7 +1,7 @@
 // src/index.ts
 import express from 'express';
 import mongoose from 'mongoose';
-import { MONGO_URI, PORT } from "./config/index.js";
+import { CORS_ORIGIN, MONGO_URI, PORT } from "./config/index.js";
 import { AuthController } from './controllers/authController.js';
 import {AuthService} from './services/AuthService.js';
 import { MongoUserRepository } from './repositories/UserRepository.js';
@@ -18,9 +18,20 @@ const auth = new AuthController(authService);
 
 const app = express(); 
 app.use(express.json());// express use allows me to use middleware for incoming requests
-// Simple CORS middleware for development: allows the frontend dev server to call this API
+const allowedOrigins = new Set(
+  [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    ...CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean),
+  ],
+)
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const requestOrigin = req.headers.origin;
+  if (!requestOrigin || allowedOrigins.has(requestOrigin)) {
+    res.header('Access-Control-Allow-Origin', requestOrigin ?? '*');
+  }
+  res.header('Vary', 'Origin');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
@@ -31,6 +42,9 @@ app.use('/projects', makeProjectRoutes());
 app.use('/public', makePublicProjectRoutes());
 app.get('/', (_, res) => {
   res.send(' API running');
+});
+app.get('/health', (_, res) => {
+  res.json({ ok: true });
 });
 
 

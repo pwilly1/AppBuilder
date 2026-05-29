@@ -1,6 +1,6 @@
 // © 2025 Preston Willis. All rights reserved.
 import { BlockRenderer } from './shared/BlockRenderer'
-import type { Page, Block } from './shared/schema/types'
+import type { Page, Block, GridPlacement } from './shared/schema/types'
 import {
   clampRenderMetadataToPlacement,
   collidesWithBlocks,
@@ -57,7 +57,7 @@ function measureResizeContentMinWidth(root: HTMLElement | null) {
 type ResizeMode = 'uniform' | 'horizontal' | 'vertical'
 type GridPreview = {
   blockId: string
-  placement: NonNullable<Block['layout']>['grid']
+  placement: GridPlacement
   rect: ReturnType<typeof getPlacementRect>
   valid: boolean
 }
@@ -78,7 +78,7 @@ type DraggableProps = {
   onDragStateChange?: (dragging: boolean) => void
   onGridPreviewChange?: (preview: { blockId: string; left: number; top: number; width: number; height: number } | null) => void
   dropPreviewValid?: boolean
-  dropPreviewPlacement?: NonNullable<Block['layout']>['grid']
+  dropPreviewPlacement?: GridPlacement
   onSelect?: (b: Block) => void
   onUpdate?: (b: Block) => void
   onSnapChange?: (snap: { h: boolean; v: boolean }) => void
@@ -87,13 +87,11 @@ type DraggableProps = {
 function InlineBlockEditor({
   block,
   width,
-  height,
   onCommit,
   onCancel,
 }: {
   block: Block
   width?: number
-  height?: number
   onCommit: (props: Record<string, any>) => void
   onCancel: () => void
 }) {
@@ -880,7 +878,6 @@ function DraggableBlock({
           <InlineBlockEditor
             block={block}
             width={renderedWidth}
-            height={renderedHeight}
             onCommit={commitInlineEdit}
             onCancel={() => setInlineEditing(false)}
           />
@@ -968,7 +965,7 @@ function DraggableBlock({
 function computeCenteredOffset(
   finalStart: number,
   finalSize: number,
-  placement: NonNullable<Block['layout']>['grid'],
+  placement: GridPlacement,
   gridMetrics: GridMetrics,
   axis: 'x' | 'y',
 ) {
@@ -980,7 +977,7 @@ function computeCenteredOffset(
 }
 
 function getAlignedPositionForPlacement(
-  placement: NonNullable<Block['layout']>['grid'],
+  placement: GridPlacement,
   width: number,
   height: number,
   gridMetrics: GridMetrics,

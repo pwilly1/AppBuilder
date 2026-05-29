@@ -6,6 +6,13 @@ export function getToken(): string | null {
   return localStorage.getItem('app_token');
 }
 
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
+function apiUrl(path: string) {
+  if (!API_BASE_URL) return path;
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 async function request(path: string, options: RequestInit = {}) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -13,7 +20,7 @@ async function request(path: string, options: RequestInit = {}) {
   };
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(path, { ...options, headers, credentials: 'same-origin' });
+  const res = await fetch(apiUrl(path), { ...options, headers, credentials: 'same-origin' });
   if (!res.ok) {
     // If unauthorized, clear stored token so the app can fall back to login
     if (res.status === 401) {

@@ -26,5 +26,5 @@ export function getBlockEditorPlacement(block: Block, index = 0): Required<Block
             ? legacy.scale
             : 1
 
-  return { x, y, scale: typeof placement.scale === 'number' ? placement.scale : undefined, scaleX, scaleY }
+  return { x, y, scale: typeof placement.scale === 'number' ? placement.scale : scaleX, scaleX, scaleY }
 }

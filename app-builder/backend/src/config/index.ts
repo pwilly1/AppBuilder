@@ -20,5 +20,6 @@ if (!jwtSecret) {
 export const JWT_SECRET = jwtSecret;
 export const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() || '';
 export const EMAIL_FROM = process.env.EMAIL_FROM?.trim() || '';
+export const CORS_ORIGIN = process.env.CORS_ORIGIN?.trim() || '';
 
 
