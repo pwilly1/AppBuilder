@@ -3,11 +3,17 @@
 Apptura is a low-code app creation platform that lets users visually design and configure mobile app content without writing extensive code.
 It currently includes a React/Tailwind web editor, a Node.js/Express backend, and an Android Kotlin/Compose native preview app.
 
+Live deployment:
+- Frontend: <https://delightful-desert-04350a50f.7.azurestaticapps.net>
+- Backend health check: <https://apptura-cneyenbkczh5hzcv.eastus-01.azurewebsites.net/health>
+
 ---
 
 ## Features (Current)
 
 - Visual app editor with draggable block placement and property inspector
+- Grid-snapped block placement and resizing for core blocks
+- Inline and inspector-based editing for hero, text, and navigation button blocks
 - Multi-page project editing (add, rename, delete, select)
 - Web preview pane and Android native runtime preview
 - Authentication with JWT (signup/login, protected APIs)
@@ -24,6 +30,8 @@ It currently includes a React/Tailwind web editor, a Node.js/Express backend, an
 | Backend | Node.js, Express |
 | Database | MongoDB (Mongoose) |
 | Auth | JWT |
+| Hosting | Azure Static Web Apps, Azure App Service |
+| CI/CD | GitHub Actions |
 | Native Preview | Android (Kotlin + Jetpack Compose) |
 | AI | Planned (not yet implemented in this repository) |
 
@@ -46,6 +54,32 @@ It currently includes a React/Tailwind web editor, a Node.js/Express backend, an
 4. The Android native preview app can load and render saved projects.
 
 Planned next layers include AI-assisted layout/content generation and deployment/export automation.
+
+---
+
+## Deployment
+
+Current deployment architecture:
+
+```text
+Azure Static Web Apps frontend
+  -> Azure App Service backend
+  -> MongoDB Atlas database
+```
+
+The frontend build receives the backend URL through:
+
+```text
+VITE_API_URL
+```
+
+The backend allows the deployed frontend through:
+
+```text
+CORS_ORIGIN
+```
+
+See [docs/AZURE_DEPLOYMENT.md](docs/AZURE_DEPLOYMENT.md) for deployment details and environment variables.
 
 ---
 

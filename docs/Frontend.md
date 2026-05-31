@@ -32,6 +32,10 @@ Responsibilities:
 - login/signup related requests
 - general fetch wrappers used by the frontend
 
+Deployment note:
+- local development can use relative API paths through the Vite proxy
+- deployed builds must receive `VITE_API_URL` during the build so requests go to the Azure App Service backend
+
 ### [AddBlock.tsx](/C:/Users/prwil/Documents/AppBuilder/app-builder/frontend/src/AddBlock.tsx)
 Small block-library UI used in the editor sidebar.
 
