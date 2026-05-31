@@ -54,5 +54,7 @@ jobs:
       - name: Close Pull Request
         id: closepullrequest
         uses: Azure/static-web-apps-deploy@v1
+        env:
+          VITE_API_URL: https://apptura-cneyenbkczh5hzcv.eastus-01.azurewebsites.net
         with:
           action: "close"
