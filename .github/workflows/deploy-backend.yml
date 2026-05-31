@@ -27,7 +27,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: ${{ env.BACKEND_PATH }}/package-lock.json
+          cache-dependency-path: app-builder/backend/package-lock.json
 
       - name: Install dependencies
         working-directory: ${{ env.BACKEND_PATH }}
