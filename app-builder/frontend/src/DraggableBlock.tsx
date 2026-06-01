@@ -5,46 +5,23 @@ import {
   clampRenderMetadataToPlacement,
   getPlacementRect,
   type GridMetrics,
-  GRID_PADDING,
   GRID_ROW_HEIGHT,
   resolveBlockRenderRect,
 } from './shared/schema/gridLayout'
 import { getBlockEditorPlacement } from './shared/schema/runtimeLayout'
 import { InlineBlockEditor } from './InlineBlockEditor'
-const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
-const MIN_BLOCK_WIDTH = 120
-const MIN_BLOCK_HEIGHT = 72
-const MIN_TEXTLIKE_WIDTH = 24
-const MIN_TEXTLIKE_HEIGHT = 24
-const MIN_SCALE = 0.5
-const MAX_SCALE = 2.6
-
-function measureResizeContentMinWidth(root: HTMLElement | null) {
-  if (!root || !document.body) return null
-
-  const clone = root.cloneNode(true) as HTMLElement
-  clone.style.position = 'fixed'
-  clone.style.left = '-10000px'
-  clone.style.top = '0'
-  clone.style.visibility = 'hidden'
-  clone.style.pointerEvents = 'none'
-  clone.style.width = 'max-content'
-  clone.style.maxWidth = 'none'
-  clone.style.height = 'auto'
-
-  clone.querySelectorAll<HTMLElement>('*').forEach((child) => {
-    child.style.width = 'max-content'
-    child.style.maxWidth = 'none'
-    child.style.whiteSpace = 'pre'
-  })
-
-  document.body.appendChild(clone)
-  const width = Math.ceil(clone.getBoundingClientRect().width)
-  clone.remove()
-
-  // Keep a small guard band so grid rounding does not force a last-word wrap.
-  return width > 0 ? width + 12 : null
-}
+import {
+  clamp,
+  computeCenteredOffset,
+  getAlignedPositionForPlacement,
+  MAX_SCALE,
+  measureResizeContentMinWidth,
+  MIN_BLOCK_HEIGHT,
+  MIN_BLOCK_WIDTH,
+  MIN_SCALE,
+  MIN_TEXTLIKE_HEIGHT,
+  MIN_TEXTLIKE_WIDTH,
+} from './editor/editorGeometry'
 
 type ResizeMode = 'uniform' | 'horizontal' | 'vertical'
 type SaveBlockOptions = {
@@ -284,6 +261,11 @@ export function DraggableBlock({
       const dy = e.clientY - startPt.y
       const baseWidth = Math.max(baseSize.width || MIN_BLOCK_WIDTH, MIN_BLOCK_WIDTH)
       const baseHeight = Math.max(baseSize.height || MIN_BLOCK_HEIGHT, MIN_BLOCK_HEIGHT)
+      const container = containerRef.current
+      const containerWidth = container?.clientWidth ?? gridMetrics.canvasWidth
+      const containerHeight = container?.clientHeight ?? (gridMetrics.rowHeight ?? GRID_ROW_HEIGHT) * 24
+      const maxResizeWidth = Math.max(MIN_BLOCK_WIDTH, containerWidth - pos.x)
+      const maxResizeHeight = Math.max(MIN_BLOCK_HEIGHT, containerHeight - pos.y)
 
       if (usesContainerResize) {
         const nextWidthRaw =
@@ -298,11 +280,8 @@ export function DraggableBlock({
           resizingMode === 'horizontal'
             ? MIN_TEXTLIKE_HEIGHT
             : Math.max(MIN_TEXTLIKE_HEIGHT, startContentSize.height)
-        const maxCanvasWidth = Math.max(MIN_BLOCK_WIDTH, gridMetrics.canvasWidth - GRID_PADDING * 2)
-        const maxCanvasHeight = Math.max(
-          MIN_BLOCK_HEIGHT,
-          (containerRef.current?.clientHeight ?? (gridMetrics.rowHeight ?? GRID_ROW_HEIGHT) * 24),
-        )
+        const maxCanvasWidth = Math.max(minWidth, maxResizeWidth)
+        const maxCanvasHeight = Math.max(minHeight, maxResizeHeight)
         const nextWidth = clamp(nextWidthRaw, minWidth, maxCanvasWidth)
         const nextHeight = clamp(nextHeightRaw, minHeight, maxCanvasHeight)
 
@@ -321,41 +300,45 @@ export function DraggableBlock({
       }
 
       if (resizingMode === 'horizontal') {
-        const nextScaleX = clamp((baseWidth * startScale.x + dx) / baseWidth, MIN_SCALE, MAX_SCALE)
+        const nextWidth = clamp(baseWidth * startScale.x + dx, baseWidth * MIN_SCALE, Math.min(baseWidth * MAX_SCALE, maxResizeWidth))
+        const nextScaleX = nextWidth / baseWidth
         setScaleX(Number(nextScaleX.toFixed(3)))
         onGridPreviewChange?.({
           blockId: block.id,
           left: pos.x,
           top: pos.y,
-          width: Math.round(baseWidth * nextScaleX),
+          width: Math.round(nextWidth),
           height: renderedHeight ?? Math.round(baseHeight * scaleY),
         })
         return
       }
 
       if (resizingMode === 'vertical') {
-        const nextScaleY = clamp((baseHeight * startScale.y + dy) / baseHeight, MIN_SCALE, MAX_SCALE)
+        const nextHeight = clamp(baseHeight * startScale.y + dy, baseHeight * MIN_SCALE, Math.min(baseHeight * MAX_SCALE, maxResizeHeight))
+        const nextScaleY = nextHeight / baseHeight
         setScaleY(Number(nextScaleY.toFixed(3)))
         onGridPreviewChange?.({
           blockId: block.id,
           left: pos.x,
           top: pos.y,
           width: renderedWidth ?? Math.round(baseWidth * scaleX),
-          height: Math.round(baseHeight * nextScaleY),
+          height: Math.round(nextHeight),
         })
         return
       }
 
-      const nextScaleX = clamp((baseWidth * startScale.x + dx) / baseWidth, MIN_SCALE, MAX_SCALE)
-      const nextScaleY = clamp((baseHeight * startScale.y + dy) / baseHeight, MIN_SCALE, MAX_SCALE)
+      const nextWidth = clamp(baseWidth * startScale.x + dx, baseWidth * MIN_SCALE, Math.min(baseWidth * MAX_SCALE, maxResizeWidth))
+      const nextHeight = clamp(baseHeight * startScale.y + dy, baseHeight * MIN_SCALE, Math.min(baseHeight * MAX_SCALE, maxResizeHeight))
+      const nextScaleX = nextWidth / baseWidth
+      const nextScaleY = nextHeight / baseHeight
       setScaleX(Number(nextScaleX.toFixed(3)))
       setScaleY(Number(nextScaleY.toFixed(3)))
       onGridPreviewChange?.({
         blockId: block.id,
         left: pos.x,
         top: pos.y,
-        width: Math.round(baseWidth * nextScaleX),
-        height: Math.round(baseHeight * nextScaleY),
+        width: Math.round(nextWidth),
+        height: Math.round(nextHeight),
       })
       return
     }
@@ -710,33 +693,6 @@ export function DraggableBlock({
       </div>
     </div>
   )
-}
-
-function computeCenteredOffset(
-  finalStart: number,
-  finalSize: number,
-  placement: GridPlacement,
-  gridMetrics: GridMetrics,
-  axis: 'x' | 'y',
-) {
-  const placementRect = getPlacementRect(placement, gridMetrics)
-  const containerSize = axis === 'x' ? placementRect.width : placementRect.height
-  const containerStart = axis === 'x' ? placementRect.left : placementRect.top
-  const centeredStart = containerStart + Math.max(0, (containerSize - finalSize) / 2)
-  return finalStart - centeredStart
-}
-
-function getAlignedPositionForPlacement(
-  placement: GridPlacement,
-  width: number,
-  height: number,
-  gridMetrics: GridMetrics,
-) {
-  const placementRect = getPlacementRect(placement, gridMetrics)
-  return {
-    x: Math.round(placementRect.left + Math.max(0, (placementRect.width - width) / 2)),
-    y: Math.round(placementRect.top + Math.max(0, (placementRect.height - height) / 2)),
-  }
 }
 
 
