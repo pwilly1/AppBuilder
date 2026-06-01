@@ -81,6 +81,8 @@ CORS_ORIGIN
 
 See [docs/AZURE_DEPLOYMENT.md](docs/AZURE_DEPLOYMENT.md) for deployment details and environment variables.
 
+See [docs/ROADMAP.md](docs/ROADMAP.md) for completed milestones and planned next steps.
+
 ---
 
 ## API Overview
