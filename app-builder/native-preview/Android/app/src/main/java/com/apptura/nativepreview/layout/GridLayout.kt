@@ -6,8 +6,8 @@ import androidx.compose.ui.unit.dp
 import com.apptura.nativepreview.models.Block
 import com.apptura.nativepreview.models.GridPlacement
 
-const val GRID_COLUMN_COUNT = 8
-val GRID_ROW_HEIGHT: Dp = 56.dp
+const val GRID_COLUMN_COUNT = 16
+val GRID_ROW_HEIGHT: Dp = 28.dp
 val GRID_GAP: Dp = 0.dp
 val GRID_PADDING: Dp = 16.dp
 val GRID_CANVAS_WIDTH: Dp = 390.dp

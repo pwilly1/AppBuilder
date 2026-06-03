@@ -1,4 +1,4 @@
-﻿// © 2025 Preston Willis. All rights reserved.
+// Copyright 2025 Preston Willis. All rights reserved.
 // Block registry with defaults and factories (no React imports)
 import type {
   BlockType,
@@ -24,9 +24,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     layoutClass: 'hero',
     defaultLayout: { width: 'full', align: 'center', spacingTop: 'lg', spacingBottom: 'md' },
     gridConstraints: {
-      defaultSpan: { cols: 8, rows: 3 },
+      defaultSpan: { cols: 16, rows: 6 },
       minSpan: { cols: 1, rows: 1 },
-      maxSpan: { cols: 8, rows: 24 },
+      maxSpan: { cols: 16, rows: 48 },
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
@@ -37,9 +37,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     layoutClass: 'content',
     defaultLayout: { width: 'content', align: 'center', spacingTop: 'sm', spacingBottom: 'sm' },
     gridConstraints: {
-      defaultSpan: { cols: 4, rows: 2 },
+      defaultSpan: { cols: 8, rows: 4 },
       minSpan: { cols: 1, rows: 1 },
-      maxSpan: { cols: 8, rows: 24 },
+      maxSpan: { cols: 16, rows: 48 },
       allowAutoGrowRows: true,
       allowInnerMove: true,
     },
@@ -51,9 +51,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     layoutClass: 'action',
     defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'sm' },
     gridConstraints: {
-      defaultSpan: { cols: 2, rows: 1 },
+      defaultSpan: { cols: 4, rows: 2 },
       minSpan: { cols: 1, rows: 1 },
-      maxSpan: { cols: 8, rows: 24 },
+      maxSpan: { cols: 16, rows: 48 },
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
@@ -64,9 +64,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     layoutClass: 'list',
     defaultLayout: { width: 'full', align: 'start', spacingTop: 'md', spacingBottom: 'md' },
     gridConstraints: {
-      defaultSpan: { cols: 8, rows: 3 },
-      minSpan: { cols: 4, rows: 2 },
-      maxSpan: { cols: 8, rows: 6 },
+      defaultSpan: { cols: 16, rows: 6 },
+      minSpan: { cols: 8, rows: 4 },
+      maxSpan: { cols: 16, rows: 12 },
       allowAutoGrowRows: true,
       allowInnerMove: true,
     },
@@ -85,9 +85,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     layoutClass: 'form',
     defaultLayout: { width: 'full', align: 'start', spacingTop: 'md', spacingBottom: 'lg' },
     gridConstraints: {
-      defaultSpan: { cols: 8, rows: 4 },
-      minSpan: { cols: 6, rows: 3 },
-      maxSpan: { cols: 8, rows: 8 },
+      defaultSpan: { cols: 16, rows: 8 },
+      minSpan: { cols: 12, rows: 6 },
+      maxSpan: { cols: 16, rows: 16 },
       allowAutoGrowRows: true,
       allowInnerMove: true,
     },
@@ -109,9 +109,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     layoutClass: 'media',
     defaultLayout: { width: 'full', align: 'center', spacingTop: 'md', spacingBottom: 'md' },
     gridConstraints: {
-      defaultSpan: { cols: 8, rows: 3 },
-      minSpan: { cols: 4, rows: 2 },
-      maxSpan: { cols: 8, rows: 6 },
+      defaultSpan: { cols: 16, rows: 6 },
+      minSpan: { cols: 8, rows: 4 },
+      maxSpan: { cols: 16, rows: 12 },
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },

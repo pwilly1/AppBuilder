@@ -1,6 +1,6 @@
 ﻿// © 2025 Preston Willis. All rights reserved.
 import { useMemo, useState } from 'react'
-import { PageRenderer } from '../PageRenderer'
+import { PageRenderer } from '../editor/PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'

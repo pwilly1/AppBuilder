@@ -8,8 +8,8 @@ import type {
   GridSpan,
 } from './types'
 
-export const GRID_COLUMN_COUNT = 8
-export const GRID_ROW_HEIGHT = 56
+export const GRID_COLUMN_COUNT = 16
+export const GRID_ROW_HEIGHT = 28
 export const GRID_GAP = 0
 export const GRID_PADDING = 16
 

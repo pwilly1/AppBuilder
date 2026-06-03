@@ -1,5 +1,5 @@
 // © 2025 Preston Willis. All rights reserved.
-import type { Page, Block, GridPlacement } from './shared/schema/types'
+import type { Page, Block, GridPlacement } from '../shared/schema/types'
 import {
   collidesWithBlocks,
   derivePlacementFromPixelRect,
@@ -10,7 +10,7 @@ import {
   GRID_GAP,
   GRID_PADDING,
   GRID_ROW_HEIGHT,
-} from './shared/schema/gridLayout'
+} from '../shared/schema/gridLayout'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { DraggableBlock } from './DraggableBlock'
 

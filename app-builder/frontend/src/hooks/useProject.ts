@@ -3,13 +3,13 @@
 import type { Project, Block } from '../shared/schema/types'
 import { getProject, updateProject, createProject, getToken, listProjects } from '../api'
 import { findFirstAvailablePlacement, getBlockGridConstraints } from '../shared/schema/gridLayout'
-import { migrateProjectToGridLayout } from '../shared/schema/gridMigration'
+import { GRID_DENSITY_SCHEMA_VERSION, migrateProjectToGridLayout } from '../shared/schema/gridMigration'
 
 const LAST_PROJECT_ID_KEY = 'app_last_project_id'
 
 export default function useProject(setAuthed: (a: boolean) => void) {
   const initialProject: Project = {
-    schemaVersion: 1,
+    schemaVersion: GRID_DENSITY_SCHEMA_VERSION,
     id: 'proj1',
     name: 'My App',
     pages: [

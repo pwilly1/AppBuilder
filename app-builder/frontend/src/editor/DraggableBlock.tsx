@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type RefObject } from 'react'
-import { BlockRenderer } from './shared/BlockRenderer'
-import type { Block, GridPlacement } from './shared/schema/types'
+import { BlockRenderer } from '../shared/BlockRenderer'
+import type { Block, GridPlacement } from '../shared/schema/types'
 import {
   clampRenderMetadataToPlacement,
   getPlacementRect,
   type GridMetrics,
   GRID_ROW_HEIGHT,
   resolveBlockRenderRect,
-} from './shared/schema/gridLayout'
-import { getBlockEditorPlacement } from './shared/schema/runtimeLayout'
+} from '../shared/schema/gridLayout'
+import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout'
 import { InlineBlockEditor } from './InlineBlockEditor'
 import {
   clamp,
@@ -21,7 +21,7 @@ import {
   MIN_SCALE,
   MIN_TEXTLIKE_HEIGHT,
   MIN_TEXTLIKE_WIDTH,
-} from './editor/editorGeometry'
+} from './editorGeometry'
 
 type ResizeMode = 'uniform' | 'horizontal' | 'vertical'
 type SaveBlockOptions = {

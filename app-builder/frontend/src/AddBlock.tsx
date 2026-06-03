@@ -51,15 +51,8 @@ export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
             <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
           </div>
         </CollapsibleSection>
-
-        <CollapsibleSection title="Business Sections" defaultOpen>
-          <div className="grid gap-2">
-            <BlockEntry title="Services List" note="Pricing, packages, or offerings" onClick={() => onAdd(createBlock('servicesList'))} />
-            <BlockEntry title="Contact Form" note="Collect leads and customer requests" onClick={() => onAdd(createBlock('contactForm'))} />
-            <BlockEntry title="Image Gallery" note="Show work samples or photos" onClick={() => onAdd(createBlock('imageGallery'))} />
-          </div>
-        </CollapsibleSection>
       </div>
     </div>
   )
 }
+

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FocusEventHandler } from 'react'
-import type { Block } from './shared/schema/types'
-import { getHeroHeadlineStyle, getHeroRootStyle } from './shared/blocks/Hero'
+import type { Block } from '../shared/schema/types'
+import { getHeroHeadlineStyle, getHeroRootStyle } from '../shared/blocks/Hero'
 
 type InlineBlockEditorProps = {
   block: Block

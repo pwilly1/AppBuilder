@@ -79,6 +79,8 @@ data class PublicFormSubmissionRequest(
 )
 
 object ProjectLoader {
+    private const val GRID_DENSITY_SCHEMA_VERSION = 2
+
     private val json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true
@@ -87,7 +89,7 @@ object ProjectLoader {
     fun loadFromAssets(context: Context, fileName: String): Project {
         val input = context.assets.open(fileName)
         val content = input.bufferedReader().use { it.readText() }
-        return json.decodeFromString<Project>(content)
+        return migrateProjectGridDensity(json.decodeFromString<Project>(content))
     }
 
     suspend fun createGuestToken(baseUrl: String): String {
@@ -122,7 +124,7 @@ object ProjectLoader {
 
     suspend fun loadFromBackend(baseUrl: String, projectId: String, token: String): Project {
         val body = httpGet(normalizeBaseUrl(baseUrl) + "/projects/" + projectId, token = token)
-        return json.decodeFromString<Project>(body)
+        return migrateProjectGridDensity(json.decodeFromString<Project>(body))
     }
 
     suspend fun submitPublicProjectForm(
@@ -139,6 +141,31 @@ object ProjectLoader {
     }
 
     private fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trim().removeSuffix("/")
+
+    private fun migrateProjectGridDensity(project: Project): Project {
+        if ((project.schemaVersion ?: 1) >= GRID_DENSITY_SCHEMA_VERSION) return project
+
+        return project.copy(
+            schemaVersion = GRID_DENSITY_SCHEMA_VERSION,
+            pages = project.pages.map { page ->
+                page.copy(
+                    blocks = page.blocks.map { block ->
+                        val grid = block.layout?.grid ?: return@map block
+                        block.copy(
+                            layout = block.layout.copy(
+                                grid = GridPlacement(
+                                    colStart = (grid.colStart - 1) * 2 + 1,
+                                    rowStart = (grid.rowStart - 1) * 2 + 1,
+                                    colSpan = grid.colSpan * 2,
+                                    rowSpan = grid.rowSpan * 2
+                                )
+                            )
+                        )
+                    }
+                )
+            }
+        )
+    }
 
     private suspend fun httpGet(url: String, token: String?): String {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
