@@ -12,8 +12,10 @@ type InlineBlockEditorProps = {
 export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBlockEditorProps) {
   const [draft, setDraft] = useState<Record<string, any>>(() => ({ ...(block.props as Record<string, any>) }))
   const textEditorRef = useRef<HTMLTextAreaElement | null>(null)
+  const lastAcceptedTextHeightRef = useRef(0)
   const heroEditorRef = useRef<HTMLDivElement | null>(null)
   const heroHeadlineRef = useRef<HTMLDivElement | null>(null)
+  const lastAcceptedHeroHeightRef = useRef(0)
   const lastAcceptedHeroDraftRef = useRef<Record<string, any>>({ ...(block.props as Record<string, any>) })
   const navInputRef = useRef<HTMLInputElement | null>(null)
   const lastAcceptedNavLabelRef = useRef(String((block.props as Record<string, any>)?.label ?? 'Go'))
@@ -38,9 +40,18 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
         selection?.removeAllRanges()
         selection?.addRange(range)
       }
+      lastAcceptedHeroHeightRef.current = headlineNode?.scrollHeight ?? 0
     })
     return () => window.cancelAnimationFrame(frame)
   }, [block.id, block.type])
+
+  useEffect(() => {
+    if (block.type !== 'text') return
+    const frame = window.requestAnimationFrame(() => {
+      lastAcceptedTextHeightRef.current = textEditorRef.current?.scrollHeight ?? 0
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [block.id, block.type, draft.value])
 
   const commit = () => onCommit(block.type === 'hero' ? lastAcceptedHeroDraftRef.current : draft)
   const handleOverlayBlur: FocusEventHandler<HTMLDivElement> = (event) => {
@@ -68,6 +79,8 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
       ...lastAcceptedHeroDraftRef.current,
       headline: readEditableText(node),
     }
+    const previousHeadline = String(lastAcceptedHeroDraftRef.current.headline ?? '')
+    const isShrinking = String(nextDraft.headline ?? '').length < previousHeadline.length
 
     const editor = heroEditorRef.current
     const headlineNode = heroHeadlineRef.current
@@ -81,9 +94,12 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
     const paddingBottom = Number.parseFloat(editorStyles.paddingBottom || '0') || 0
     const usableHeight = editor.clientHeight - paddingTop - paddingBottom
     const contentHeight = headlineNode.scrollHeight
-    const fitsHeight = contentHeight <= usableHeight + 4
+    const fitsHeight = contentHeight <= usableHeight + 6
+    const staysOnAcceptedRows =
+      lastAcceptedHeroHeightRef.current > 0 && contentHeight <= lastAcceptedHeroHeightRef.current + 2
 
-    if (fitsHeight) {
+    if (fitsHeight || staysOnAcceptedRows || isShrinking) {
+      lastAcceptedHeroHeightRef.current = contentHeight
       lastAcceptedHeroDraftRef.current = nextDraft
       return
     }
@@ -107,9 +123,13 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
             const nextValue = event.target.value
             const currentValue = String(draft.value ?? '')
             const isShrinking = nextValue.length < currentValue.length
-            const fitsHeight = event.target.scrollHeight <= event.target.clientHeight + 1
+            const contentHeight = event.target.scrollHeight
+            const fitsHeight = contentHeight <= event.target.clientHeight + 6
+            const staysOnAcceptedRows =
+              lastAcceptedTextHeightRef.current > 0 && contentHeight <= lastAcceptedTextHeightRef.current + 2
 
-            if (fitsHeight || isShrinking) {
+            if (fitsHeight || staysOnAcceptedRows || isShrinking) {
+              lastAcceptedTextHeightRef.current = contentHeight
               setDraft((current) => ({ ...current, value: nextValue }))
               return
             }
