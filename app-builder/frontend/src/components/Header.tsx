@@ -1,27 +1,12 @@
-// © 2025 Preston Willis. All rights reserved.
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 type Props = {
   authed: boolean
-  setAuthed: (v: boolean) => void
   logout: () => void
-  undo: () => void
-  redo: () => void
-  canUndo: boolean
-  canRedo: boolean
-  saveProject: () => void
-  isSaving?: boolean
-  lastSavedAt?: number | null
-  saveError?: string | null
-  previewMode?: boolean
 }
 
-export default function Header(props: Props) {
+export default function Header({ authed, logout }: Props) {
   const navigate = useNavigate()
-  const location = useLocation()
-  const { authed, logout, undo, redo, canUndo, canRedo, saveProject, isSaving, lastSavedAt, saveError, previewMode } = props
-  const isEditorRoute = location.pathname.startsWith('/editor')
-  const showEditorControls = isEditorRoute && !previewMode
 
   return (
     <header className="sticky top-0 z-40 mx-auto mb-4 w-full max-w-[var(--max-width)] px-4 pt-4">
@@ -42,27 +27,6 @@ export default function Header(props: Props) {
         </button>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {showEditorControls ? (
-            <>
-              <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={undo} disabled={!canUndo}>
-                Undo
-              </button>
-              <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={redo} disabled={!canRedo}>
-                Redo
-              </button>
-              <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate('/dashboard')}>
-                Back to Dashboard
-              </button>
-              <button className="btn" onClick={saveProject} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save'}
-              </button>
-              <div className="min-w-[150px] text-right text-xs text-slate-500">
-                {isSaving ? 'Saving...' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'Not saved yet'}
-                {saveError ? ` | ${saveError}` : null}
-              </div>
-            </>
-          ) : null}
-
           {authed ? (
             <>
               <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate('/account')}>
@@ -88,4 +52,3 @@ export default function Header(props: Props) {
     </header>
   )
 }
-

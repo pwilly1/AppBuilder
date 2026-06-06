@@ -134,6 +134,13 @@ function AppContent(props: any) {
       onReorder={onReorder}
       selectedBlock={selectedBlock}
       saveProject={saveProject}
+      undo={undo}
+      redo={redo}
+      canUndo={canUndo}
+      canRedo={canRedo}
+      isSaving={isSaving}
+      lastSavedAt={lastSavedAt}
+      saveError={saveError}
       addPage={addPage}
       selectPage={selectPage}
       renamePage={renamePage}
@@ -172,17 +179,7 @@ function AppContent(props: any) {
     <>
       <Header
         authed={authed}
-        setAuthed={props.setAuthed}
         logout={logout}
-        undo={undo}
-        redo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        saveProject={saveProject}
-        isSaving={isSaving}
-        lastSavedAt={lastSavedAt}
-        saveError={saveError}
-        previewMode={previewMode}
       />
 
       <main className={`app-grid ${location.pathname.startsWith('/editor') ? 'editor-mode' : ''}`}>
@@ -246,6 +243,13 @@ function EditorScreen(props: any) {
     onReorder,
     selectedBlock,
     saveProject,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isSaving,
+    lastSavedAt,
+    saveError,
     addPage,
     selectPage,
     renamePage,
@@ -280,6 +284,13 @@ function EditorScreen(props: any) {
       onReorder={onReorder}
       selectedBlock={selectedBlock}
       saveProject={saveProject}
+      undo={undo}
+      redo={redo}
+      canUndo={canUndo}
+      canRedo={canRedo}
+      isSaving={isSaving}
+      lastSavedAt={lastSavedAt}
+      saveError={saveError}
       addPage={addPage}
       selectPage={selectPage}
       renamePage={renamePage}
