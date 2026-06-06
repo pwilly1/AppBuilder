@@ -5,7 +5,7 @@ import Landing from './components/Landing'
 import Account from './pages/Account'
 import Dashboard from './pages/Dashboard'
 
-import { BrowserRouter, Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
 import useProject from './hooks/useProject'
 import Header from './components/Header'
 import EditorLayout from './layout/EditorLayout'
@@ -91,6 +91,7 @@ export default function App() {
 function AppContent(props: any) {
   const navigate = useNavigate()
   const location = useLocation()
+  const [previewMode, setPreviewMode] = React.useState(false)
 
   const {
     authed,
@@ -120,6 +121,32 @@ function AppContent(props: any) {
     lastSavedAt,
     saveError,
   } = props
+  const editorElement = (
+    <EditorScreen
+      project={project}
+      page={page}
+      pages={project?.pages || []}
+      selectedPageId={selectedPageId}
+      addBlock={addBlock}
+      setSelectedBlock={setSelectedBlock}
+      editBlock={editBlock}
+      deleteBlock={deleteBlock}
+      onReorder={onReorder}
+      selectedBlock={selectedBlock}
+      saveProject={saveProject}
+      addPage={addPage}
+      selectPage={selectPage}
+      renamePage={renamePage}
+      deletePage={deletePage}
+      loadProjectById={loadProjectById}
+      previewMode={previewMode}
+      onPreviewModeChange={setPreviewMode}
+    />
+  )
+
+  React.useEffect(() => {
+    if (!location.pathname.startsWith('/editor')) setPreviewMode(false)
+  }, [location.pathname])
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -155,6 +182,7 @@ function AppContent(props: any) {
         isSaving={isSaving}
         lastSavedAt={lastSavedAt}
         saveError={saveError}
+        previewMode={previewMode}
       />
 
       <main className={`app-grid ${location.pathname.startsWith('/editor') ? 'editor-mode' : ''}`}>
@@ -163,7 +191,7 @@ function AppContent(props: any) {
             path="/"
             element={(
               <section className="col-span-3">
-                <Landing onLogin={() => { setAuthed(true); navigate('/dashboard') }} />
+                {authed ? <Navigate to="/dashboard" replace /> : <Landing onLogin={() => { setAuthed(true); navigate('/dashboard') }} />}
               </section>
             )}
           />
@@ -172,7 +200,7 @@ function AppContent(props: any) {
             path="/dashboard"
             element={(
               <section className="col-span-3">
-                <Dashboard onOpen={(proj: any) => openProject(proj, navigate)} />
+                {authed ? <Dashboard onOpen={(proj: any) => openProject(proj, navigate)} /> : <Navigate to="/" replace />}
               </section>
             )}
           />
@@ -181,57 +209,19 @@ function AppContent(props: any) {
             path="/account"
             element={(
               <section className="col-span-3">
-                <Account onBack={() => navigate('/dashboard')} />
+                {authed ? <Account onBack={() => navigate('/dashboard')} /> : <Navigate to="/" replace />}
               </section>
             )}
           />
 
           <Route
             path="/editor"
-            element={(
-              <EditorScreen
-                project={project}
-                page={page}
-                pages={project?.pages || []}
-                selectedPageId={selectedPageId}
-                addBlock={addBlock}
-                setSelectedBlock={setSelectedBlock}
-                editBlock={editBlock}
-                deleteBlock={deleteBlock}
-                onReorder={onReorder}
-                selectedBlock={selectedBlock}
-                saveProject={saveProject}
-                addPage={addPage}
-                selectPage={selectPage}
-                renamePage={renamePage}
-                deletePage={deletePage}
-                loadProjectById={loadProjectById}
-              />
-            )}
+            element={authed ? editorElement : <Navigate to="/" replace />}
           />
 
           <Route
             path="/editor/:projectId"
-            element={(
-              <EditorScreen
-                project={project}
-                page={page}
-                pages={project?.pages || []}
-                selectedPageId={selectedPageId}
-                addBlock={addBlock}
-                setSelectedBlock={setSelectedBlock}
-                editBlock={editBlock}
-                deleteBlock={deleteBlock}
-                onReorder={onReorder}
-                selectedBlock={selectedBlock}
-                saveProject={saveProject}
-                addPage={addPage}
-                selectPage={selectPage}
-                renamePage={renamePage}
-                deletePage={deletePage}
-                loadProjectById={loadProjectById}
-              />
-            )}
+            element={authed ? editorElement : <Navigate to="/" replace />}
           />
         </Routes>
       </main>
@@ -260,6 +250,8 @@ function EditorScreen(props: any) {
     selectPage,
     renamePage,
     deletePage,
+    previewMode,
+    onPreviewModeChange,
   } = props
 
   React.useEffect(() => {
@@ -292,6 +284,8 @@ function EditorScreen(props: any) {
       selectPage={selectPage}
       renamePage={renamePage}
       deletePage={deletePage}
+      previewMode={previewMode}
+      onPreviewModeChange={onPreviewModeChange}
     />
   )
 }

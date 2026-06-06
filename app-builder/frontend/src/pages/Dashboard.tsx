@@ -287,6 +287,7 @@ function ProjectCard({
 export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord) => void }) {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [namingProject, setNamingProject] = useState(false);
   const [newName, setNewName] = useState('');
   const [search, setSearch] = useState('');
 
@@ -391,15 +392,24 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
   }, [selectedSubmissionBlockId, submissionProject?.id]);
 
   async function create() {
+    const name = newName.trim();
+    if (!name) return;
+
     try {
-      const res: any = await createProject(newName || 'Untitled');
+      const res: any = await createProject(name);
       const normalized = { ...res, id: res.id ?? res._id };
       setProjects((prev) => [normalized, ...prev]);
       setNewName('');
+      setNamingProject(false);
       onOpen(normalized);
     } catch (error) {
       console.error(error);
     }
+  }
+
+  function cancelCreate() {
+    setNewName('');
+    setNamingProject(false);
   }
 
   async function remove(id: string) {
@@ -439,15 +449,37 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
                   <h2 className="section-heading text-3xl font-semibold">Projects</h2>
                   <p className="muted">A snapshot of your work. Open a project to edit it or review contact submissions.</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    className="field-input !min-w-[220px] !rounded-full !px-4 !py-3"
-                    placeholder="New project name"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                  />
-                  <button className="btn" onClick={create}>Create</button>
-                </div>
+                {namingProject ? (
+                  <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm sm:min-w-[320px]">
+                    <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="new-project-name">
+                      Project name
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        id="new-project-name"
+                        autoFocus
+                        className="field-input !min-w-0 !flex-1 !rounded-full !px-4 !py-3"
+                        placeholder="Example: Client portal"
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void create();
+                          if (e.key === 'Escape') cancelCreate();
+                        }}
+                      />
+                      <button className="btn" disabled={!newName.trim()} onClick={create}>
+                        Create
+                      </button>
+                      <button className="ghost-btn !px-4 !py-3 !text-sm" onClick={cancelCreate}>
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="btn whitespace-nowrap" onClick={() => setNamingProject(true)}>
+                    New Project
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

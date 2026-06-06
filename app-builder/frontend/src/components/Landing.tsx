@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Login from './Login'
 import Signup from './Signup'
 
-// © 2025 Preston Willis. All rights reserved.
+// ï¿½ 2025 Preston Willis. All rights reserved.
 export default function Landing({ onLogin }: { onLogin: () => void }) {
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
 
@@ -21,10 +21,10 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           <div>
             <div className="tag">Native-first builder</div>
             <h1 className="section-heading mt-5 max-w-3xl text-5xl font-semibold leading-[0.95] text-slate-900 md:text-6xl">
-              Build polished client apps before you touch Android Studio.
+              Build polished apps before you touch Android Studio.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 md:text-lg">
-              Apptura gives small businesses a cleaner path from idea to mobile app: visual page building, industry
+              Apptura gives a cleaner path from idea to mobile app: visual page building, industry
               blocks, live preview, and a runtime that already thinks in native screens.
             </p>
           </div>
@@ -55,9 +55,6 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             <div className="text-sm uppercase tracking-[0.2em] text-white/60">Secure access</div>
             <div className="mt-2 text-2xl font-semibold">{authMode === 'signin' ? 'Sign in to your workspace' : 'Create your account'}</div>
             <p className="mt-2 text-sm leading-6 text-white/70">
-              {authMode === 'signin'
-                ? 'Pick up where you left off, open projects, and keep building.'
-                : 'Set up your account and start building without leaving the page.'}
             </p>
           </div>
 
@@ -68,6 +65,11 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
             <button type="button" className="auth-tab" data-active={authMode === 'signup'} onClick={() => setAuthMode('signup')}>
               Create account
             </button>
+          </div>
+
+          <div className="mb-4 rounded-2xl border border-blue-300/20 bg-blue-300/10 px-4 py-3 text-sm leading-6 text-blue-50">
+            <span className="font-semibold">Demo note:</span> Create a temporary account to try the live builder. No payment
+            or email verification is required, and your projects can be saved after signing in.
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/6 p-4">

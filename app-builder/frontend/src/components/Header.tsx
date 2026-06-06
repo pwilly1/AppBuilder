@@ -1,5 +1,5 @@
 // © 2025 Preston Willis. All rights reserved.
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 type Props = {
   authed: boolean
@@ -13,11 +13,15 @@ type Props = {
   isSaving?: boolean
   lastSavedAt?: number | null
   saveError?: string | null
+  previewMode?: boolean
 }
 
 export default function Header(props: Props) {
   const navigate = useNavigate()
-  const { authed, logout, undo, redo, canUndo, canRedo, saveProject, isSaving, lastSavedAt, saveError } = props
+  const location = useLocation()
+  const { authed, logout, undo, redo, canUndo, canRedo, saveProject, isSaving, lastSavedAt, saveError, previewMode } = props
+  const isEditorRoute = location.pathname.startsWith('/editor')
+  const showEditorControls = isEditorRoute && !previewMode
 
   return (
     <header className="sticky top-0 z-40 mx-auto mb-4 w-full max-w-[var(--max-width)] px-4 pt-4">
@@ -38,7 +42,7 @@ export default function Header(props: Props) {
         </button>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {window.location.pathname.startsWith('/editor') ? (
+          {showEditorControls ? (
             <>
               <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={undo} disabled={!canUndo}>
                 Undo
@@ -49,8 +53,8 @@ export default function Header(props: Props) {
               <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate('/dashboard')}>
                 Back to Dashboard
               </button>
-              <button className="btn" onClick={saveProject}>
-                Save
+              <button className="btn" onClick={saveProject} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
               <div className="min-w-[150px] text-right text-xs text-slate-500">
                 {isSaving ? 'Saving...' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'Not saved yet'}
@@ -76,7 +80,7 @@ export default function Header(props: Props) {
             </>
           ) : (
             <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate('/')}>
-              Account
+              Sign in
             </button>
           )}
         </div>

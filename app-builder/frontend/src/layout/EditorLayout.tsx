@@ -1,5 +1,5 @@
 ﻿// © 2025 Preston Willis. All rights reserved.
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { PageRenderer } from '../editor/PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
@@ -21,6 +21,8 @@ type Props = {
   selectPage?: (id: string) => void
   renamePage?: (id: string, title: string) => void
   deletePage?: (id: string) => void
+  previewMode?: boolean
+  onPreviewModeChange?: (previewMode: boolean) => void
 }
 
 export default function EditorLayout(props: Props) {
@@ -39,8 +41,9 @@ export default function EditorLayout(props: Props) {
     selectPage,
     renamePage,
     deletePage,
+    previewMode = false,
+    onPreviewModeChange,
   } = props as any
-  const [previewMode, setPreviewMode] = useState(false)
 
   const currentPageTitle = page?.title || 'Untitled Page'
   const blockCount = page?.blocks?.length ?? 0
@@ -118,7 +121,7 @@ export default function EditorLayout(props: Props) {
                 className="btn min-w-[120px]"
                 onClick={() => {
                   const next = !previewMode
-                  setPreviewMode(next)
+                  onPreviewModeChange?.(next)
                   if (next) setSelectedBlock(null)
                 }}
               >
@@ -180,5 +183,4 @@ export default function EditorLayout(props: Props) {
     </>
   )
 }
-
 
