@@ -25,8 +25,8 @@ export default function Header(props: Props) {
         <button
           type="button"
           className="flex cursor-pointer items-center gap-3"
-          onClick={() => navigate('/')}
-          aria-label="Go to landing"
+          onClick={() => navigate(authed ? '/dashboard' : '/')}
+          aria-label={authed ? 'Go to dashboard' : 'Go to landing'}
         >
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#2563eb] via-[#1d4ed8] to-[#172554] text-sm font-bold text-white shadow-lg">
             A
@@ -84,3 +84,4 @@ export default function Header(props: Props) {
     </header>
   )
 }
+
