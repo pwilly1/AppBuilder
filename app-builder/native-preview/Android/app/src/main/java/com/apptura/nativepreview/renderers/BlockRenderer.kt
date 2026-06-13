@@ -14,7 +14,7 @@ fun BlockRenderer(
     when (block.type) {
         "hero" -> HeroView(block)
         "text" -> TextView(block)
-        "navButton" -> NavButtonView(block, onNavigate)
+        "navButton" -> NavButtonView(block, onNavigate = onNavigate)
         "servicesList" -> ServicesListView(block)
         "contactForm" -> ContactFormView(block, projectId = projectId, baseUrl = baseUrl)
         "imageGallery" -> ImageGalleryView(block)

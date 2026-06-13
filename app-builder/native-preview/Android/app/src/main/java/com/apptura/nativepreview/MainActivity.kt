@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -48,7 +49,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color.White,
+                ) {
                     val scope = rememberCoroutineScope()
 
                     // For Android emulator to reach host machine.
@@ -232,6 +236,9 @@ private fun MainMenuScreen(
             .fillMaxSize()
             .padding(12.dp)
     ) {
+        Text(text = "Apptura Native Preview", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(8.dp))
+
         if (!lastCrash.isNullOrBlank()) {
             Text(text = "Last crash:")
             Spacer(modifier = Modifier.height(4.dp))

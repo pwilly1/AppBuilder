@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FocusEventHandler } from 'react'
 import type { Block } from '../shared/schema/types'
 import { getHeroHeadlineStyle, getHeroRootStyle } from '../shared/blocks/Hero'
+import { getBlockContentScale } from '../shared/schema/contentScale'
 
 type InlineBlockEditorProps = {
   block: Block
@@ -109,9 +110,15 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
   }
 
   if (block.type === 'text') {
+    const contentScale = getBlockContentScale(block)
+    const contentPadding = Number(draft.contentPadding ?? 12) || 12
+    const fontSize = Number(draft.fontSize ?? 16) || 16
+    const editWidthCompensationPx = 4
+
     return (
       <div
-        className="absolute inset-0 z-[120] rounded-[1rem] bg-white/90 p-3 backdrop-blur-[1px]"
+        className="absolute inset-0 z-[120] overflow-hidden rounded-[1rem]"
+        style={{ padding: contentPadding * contentScale }}
         onPointerDown={(event) => event.stopPropagation()}
         onBlur={handleOverlayBlur}
       >
@@ -144,8 +151,16 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
           }}
           className="h-full w-full resize-none border-none bg-transparent text-slate-900 outline-none"
           style={{
-            fontSize: Number(draft.fontSize ?? 16) || 16,
+            display: 'block',
+            margin: 0,
+            marginRight: -editWidthCompensationPx,
+            padding: 0,
+            boxSizing: 'border-box',
+            fontFamily: 'inherit',
+            fontSize: fontSize * contentScale,
             lineHeight: 1.45,
+            width: `calc(100% + ${editWidthCompensationPx}px)`,
+            maxWidth: `calc(100% + ${editWidthCompensationPx}px)`,
             whiteSpace: 'pre-wrap',
             overflowWrap: 'break-word',
             overflowY: 'hidden',
@@ -156,14 +171,16 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
   }
 
   if (block.type === 'hero') {
-    const heroRootStyle = getHeroRootStyle()
-    const heroHeadlineStyle = getHeroHeadlineStyle(Number(lastAcceptedHeroDraftRef.current.headlineSize ?? 28) || 28)
-    const heroEditCompensationPx = 4
+    const contentScale = getBlockContentScale(block)
+    const contentPadding = Number(lastAcceptedHeroDraftRef.current.contentPadding ?? 16) || 16
+    const heroRootStyle = getHeroRootStyle(contentScale, contentPadding)
+    const heroHeadlineStyle = getHeroHeadlineStyle(Number(lastAcceptedHeroDraftRef.current.headlineSize ?? 28) || 28, contentScale)
+    const editWidthCompensationPx = 4
 
     return (
       <div
         ref={heroEditorRef}
-        className="absolute inset-0 z-[120] rounded-[1rem] bg-white/90 backdrop-blur-[1px]"
+        className="absolute inset-0 z-[120] rounded-[1rem]"
         style={heroRootStyle}
         onPointerDown={(event) => event.stopPropagation()}
         onBlur={handleOverlayBlur}
@@ -184,9 +201,9 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
           style={{
             ...heroHeadlineStyle,
             background: 'transparent',
-            width: `calc(100% + ${heroEditCompensationPx}px)`,
-            maxWidth: `calc(100% + ${heroEditCompensationPx}px)`,
-            marginRight: -heroEditCompensationPx,
+            width: `calc(100% + ${editWidthCompensationPx}px)`,
+            maxWidth: `calc(100% + ${editWidthCompensationPx}px)`,
+            marginRight: -editWidthCompensationPx,
           }}
         />
       </div>
@@ -195,15 +212,35 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
 
   if (block.type === 'navButton') {
     const disabled = !(draft.toPageId as string | undefined)
+    const contentScale = getBlockContentScale(block)
+    const contentPadding = Number(draft.contentPadding ?? 12) || 12
+    const buttonPaddingX = Number(draft.buttonPaddingX ?? 14) || 14
+    const buttonPaddingY = Number(draft.buttonPaddingY ?? 10) || 10
+    const borderRadius = Number(draft.borderRadius ?? 10) || 10
+    const fontSize = Number(draft.fontSize ?? 14) || 14
+    const scaledContentPadding = contentPadding * contentScale
+    const scaledButtonPaddingX = buttonPaddingX * contentScale
+    const scaledButtonPaddingY = buttonPaddingY * contentScale
+    const scaledBorderRadius = borderRadius * contentScale
+    const scaledFontSize = fontSize * contentScale
+
     return (
       <div
-        className="absolute inset-0 z-[120] flex items-start justify-start rounded-[1rem] bg-white/20 p-3"
+        className="absolute inset-0 z-[120] flex items-start justify-start overflow-hidden rounded-[1rem]"
+        style={{ padding: scaledContentPadding }}
         onPointerDown={(event) => event.stopPropagation()}
         onBlur={handleOverlayBlur}
       >
         <div
-          className="rounded-[10px] px-[14px] py-[10px]"
-          style={{ backgroundColor: disabled ? '#e5e7eb' : '#0f172a', maxWidth: width ? Math.max(80, width - 24) : undefined }}
+          style={{
+            backgroundColor: disabled ? '#e5e7eb' : '#0f172a',
+            borderRadius: scaledBorderRadius,
+            boxSizing: 'border-box',
+            maxWidth: '100%',
+            minWidth: 0,
+            overflow: 'hidden',
+            padding: `${scaledButtonPaddingY}px ${scaledButtonPaddingX}px`,
+          }}
         >
           <input
             ref={navInputRef}
@@ -235,13 +272,15 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
             }}
             className="w-full border-none bg-transparent text-left font-semibold outline-none"
             style={{
+              display: 'block',
               margin: 0,
               padding: 0,
               boxSizing: 'border-box',
               fontFamily: 'inherit',
               color: disabled ? '#475569' : '#ffffff',
-              fontSize: 14,
-              minWidth: 24,
+              fontSize: scaledFontSize,
+              minWidth: 0,
+              maxWidth: width ? Math.max(1, width - scaledContentPadding * 2 - scaledButtonPaddingX * 2) : undefined,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
             }}

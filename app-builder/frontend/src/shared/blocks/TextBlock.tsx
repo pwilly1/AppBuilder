@@ -1,4 +1,14 @@
-export function TextBlock({ value, fontSize }: { value: string; fontSize?: number }) {
+export function TextBlock({
+  value,
+  fontSize,
+  contentPadding = 12,
+  contentScale = 1,
+}: {
+  value: string
+  fontSize?: number
+  contentPadding?: number
+  contentScale?: number
+}) {
   return (
     <div
       style={{
@@ -7,7 +17,7 @@ export function TextBlock({ value, fontSize }: { value: string; fontSize?: numbe
         alignItems: 'flex-start',
         width: '100%',
         boxSizing: 'border-box',
-        padding: 12,
+        padding: contentPadding * contentScale,
         overflow: 'hidden',
       }}
     >
@@ -16,7 +26,7 @@ export function TextBlock({ value, fontSize }: { value: string; fontSize?: numbe
           margin: 0,
           width: '100%',
           minWidth: 0,
-          fontSize: fontSize ?? 16,
+          fontSize: (fontSize ?? 16) * contentScale,
           lineHeight: 1.45,
           color: '#0f172a',
           whiteSpace: 'pre-wrap',

@@ -9,6 +9,7 @@ import { NavButton } from './blocks/NavButton';
 import { ServicesList } from './blocks/ServicesList';
 import { ContactForm } from './blocks/ContactForm';
 import { ImageGallery } from './blocks/ImageGallery';
+import { getBlockContentScale } from './schema/contentScale';
 
 const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   hero: Hero,
@@ -31,5 +32,6 @@ export function BlockRenderer({
   previewMode?: boolean;
 }) {
   const Cmp = registry[block.type];
-  return Cmp ? <Cmp {...block.props} blockId={block.id} projectId={projectId} previewMode={previewMode} onNavigate={onNavigate} /> : null;
+  const contentScale = getBlockContentScale(block);
+  return Cmp ? <Cmp {...block.props} blockId={block.id} projectId={projectId} previewMode={previewMode} contentScale={contentScale} onNavigate={onNavigate} /> : null;
 }

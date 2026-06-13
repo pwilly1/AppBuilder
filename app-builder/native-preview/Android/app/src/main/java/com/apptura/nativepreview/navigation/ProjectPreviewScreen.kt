@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
 import com.apptura.nativepreview.layout.GRID_GAP
+import com.apptura.nativepreview.layout.GRID_CANVAS_WIDTH
 import com.apptura.nativepreview.layout.GRID_PADDING
 import com.apptura.nativepreview.layout.GRID_ROW_HEIGHT
 import com.apptura.nativepreview.layout.GridMetrics
@@ -59,13 +60,18 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
         val legacyBlocks = page.blocks.filter { it.layout?.grid == null }
         val scroll = rememberScrollState()
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+        ) {
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.White)
                     .verticalScroll(scroll)
             ) {
-                val canvasWidth = maxWidth
+                val canvasWidth = if (maxWidth.value > 1f) maxWidth else GRID_CANVAS_WIDTH
                 val metrics = GridMetrics(canvasWidth = canvasWidth)
                 val gridRowCount = maxOf(1, getGridRowCount(gridBlocks))
                 val rowContentHeight = GRID_ROW_HEIGHT * gridRowCount.toFloat() +

@@ -64,6 +64,7 @@ export function DraggableBlock({
   onSnapChange,
 }: DraggableProps) {
   const usesContainerResize = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
+  const scalesContentWithBox = usesContainerResize && block.layout?.resizeBehavior === 'scaleContent'
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)
   const contentRef = useRef<HTMLDivElement | null>(null)
@@ -190,7 +191,7 @@ export function DraggableBlock({
     const currentHeight = renderedHeight ?? elRef.current?.offsetHeight ?? baseSize.height ?? MIN_BLOCK_HEIGHT
     const contentNode = contentRef.current
     const contentRoot = contentNode?.firstElementChild as HTMLElement | null
-    const resizeContentMinWidth = usesContainerResize ? measureResizeContentMinWidth(contentRoot) : null
+    const resizeContentMinWidth = usesContainerResize && !scalesContentWithBox ? measureResizeContentMinWidth(contentRoot) : null
     const contentWidth = Math.ceil(
       resizeContentMinWidth ??
         contentRoot?.getBoundingClientRect().width ??
@@ -273,11 +274,11 @@ export function DraggableBlock({
         const nextHeightRaw =
           resizingMode === 'horizontal' ? startBoxSize.height : startBoxSize.height + dy
         const minWidth =
-          resizingMode === 'vertical'
+          resizingMode === 'vertical' || scalesContentWithBox
             ? MIN_TEXTLIKE_WIDTH
             : Math.max(MIN_TEXTLIKE_WIDTH, startContentSize.width)
         const minHeight =
-          resizingMode === 'horizontal'
+          resizingMode === 'horizontal' || scalesContentWithBox
             ? MIN_TEXTLIKE_HEIGHT
             : Math.max(MIN_TEXTLIKE_HEIGHT, startContentSize.height)
         const maxCanvasWidth = Math.max(minWidth, maxResizeWidth)
@@ -525,12 +526,24 @@ export function DraggableBlock({
       : liveHeight
   const contentWidth = resizingMode
     ? usesContainerResize
-      ? startBoxSize.width || renderedWidth
+      ? scalesContentWithBox
+        ? renderedWidth
+        : startBoxSize.width || renderedWidth
       : (baseSize.width || undefined)
     : renderedWidth
       ? Math.max(1, Math.round(renderedWidth / Math.max(scaleX, 0.001)))
       : undefined
   const contentHeight = usesContainerResize ? renderedHeight : undefined
+  const renderedBlock =
+    scalesContentWithBox && resizingMode && dropPreviewPlacement
+      ? {
+          ...block,
+          layout: {
+            ...(block.layout || {}),
+            grid: dropPreviewPlacement,
+          },
+        }
+      : block
   const showActiveFrame = Boolean(isActive || inlineEditing || dragging || resizingMode || innerMoving)
   const inlineEditorVisible = !previewMode && inlineEditing && supportsInlineEdit
 
@@ -592,6 +605,7 @@ export function DraggableBlock({
             width: contentWidth ?? 'max-content',
             maxWidth: contentWidth,
             height: contentHeight,
+            visibility: inlineEditorVisible ? 'hidden' : undefined,
             display: usesContainerResize ? 'flex' : undefined,
             flexDirection: usesContainerResize ? 'column' : undefined,
             alignItems: usesContainerResize ? 'flex-start' : undefined,
@@ -600,7 +614,7 @@ export function DraggableBlock({
           }}
         >
           <BlockRenderer
-            block={block}
+            block={renderedBlock}
             projectId={projectId}
             previewMode={previewMode}
             onNavigate={previewMode ? onNavigate : undefined}

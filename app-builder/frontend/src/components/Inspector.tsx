@@ -1,8 +1,8 @@
-// © 2025 Preston Willis. All rights reserved.
 import React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import type { Block } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
+import { getBlockContentScale } from '../shared/schema/contentScale';
 
 type PageLite = { id: string; title?: string; path?: string };
 
@@ -89,7 +89,43 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
   const rawScaleX = Number(placement.scaleX ?? 1);
   const rawScaleY = Number(placement.scaleY ?? 1);
   const hasCustomScale = Math.abs(rawScaleX - 1) > 0.001 || Math.abs(rawScaleY - 1) > 0.001;
+  const supportsContentScaling = block!.type === 'hero' || block!.type === 'text' || block!.type === 'navButton';
+  const resizeBehavior = block!.layout?.resizeBehavior ?? 'boxOnly';
 
+  function setResizeBehavior(nextBehavior: 'boxOnly' | 'scaleContent') {
+    const grid = block!.layout?.grid;
+    const currentContentScale = getBlockContentScale(block!);
+    const nextProps = { ...(block!.props as Record<string, any>) };
+
+    if (nextBehavior === 'boxOnly' && resizeBehavior === 'scaleContent' && Math.abs(currentContentScale - 1) > 0.001) {
+      if (block!.type === 'hero') {
+        nextProps.headlineSize = Math.round((Number(nextProps.headlineSize ?? 28) || 28) * currentContentScale);
+        nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 16) || 16) * currentContentScale);
+      }
+      if (block!.type === 'text') {
+        nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 16) || 16) * currentContentScale);
+        nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
+      }
+      if (block!.type === 'navButton') {
+        nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 14) || 14) * currentContentScale);
+        nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
+        nextProps.buttonPaddingX = Math.round((Number(nextProps.buttonPaddingX ?? 14) || 14) * currentContentScale);
+        nextProps.buttonPaddingY = Math.round((Number(nextProps.buttonPaddingY ?? 10) || 10) * currentContentScale);
+        nextProps.borderRadius = Math.round((Number(nextProps.borderRadius ?? 10) || 10) * currentContentScale);
+      }
+    }
+
+    const nextLayout = {
+      ...(block!.layout || {}),
+      resizeBehavior: nextBehavior,
+      scaleBase:
+        nextBehavior === 'scaleContent'
+          ? block!.layout?.scaleBase ?? (grid ? { colSpan: grid.colSpan, rowSpan: grid.rowSpan } : undefined)
+          : undefined,
+    };
+
+    onSave?.({ ...block!, props: nextProps, layout: nextLayout });
+  }
   return (
     <div className="grid gap-4">
       <div className="editor-section">
@@ -128,6 +164,38 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
         </div>
       </div>
 
+      {supportsContentScaling ? (
+        <FormSection
+          title="Resize behavior"
+          description="Choose whether resizing changes only the grid box or scales the content inside it too."
+        >
+          <div className="grid gap-2">
+            <button
+              type="button"
+              className={`ghost-btn !justify-start !px-4 !py-3 text-left text-sm ${
+                resizeBehavior === 'boxOnly' ? '!bg-slate-900 !text-white' : ''
+              }`}
+              onClick={() => setResizeBehavior('boxOnly')}
+            >
+              Box only
+            </button>
+            <button
+              type="button"
+              className={`ghost-btn !justify-start !px-4 !py-3 text-left text-sm ${
+                resizeBehavior === 'scaleContent' ? '!bg-slate-900 !text-white' : ''
+              }`}
+              onClick={() => setResizeBehavior('scaleContent')}
+            >
+              Scale content with box
+            </button>
+          </div>
+          {resizeBehavior === 'scaleContent' && block.layout?.scaleBase ? (
+            <p className="text-xs text-slate-500">
+              1x base: {block.layout.scaleBase.colSpan} columns x {block.layout.scaleBase.rowSpan} rows.
+            </p>
+          ) : null}
+        </FormSection>
+      ) : null}
       <form onSubmit={handleSubmit(submit)} className="grid gap-4">
         {block.type === 'text' && (
           <FormSection title="Content" description="Edit the text copy and its display size.">

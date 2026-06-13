@@ -1,126 +1,80 @@
 # Apptura
 
-Apptura is a low-code app creation platform that lets users visually design and configure mobile app content without writing extensive code.
-It currently includes a React/Tailwind web editor, a Node.js/Express backend, and an Android Kotlin/Compose native preview app.
+Apptura is a low-code mobile app builder. Users design app screens in a web editor, save projects through a Node/Express backend, and preview saved projects in a Kotlin/Jetpack Compose Android runtime.
 
-Live deployment:
+The current product focus is a stable public demo, a clean grid-based editor, and reliable parity between the web editor, web preview, and Android preview.
+
+## Live Deployment
+
 - Frontend: <https://delightful-desert-04350a50f.7.azurestaticapps.net>
+- Backend: <https://apptura-cneyenbkczh5hzcv.eastus-01.azurewebsites.net>
 - Backend health check: <https://apptura-cneyenbkczh5hzcv.eastus-01.azurewebsites.net/health>
 
----
+## Current Features
 
-## Features (Current)
-
-- Visual app editor with draggable block placement and property inspector
-- Grid-snapped block placement and resizing for core blocks
-- Inline and inspector-based editing for hero, text, and navigation button blocks
-- Multi-page project editing (add, rename, delete, select)
-- Web preview pane and Android native runtime preview
-- Authentication with JWT (signup/login, protected APIs)
-- Project persistence in MongoDB (create, list, open, update, delete)
-- Dashboard for project management
-
----
+- JWT signup/login and protected project APIs
+- Project dashboard with create/open/delete flows
+- Multi-page app projects
+- Visual editor with pages, block palette, canvas, and inspector
+- 16-column grid-based block placement and resizing
+- Inline editing for core text-like blocks
+- Web preview mode with page navigation
+- Android native preview app connected to backend project data
+- MongoDB persistence for projects
+- Azure-hosted frontend and backend with GitHub Actions deployment
 
 ## Tech Stack
 
 | Layer | Technology |
-|---|---|
-| Frontend | React, Vite, Tailwind CSS |
-| Backend | Node.js, Express |
-| Database | MongoDB (Mongoose) |
+| --- | --- |
+| Frontend | React, TypeScript, Vite, Tailwind CSS |
+| Editor interactions | React state, custom grid math, dnd-kit dependency available |
+| Backend | Node.js, Express, TypeScript |
+| Database | MongoDB Atlas, Mongoose |
 | Auth | JWT |
+| Native preview | Android, Kotlin, Jetpack Compose |
 | Hosting | Azure Static Web Apps, Azure App Service |
 | CI/CD | GitHub Actions |
-| Native Preview | Android (Kotlin + Jetpack Compose) |
-| AI | Planned (not yet implemented in this repository) |
 
----
-
-## Prerequisites
-
-- Node.js (LTS recommended)
-- npm or yarn
-- MongoDB (local or Atlas)
-- Android Studio + Android SDK (for native-preview app)
-
----
-
-## How It Works (Current)
-
-1. A user signs up or logs in.
-2. The user creates/edits projects in the web editor.
-3. Project schema is saved to MongoDB via Express APIs.
-4. The Android native preview app can load and render saved projects.
-
-Planned next layers include AI-assisted layout/content generation and deployment/export automation.
-
----
-
-## Deployment
-
-Current deployment architecture:
+## Repository Layout
 
 ```text
-Azure Static Web Apps frontend
-  -> Azure App Service backend
-  -> MongoDB Atlas database
+app-builder/
+  frontend/          React/Vite web app and editor
+  backend/           Express API, auth, project persistence
+  native-preview/    Android/Kotlin native preview app
+docs/                Architecture, deployment, features, roadmap, project history
+.github/workflows/   Frontend and backend deployment workflows
 ```
 
-The frontend build receives the backend URL through:
+## Documentation
+
+- [Architecture](docs/architecture.md) - system design, editor/runtime schema, frontend/backend/native structure
+- [Deployment](docs/deployment.md) - Azure hosting, GitHub Actions, production configuration
+- [Features](docs/features.md) - current capabilities, planned product areas, known feature limits
+- [Roadmap](docs/roadmap.md) - priorities, milestones, and next work
+- [Project History](docs/project-history.md) - summarized evolution of the project
+- [Agent Notes](docs/AGENTS.md) - context for Codex/AI agents continuing work
+
+## Current Direction
+
+The editor is moving toward a shared runtime contract:
 
 ```text
-VITE_API_URL
+layout.grid = where a block is allowed to live
+render = how the block is positioned/sized inside that grid area
+props = block-specific content and styling
 ```
 
-The backend allows the deployed frontend through:
-
-```text
-CORS_ORIGIN
-```
-
-See [docs/AZURE_DEPLOYMENT.md](docs/AZURE_DEPLOYMENT.md) for deployment details and environment variables.
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for completed milestones and planned next steps.
-
----
-
-## API Overview
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/auth/signup` | Register new user |
-| POST | `/auth/login` | Login and get JWT |
-| GET | `/auth/createGuestSession` | Create guest session token |
-| GET | `/auth/health` | Health check |
-| GET | `/auth/me` | Get current authenticated user |
-| GET | `/projects` | List current user projects |
-| POST | `/projects` | Create new project |
-| GET | `/projects/:id` | Get project by id (owner-only) |
-| PATCH | `/projects/:id` | Update project |
-| DELETE | `/projects/:id` | Delete project (owner-only) |
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a new branch: `git checkout -b feature/my-feature`
-3. Commit changes: `git commit -m "Add new feature"`
-4. Push to your fork: `git push origin feature/my-feature`
-5. Open a Pull Request
-
----
+The long-term goal is for the same saved schema to power web preview, Android preview, future export targets, and eventual AI-assisted generation.
 
 ## License
 
-Licensed under the MIT License.
-See the `LICENSE` file for details.
-
----
+All rights reserved. See `LICENSE` for details.
 
 ## Author
 
-**Preston Willis**
-GitHub: <https://github.com/pwilly1>
-Email: prwillis2@gmail.com
+Preston Willis
+
+- GitHub: <https://github.com/pwilly1>
+- Email: prwillis2@gmail.com

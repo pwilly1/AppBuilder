@@ -1,4 +1,3 @@
-// © 2025 Preston Willis. All rights reserved.
 // Opting into InternalSerializationApi for the file
 @file:OptIn(kotlinx.serialization.InternalSerializationApi::class)
 
@@ -33,8 +32,16 @@ data class GridPlacement(
 )
 
 @Serializable
+data class ContentScaleBase(
+    val colSpan: Int,
+    val rowSpan: Int
+)
+
+@Serializable
 data class BlockRuntimeLayout(
-    val grid: GridPlacement? = null
+    val grid: GridPlacement? = null,
+    val resizeBehavior: String? = null,
+    val scaleBase: ContentScaleBase? = null
 )
 
 @Serializable

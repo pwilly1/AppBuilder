@@ -1,134 +1,143 @@
-# AGENTS
+# Agent Notes
 
-## Purpose
-This file gives coding agents and future collaborators the current working context for AppBuilder.
+This file gives Codex/AI agents and future collaborators the current working context for Apptura.
 
-Use this as the first orientation document when continuing work on another device or in a fresh agent session.
+Use this after reading the root [README](../README.md).
 
-## Project Overview
-AppBuilder is a web-based mobile app builder with:
-- a browser editor
-- backend project persistence
-- Android/native preview runtime
-- schema-driven block rendering
+## Current Project Direction
 
-The product direction is:
-- business-focused app creation
-- strong editor/runtime parity
-- a structured runtime layout model that can later support Android, web preview, and future export targets
+Apptura is a schema-driven low-code mobile app builder with:
+
+- React web editor
+- Express backend
+- MongoDB persistence
+- Kotlin/Jetpack Compose Android preview
+- Azure-hosted frontend/backend deployment
+
+The active product focus is:
+
+```text
+stable public demo
++ reliable core editor behavior
++ web/Android schema parity
++ clean documentation
+```
 
 ## Current Layout Direction
-The active layout direction is a **full-canvas adaptive grid**.
 
-This replaces the earlier section/subsection exploration.
+The active layout model is grid-first.
 
-### Canonical layout model
-- full phone canvas grid
-- `8` columns
-- dynamic rows
-- `56px` fixed row height
-- `0` grid gap
-- `16px` grid padding
+Canonical layout data:
 
-### Runtime truth
-The canonical saved layout is:
-- `block.layout.grid`
-- `block.render`
+```text
+block.layout.grid
+block.render
+block.props
+```
 
-Meaning:
-- `layout.grid` decides occupied area
-- `render` decides width/height and offsets inside that area
+Current grid constants:
 
-### Current implementation behavior
-- blocks snap to grid occupancy on valid drag/drop
-- blocked placement is denied
-- resize quantizes to grid occupancy
-- blocks can be moved within their occupied area using a dedicated inner-move handle
-- preview uses `layout.grid + render`
-- old freeform fields still exist as migration fallback
+```text
+columns: 16
+row height: 28
+gap: 0
+padding: 16
+```
 
-## Important Current Constraints
+Do not treat legacy freeform fields as the preferred runtime truth.
 
-### Do not reintroduce section-first layout as the main model
-The older section-first exploration has been retired from the shared frontend schema. Keep the active product direction centered on the grid model.
+Legacy compatibility fields still exist:
 
-### Avoid making raw `x/y/scale` the runtime truth again
-Legacy fields still exist for compatibility:
-- `props.x`
-- `props.y`
-- `props.scaleX`
-- `props.scaleY`
-- `editorPlacement`
+```text
+editorPlacement
+props.x
+props.y
+props.scaleX
+props.scaleY
+```
 
-These are transitional. They should not become the long-term runtime model again.
+## Important Constraints
 
-### Keep web and Android aligned
-When making layout decisions, prefer choices that can be implemented the same way in:
-- web editor
-- web preview
-- Kotlin Android renderer
+- Keep web editor, web preview, and Android preview aligned.
+- Do not reintroduce section-first layout as the primary architecture without a deliberate design decision.
+- Do not remove migration/fallback paths until old projects are tested.
+- Do not claim planned strategic features are implemented unless the code supports them.
+- Update docs when architecture, deployment, schema, or roadmap changes.
+
+## Key Docs
+
+- [Architecture](architecture.md)
+- [Development](development.md)
+- [Deployment](deployment.md)
+- [Features](features.md)
+- [Roadmap](roadmap.md)
+- [Troubleshooting](troubleshooting.md)
+- [Project History](project-history.md)
 
 ## Key Frontend Files
 
-### Layout/editor core
-- [PageRenderer.tsx](./app-builder/frontend/src/PageRenderer.tsx)
-- [Preview.tsx](./app-builder/frontend/src/editor/Preview.tsx)
-- [EditorLayout.tsx](./app-builder/frontend/src/layout/EditorLayout.tsx)
-- [useProject.ts](./app-builder/frontend/src/hooks/useProject.ts)
+| File | Purpose |
+| --- | --- |
+| `app-builder/frontend/src/App.tsx` | Routing, auth state, project hook wiring |
+| `app-builder/frontend/src/hooks/useProject.ts` | Main project state/actions/save/load logic |
+| `app-builder/frontend/src/layout/EditorLayout.tsx` | Editor shell and toolbar |
+| `app-builder/frontend/src/editor/PageRenderer.tsx` | Canvas rendering and interactions |
+| `app-builder/frontend/src/editor/DraggableBlock.tsx` | Block movement/resizing behavior |
+| `app-builder/frontend/src/editor/InlineBlockEditor.tsx` | Direct text editing behavior |
+| `app-builder/frontend/src/editor/Preview.tsx` | Web preview renderer |
+| `app-builder/frontend/src/shared/schema/gridLayout.ts` | Grid math and collision logic |
+| `app-builder/frontend/src/shared/schema/registry.ts` | Block defaults and constraints |
+| `app-builder/frontend/src/shared/schema/contentScale.ts` | Shared content scale helper |
 
-### Grid/runtime schema
-- [gridLayout.ts](./app-builder/frontend/src/shared/schema/gridLayout.ts)
-- [gridMigration.ts](./app-builder/frontend/src/shared/schema/gridMigration.ts)
-- [types.ts](./app-builder/frontend/src/shared/schema/types.ts)
-- [registry.ts](./app-builder/frontend/src/shared/schema/registry.ts)
+## Key Backend Files
 
-### Shared blocks
-- [BlockRenderer.tsx](./app-builder/frontend/src/shared/BlockRenderer.tsx)
-- `app-builder/frontend/src/shared/blocks/*`
+| File | Purpose |
+| --- | --- |
+| `app-builder/backend/src/index.ts` | Express app setup, CORS, routes, Mongo connection |
+| `app-builder/backend/src/config/index.ts` | Env variable loading |
+| `app-builder/backend/src/routes/AuthRoutes.ts` | Auth endpoints |
+| `app-builder/backend/src/routes/ProjectRoutes.ts` | Project endpoints |
+| `app-builder/backend/src/services/AuthService.ts` | Auth behavior |
+| `app-builder/backend/src/services/ProjectManager.ts` | Project behavior |
+| `app-builder/backend/src/services/SessionManager.ts` | Session/JWT helper |
 
-### Historical/legacy layout helper
-- [runtimeLayout.ts](./app-builder/frontend/src/shared/schema/runtimeLayout.ts)
+## Key Android Files
 
-This file is still used for fallback placement for older projects. It is transitional support, not active architecture.
-
-## Current Known Technical Debt
-- legacy freeform fallback still exists for compatibility
-- some docs still need occasional sync with the current implementation
-- Android runtime still needs a deliberate grid-model implementation pass
-
-## Current Documentation
-- [adaptive-subsection-system.md](./docs/adaptive-subsection-system.md)
-- [PROJECT_HISTORY.md](./docs/PROJECT_HISTORY.md)
-
-These should be kept aligned with the actual code, especially:
-- grid constants
-- active architecture direction
-- known limitations
+| File | Purpose |
+| --- | --- |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/MainActivity.kt` | Native app entry and project loading |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt` | Kotlin schema models |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/layout/GridLayout.kt` | Android grid math |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt` | Android page preview |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/*View.kt` | Compose block renderers |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RenderScale.kt` | Android content scaling helper |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RenderTypography.kt` | Android typography helper |
 
 ## Safe Next-Step Priorities
+
 Good next steps:
-1. reduce legacy freeform fallback gradually
-2. implement the same grid model in Android/Kotlin
-3. keep tightening editor/runtime parity across web and Android
-4. keep docs synchronized with the current implementation
 
-## Risky Changes
-Pause and re-check before:
-- reintroducing section-slot layout as the primary model
-- making all block types behave identically on resize
-- changing grid constants without updating docs and constraints
-- removing fallback migration paths before verifying older projects still load correctly
+1. keep public demo stable
+2. test core block editing/resizing thoroughly
+3. keep Android parity close after each schema change
+4. add atomic blocks before complex sections
+5. design containers/templates before rebuilding business blocks
+6. document decisions when architecture changes
 
-## Working Style Notes
-- prefer small, stable iterations over broad rewrites
-- preserve rollback room when changing core editor behavior
-- update docs when architectural direction changes
-- keep decisions explicit so work can continue cleanly across devices
+Risky changes:
 
-## Current Snapshot
-As of the current working tree:
-- grid foundation is implemented
-- migration to grid on load is implemented
-- content auto-grow was attempted and rolled back
-- semantic text resize was attempted and rolled back
-- current state is the stable grid baseline
+- broad rewrites of editor interaction logic without tests/manual checklist
+- changing grid constants without updating web, Android, and docs
+- adding complex blocks that should be templates or containers
+- removing legacy migration code too early
+- treating future strategic features as current product capabilities
+
+## Recommended Agent Workflow
+
+```text
+1. Inspect relevant files first.
+2. Explain the intended change briefly.
+3. Edit the smallest safe set of files.
+4. Run the relevant build/check command when possible.
+5. Summarize what changed and what was not tested.
+```

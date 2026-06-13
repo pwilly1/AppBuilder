@@ -35,6 +35,13 @@ export type GridPlacement = {
   rowSpan: number;
 };
 
+export type ResizeBehavior = 'boxOnly' | 'scaleContent';
+
+export type ContentScaleBase = {
+  colSpan: number;
+  rowSpan: number;
+};
+
 export type BlockRenderMetadata = {
   widthPx?: number;
   heightPx?: number;
@@ -63,6 +70,8 @@ export type BlockRuntimeLayout = {
   spacingBottom?: LayoutSpacing;
   layoutClass?: BlockLayoutClass;
   grid?: GridPlacement;
+  resizeBehavior?: ResizeBehavior;
+  scaleBase?: ContentScaleBase;
 };
 
 // Transitional metadata only for the editor while we migrate away from freeform canvas state.
