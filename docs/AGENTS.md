@@ -39,9 +39,11 @@ Current grid constants:
 
 ```text
 columns: 16
+default editor rows: 29
 row height: 28
 gap: 0
-padding: 16
+web editor padding: 0 horizontal, centered vertical inset
+Android preview padding: 16
 ```
 
 Do not treat legacy freeform fields as the preferred runtime truth.
@@ -71,7 +73,6 @@ props.scaleY
 - [Deployment](deployment.md)
 - [Features](features.md)
 - [Roadmap](roadmap.md)
-- [Troubleshooting](troubleshooting.md)
 - [Project History](project-history.md)
 
 ## Key Frontend Files

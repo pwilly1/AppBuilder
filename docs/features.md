@@ -29,7 +29,7 @@ The current editor includes:
 - block palette
 - central phone-style canvas
 - right-side inspector
-- editor toolbar for save, undo, redo, web preview, and Android preview note
+- editor toolbar for save, undo, redo, web preview, and Android preview setup note
 
 ### Pages
 
@@ -48,15 +48,16 @@ The stable public-demo block set is:
 - Hero
 - Text
 - Nav Button
+- Shape
 
-These support canvas editing and inspector editing.
+Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling.
 
 ### Grid Layout
 
 Current layout capabilities:
 
 - 16-column page grid
-- dynamic rows
+- fixed 29-row phone-style editor workspace
 - grid-snapped placement
 - grid-snapped resizing
 - collision prevention
@@ -67,6 +68,7 @@ Current layout capabilities:
 
 - Web preview mode renders the active project page without editor controls.
 - Android native preview can load backend projects and render the schema with Jetpack Compose.
+- The editor's `Preview on Android` action currently explains local Android Studio setup; it does not launch a public APK or hosted mobile preview.
 
 ### Persistence
 
@@ -95,13 +97,13 @@ They are not currently the preferred public-demo block direction. The better lon
 
 Planned primitives:
 
-- Image
 - Divider
 - Spacer
 - Card/container
 - Improved button variants
 - Input
 - Textarea
+- Image
 
 ### Sections And Containers
 

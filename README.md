@@ -18,8 +18,10 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Visual editor with pages, block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
+- Shape block for simple visual design accents
 - Web preview mode with page navigation
-- Android native preview app connected to backend project data
+- Android native preview runtime connected to backend project data
+- Editor toolbar note for Android preview setup while public APK/app-store distribution is pending
 - MongoDB persistence for projects
 - Azure-hosted frontend and backend with GitHub Actions deployment
 
@@ -67,6 +69,8 @@ props = block-specific content and styling
 ```
 
 The long-term goal is for the same saved schema to power web preview, Android preview, future export targets, and eventual AI-assisted generation.
+
+Today the editor canvas is intentionally constrained to a phone-style 16-column by 29-row workspace so placement stays predictable and closer to the Android reference surface.
 
 ## License
 

@@ -9,9 +9,10 @@ import type {
 } from './types'
 
 export const GRID_COLUMN_COUNT = 16
+export const GRID_DEFAULT_ROW_COUNT = 29
 export const GRID_ROW_HEIGHT = 28
 export const GRID_GAP = 0
-export const GRID_PADDING = 16
+export const GRID_PADDING = 0
 
 export type GridMetrics = {
   columnCount?: number
@@ -83,13 +84,15 @@ export function normalizePlacement(
   placement: GridPlacement,
   constraints: BlockGridConstraints,
   columnCount = GRID_COLUMN_COUNT,
+  rowCount?: number,
 ): GridPlacement {
   const span = clampSpan({ cols: placement.colSpan, rows: placement.rowSpan }, constraints)
   const maxColStart = Math.max(1, columnCount - span.cols + 1)
+  const maxRowStart = rowCount ? Math.max(1, rowCount - span.rows + 1) : undefined
 
   return {
     colStart: Math.max(1, Math.min(maxColStart, placement.colStart)),
-    rowStart: Math.max(1, placement.rowStart),
+    rowStart: maxRowStart ? Math.max(1, Math.min(maxRowStart, placement.rowStart)) : Math.max(1, placement.rowStart),
     colSpan: span.cols,
     rowSpan: span.rows,
   }
@@ -100,6 +103,7 @@ export function derivePlacementFromPixelRect(
   metrics: GridMetrics,
   constraints: BlockGridConstraints,
   columnCount = GRID_COLUMN_COUNT,
+  rowCount?: number,
 ): GridPlacement {
   const columnWidth = getColumnWidth(metrics)
   const gap = metrics.gap ?? GRID_GAP
@@ -120,6 +124,7 @@ export function derivePlacementFromPixelRect(
     },
     constraints,
     columnCount,
+    rowCount,
   )
 }
 
@@ -152,11 +157,13 @@ export function findFirstAvailablePlacement(
   blocks: Block[],
   constraints: BlockGridConstraints,
   columnCount = GRID_COLUMN_COUNT,
+  maxRows = GRID_DEFAULT_ROW_COUNT,
 ): GridPlacement {
   const span = constraints.defaultSpan
   const maxColStart = Math.max(1, columnCount - span.cols + 1)
+  const maxRowStart = Math.max(1, maxRows - span.rows + 1)
 
-  for (let rowStart = 1; rowStart < 500; rowStart += 1) {
+  for (let rowStart = 1; rowStart <= maxRowStart; rowStart += 1) {
     for (let colStart = 1; colStart <= maxColStart; colStart += 1) {
       const candidate: GridPlacement = { colStart, rowStart, colSpan: span.cols, rowSpan: span.rows }
       if (!collidesWithBlocks(candidate, blocks)) return candidate
@@ -165,7 +172,7 @@ export function findFirstAvailablePlacement(
 
   return {
     colStart: 1,
-    rowStart: Math.max(1, getGridRowCount(blocks) + 1),
+    rowStart: maxRowStart,
     colSpan: span.cols,
     rowSpan: span.rows,
   }

@@ -43,7 +43,7 @@ Goal: make the deployed app easy to understand and safe to show.
 
 ### 2. Editor Stability
 
-Goal: make Hero, Text, and Nav Button behavior dependable before expanding block complexity.
+Goal: make Hero, Text, Nav Button, and Shape behavior dependable before expanding block complexity.
 
 | Status | Task |
 | --- | --- |
@@ -88,13 +88,14 @@ Recommended order:
 
 | Status | Block |
 | --- | --- |
-| Planned | Image |
+| Completed | Shape |
 | Planned | Divider |
 | Planned | Spacer |
 | Planned | Card/container |
 | Planned | Improved button |
 | Planned | Input |
 | Planned | Textarea |
+| Planned | Image |
 
 ### 6. Section / Container System
 

@@ -244,7 +244,7 @@
   padding-left: 1rem;
   padding-right: 1rem;
   gap: 1rem;
-  grid-template-columns: 260px minmax(0, 1fr) 360px;
+  grid-template-columns: 320px minmax(0, 1fr) 320px;
 }
 
 @media (max-width: 1120px) {
@@ -271,6 +271,7 @@
 .fade-in.show { @apply opacity-100; }
 
 .phone-frame {
+  box-sizing: content-box;
   width: 390px; /* typical phone preview width */
   height: 780px;
   border-radius: 32px;
@@ -293,20 +294,24 @@
 
 .editor-grid-overlay {
   position: absolute;
+  box-sizing: border-box;
   display: grid;
   pointer-events: none;
   opacity: 0.58;
   transition: opacity 160ms ease;
   overflow: hidden;
-  border-top: 1px solid rgba(37, 99, 235, 0.14);
-  border-left: 1px solid rgba(37, 99, 235, 0.14);
+  box-shadow: inset 1px 1px 0 rgba(37, 99, 235, 0.14);
 }
 
 .editor-grid-overlay-active {
   opacity: 0.92;
+  box-shadow: inset 1px 1px 0 rgba(37, 99, 235, 0.26);
 }
 
 .editor-grid-cell {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
   border-right: 1px solid rgba(37, 99, 235, 0.14);
   border-bottom: 1px solid rgba(37, 99, 235, 0.14);
   background: rgba(239, 246, 255, 0.08);

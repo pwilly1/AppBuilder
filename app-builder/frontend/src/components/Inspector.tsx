@@ -82,6 +82,9 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
     if (props.fontSize) props.fontSize = Number(props.fontSize);
     if (props.headlineSize) props.headlineSize = Number(props.headlineSize);
     if (props.columns) props.columns = Number(props.columns);
+    if (props.borderWidth !== undefined) props.borderWidth = Number(props.borderWidth);
+    if (props.borderRadius !== undefined) props.borderRadius = Number(props.borderRadius);
+    if (props.opacity !== undefined) props.opacity = Number(props.opacity);
     onSave?.({ ...block, props });
   };
 
@@ -239,6 +242,37 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
               </select>
             </div>
             <p className="text-xs text-slate-500">This button switches to the selected page in preview/runtime.</p>
+          </FormSection>
+        )}
+
+        {block.type === 'shape' && (
+          <FormSection title="Shape" description="Style this visual block without adding text or image assets.">
+            <div className="grid gap-2">
+              <FieldLabel>Shape type</FieldLabel>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold capitalize text-slate-700">
+                {block.props.shapeType || 'rectangle'}
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Fill color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('fillColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border width (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderWidth')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Corner radius (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Opacity</FieldLabel>
+              <TextInput type="number" min={0} max={1} step={0.05} className="max-w-[120px]" {...register('opacity')} />
+            </div>
           </FormSection>
         )}
 

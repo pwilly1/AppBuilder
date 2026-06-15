@@ -158,19 +158,18 @@ export default function EditorLayout(props: Props) {
         </div>
       </aside>
 
-      <section className="overflow-auto">
-        <div className="editor-panel rounded-[2rem] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[rgba(53,80,128,0.12)] pb-4">
+      <section className="min-w-0 overflow-auto">
+        <div className="editor-panel rounded-[1.9rem] p-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-[rgba(53,80,128,0.10)] bg-white/60 px-4 py-3">
             <div>
               <div className="editor-section-title">Canvas</div>
-              <h2 className="section-heading mt-1 text-3xl font-semibold text-slate-900">{currentPageTitle}</h2>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <span className="editor-pill">{modeLabel}</span>
-                <span className="editor-pill">{pageSummary}</span>
-                <span className="editor-pill">{blockCount} blocks on page</span>
-              </div>
+              <h2 className="mt-1 text-lg font-semibold text-slate-900">{currentPageTitle}</h2>
             </div>
-
+            <div className="flex flex-wrap gap-2">
+              <span className="editor-pill">{modeLabel}</span>
+              <span className="editor-pill">{pageSummary}</span>
+              <span className="editor-pill">{blockCount} blocks</span>
+            </div>
           </div>
 
           {page ? (

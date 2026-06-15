@@ -138,12 +138,12 @@ The project established `layout.grid + render` as the preferred runtime layout m
 Key concepts:
 
 - 16-column grid
-- dynamic rows
+- fixed 29-row phone-style editor workspace
 - snapped placement and resizing
 - collision prevention
 - bounded render metadata
 - migration from older layout data
-- Android grid-renderer parity work
+- Android grid-renderer parity work with surface-specific padding
 
 Representative areas:
 

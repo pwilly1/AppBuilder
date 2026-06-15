@@ -15,6 +15,7 @@ fun BlockRenderer(
         "hero" -> HeroView(block)
         "text" -> TextView(block)
         "navButton" -> NavButtonView(block, onNavigate = onNavigate)
+        "shape" -> ShapeView(block)
         "servicesList" -> ServicesListView(block)
         "contactForm" -> ContactFormView(block, projectId = projectId, baseUrl = baseUrl)
         "imageGallery" -> ImageGalleryView(block)

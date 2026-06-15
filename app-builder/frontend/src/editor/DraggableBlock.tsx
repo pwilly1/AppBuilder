@@ -63,8 +63,9 @@ export function DraggableBlock({
   onUpdate,
   onSnapChange,
 }: DraggableProps) {
-  const usesContainerResize = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
-  const scalesContentWithBox = usesContainerResize && block.layout?.resizeBehavior === 'scaleContent'
+  const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
+  const usesContainerResize = supportsInlineEdit || block.type === 'shape'
+  const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)
   const contentRef = useRef<HTMLDivElement | null>(null)
@@ -89,7 +90,6 @@ export function DraggableBlock({
   const [moved, setMoved] = useState(false)
   const [inlineEditing, setInlineEditing] = useState(false)
   const resolvedRect = useMemo(() => resolveBlockRenderRect(block, gridMetrics), [block, gridMetrics])
-  const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
 
   useEffect(() => {
     if (dragging || resizingMode || innerMoving) return
@@ -191,7 +191,7 @@ export function DraggableBlock({
     const currentHeight = renderedHeight ?? elRef.current?.offsetHeight ?? baseSize.height ?? MIN_BLOCK_HEIGHT
     const contentNode = contentRef.current
     const contentRoot = contentNode?.firstElementChild as HTMLElement | null
-    const resizeContentMinWidth = usesContainerResize && !scalesContentWithBox ? measureResizeContentMinWidth(contentRoot) : null
+    const resizeContentMinWidth = supportsInlineEdit && !scalesContentWithBox ? measureResizeContentMinWidth(contentRoot) : null
     const contentWidth = Math.ceil(
       resizeContentMinWidth ??
         contentRoot?.getBoundingClientRect().width ??
@@ -274,11 +274,11 @@ export function DraggableBlock({
         const nextHeightRaw =
           resizingMode === 'horizontal' ? startBoxSize.height : startBoxSize.height + dy
         const minWidth =
-          resizingMode === 'vertical' || scalesContentWithBox
+          resizingMode === 'vertical' || scalesContentWithBox || !supportsInlineEdit
             ? MIN_TEXTLIKE_WIDTH
             : Math.max(MIN_TEXTLIKE_WIDTH, startContentSize.width)
         const minHeight =
-          resizingMode === 'horizontal' || scalesContentWithBox
+          resizingMode === 'horizontal' || scalesContentWithBox || !supportsInlineEdit
             ? MIN_TEXTLIKE_HEIGHT
             : Math.max(MIN_TEXTLIKE_HEIGHT, startContentSize.height)
         const maxCanvasWidth = Math.max(minWidth, maxResizeWidth)

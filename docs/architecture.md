@@ -106,9 +106,11 @@ Current grid constants:
 
 ```text
 columns: 16
+default editor rows: 29
 row height: 28px / 28dp
 gap: 0
-padding: 16px / 16dp
+web editor padding: 0px horizontal, centered vertical inset
+Android preview padding: 16dp
 Android reference canvas width: 390dp
 ```
 
@@ -126,6 +128,7 @@ Meaning:
 - `props` defines the content and block-specific styling.
 
 The web implementation is in `gridLayout.ts`; the Android counterpart is in `GridLayout.kt`.
+The current parity target is shared column/span math with surface-specific outer padding, not pixel-identical frame chrome.
 
 ## Grid Placement
 
@@ -146,6 +149,7 @@ Important behavior:
 - Dragging snaps blocks to grid positions.
 - Resizing snaps block bounds to grid dimensions.
 - Collision detection prevents overlap.
+- The editor canvas uses a fixed phone-style row budget, so placements are normalized back inside the visible workspace.
 - Blocks are clamped so they cannot render outside their occupied grid area.
 
 ## Render Metadata
@@ -194,6 +198,7 @@ The visible add-block panel currently exposes the stable core blocks:
 - Hero
 - Text
 - Nav Button
+- Shape
 
 Additional business blocks still exist in the codebase but are not the preferred public-demo block set right now.
 

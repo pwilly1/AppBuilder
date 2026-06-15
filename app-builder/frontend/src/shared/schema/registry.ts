@@ -59,6 +59,26 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultRender: { alignX: 'center', alignY: 'center' },
     defaultProps: { label: 'Go', toPageId: '' },
   },
+  shape: {
+    displayName: 'Shape',
+    layoutClass: 'shape',
+    defaultLayout: { width: 'content', align: 'center', spacingTop: 'sm', spacingBottom: 'sm' },
+    gridConstraints: {
+      defaultSpan: { cols: 6, rows: 4 },
+      minSpan: { cols: 1, rows: 1 },
+      maxSpan: { cols: 16, rows: 48 },
+      allowInnerMove: true,
+    },
+    defaultRender: { alignX: 'center', alignY: 'center' },
+    defaultProps: {
+      shapeType: 'rectangle',
+      fillColor: '#dbeafe',
+      borderColor: '#2563eb',
+      borderWidth: 0,
+      borderRadius: 18,
+      opacity: 1,
+    },
+  },
   servicesList: {
     displayName: 'Services List',
     layoutClass: 'list',

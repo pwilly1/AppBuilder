@@ -5,6 +5,7 @@ export type BlockType =
   | 'hero'
   | 'text'
   | 'navButton'
+  | 'shape'
   | 'servicesList'
   | 'contactForm'
   | 'imageGallery';
@@ -14,6 +15,7 @@ export type BlockLayoutClass =
   | 'hero'
   | 'content'
   | 'action'
+  | 'shape'
   | 'list'
   | 'media'
   | 'form';

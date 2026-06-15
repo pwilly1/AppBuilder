@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import { Hero } from './blocks/Hero';
 import { TextBlock } from './blocks/TextBlock';
 import { NavButton } from './blocks/NavButton';
+import { ShapeBlock } from './blocks/ShapeBlock';
 import { ServicesList } from './blocks/ServicesList';
 import { ContactForm } from './blocks/ContactForm';
 import { ImageGallery } from './blocks/ImageGallery';
@@ -15,6 +16,7 @@ const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   hero: Hero,
   text: TextBlock,
   navButton: NavButton,
+  shape: ShapeBlock,
   servicesList: ServicesList,
   contactForm: ContactForm,
   imageGallery: ImageGallery,

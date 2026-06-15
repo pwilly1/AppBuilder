@@ -1,4 +1,4 @@
-// © 2025 Preston Willis. All rights reserved.
+ï»¿// Copyright 2025 Preston Willis. All rights reserved.
 import React from 'react'
 import type { Block } from './shared/schema/types'
 import { createBlock } from './shared/schema/registry'
@@ -30,6 +30,13 @@ function CollapsibleSection({ title, children, defaultOpen }: SectionProps) {
 }
 
 const blockButton = 'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 transition-colors hover:bg-slate-50'
+const shapeOptions = [
+  { value: 'rectangle', label: 'Rectangle', note: 'Sharp card or panel shape' },
+  { value: 'circle', label: 'Circle', note: 'Avatar, badge, or dot shape' },
+  { value: 'pill', label: 'Pill', note: 'Rounded banner or chip shape' },
+] as const
+
+type ShapeOption = (typeof shapeOptions)[number]['value']
 
 function BlockEntry({ title, note, onClick }: { title: string; note: string; onClick: () => void }) {
   return (
@@ -37,6 +44,50 @@ function BlockEntry({ title, note, onClick }: { title: string; note: string; onC
       <div>{title}</div>
       <div className="mt-1 text-xs font-medium text-slate-500">{note}</div>
     </button>
+  )
+}
+
+function ShapeEntry({ onAdd }: { onAdd: (b: Block) => void }) {
+  const [shapeType, setShapeType] = React.useState<ShapeOption>('rectangle')
+  const selectedShape = shapeOptions.find((option) => option.value === shapeType) ?? shapeOptions[0]
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold text-slate-900">Shape</div>
+          <div className="mt-1 text-xs font-medium text-slate-500">{selectedShape.note}</div>
+        </div>
+        <div
+          className="mt-0.5 h-8 w-8 shrink-0 border border-slate-300 bg-blue-100"
+          style={{ borderRadius: shapeType === 'rectangle' ? 8 : 999 }}
+          aria-hidden="true"
+        />
+      </div>
+
+      <div className="mt-3 grid gap-2">
+        <label className="sr-only" htmlFor="shape-type-picker">Shape type</label>
+        <select
+          id="shape-type-picker"
+          className="inspector-input py-2 text-xs"
+          value={shapeType}
+          onChange={(event) => setShapeType(event.target.value as ShapeOption)}
+        >
+          {shapeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="btn-sm w-full"
+          onClick={() => onAdd(createBlock('shape', { shapeType }))}
+        >
+          Add {selectedShape.label}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -49,10 +100,10 @@ export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
             <BlockEntry title="Hero" note="Intro headline" onClick={() => onAdd(createBlock('hero', { headline: 'New Hero' }))} />
             <BlockEntry title="Text" note="Paragraphs or short body copy" onClick={() => onAdd(createBlock('text', { value: 'New text' }))} />
             <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
+            <ShapeEntry onAdd={onAdd} />
           </div>
         </CollapsibleSection>
       </div>
     </div>
   )
 }
-
