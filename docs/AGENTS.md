@@ -66,6 +66,25 @@ props.scaleY
 - Do not claim planned strategic features are implemented unless the code supports them.
 - Update docs when architecture, deployment, schema, or roadmap changes.
 
+## Current Block Inventory
+
+Visible editor palette today:
+
+- Hero
+- Text
+- Nav Button
+- Shape
+- Divider
+- Spacer
+- Input
+- Textarea
+
+Business/demo-experiment blocks still present in code but not the preferred public-demo direction:
+
+- Services List
+- Contact Form
+- Image Gallery
+
 ## Key Docs
 
 - [Architecture](architecture.md)

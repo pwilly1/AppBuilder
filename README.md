@@ -18,7 +18,9 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Visual editor with pages, block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
-- Shape block for simple visual design accents
+- Lightweight primitive blocks: Shape, Divider, Spacer, Input, and Textarea
+- Nav Button supports page navigation plus inspector-based visual styling
+- Input and Textarea are currently visual mockup blocks, not live form-submission fields
 - Web preview mode with page navigation
 - Android native preview runtime connected to backend project data
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending

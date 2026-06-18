@@ -447,8 +447,6 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
                 <div>
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Workspace</div>
                   <h2 className="section-heading text-3xl font-semibold">Projects</h2>
-                  <h2 className="section-heading text-3xl font-semibold">Projects</h2>
-                  <p className="muted">A snapshot of your work. Open a project to edit it or review contact submissions.</p>
                   <p className="muted">A snapshot of your work. Open a project to edit it or review contact submissions.</p>
                 </div>
                 {namingProject ? (

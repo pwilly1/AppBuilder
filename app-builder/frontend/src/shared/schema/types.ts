@@ -6,6 +6,10 @@ export type BlockType =
   | 'text'
   | 'navButton'
   | 'shape'
+  | 'divider'
+  | 'spacer'
+  | 'input'
+  | 'textarea'
   | 'servicesList'
   | 'contactForm'
   | 'imageGallery';
@@ -16,6 +20,9 @@ export type BlockLayoutClass =
   | 'content'
   | 'action'
   | 'shape'
+  | 'divider'
+  | 'spacer'
+  | 'input'
   | 'list'
   | 'media'
   | 'form';

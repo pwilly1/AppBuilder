@@ -7,6 +7,8 @@ export function NavButton({
   buttonPaddingX = 14,
   buttonPaddingY = 10,
   borderRadius = 10,
+  backgroundColor = '#0f172a',
+  textColor = '#ffffff',
   contentScale = 1,
 }: {
   label?: string
@@ -17,6 +19,8 @@ export function NavButton({
   buttonPaddingX?: number
   buttonPaddingY?: number
   borderRadius?: number
+  backgroundColor?: string
+  textColor?: string
   contentScale?: number
 }) {
   const text = label || 'Go'
@@ -44,8 +48,8 @@ export function NavButton({
           border: 'none',
           borderRadius: borderRadius * contentScale,
           padding: `${buttonPaddingY * contentScale}px ${buttonPaddingX * contentScale}px`,
-          backgroundColor: disabled ? '#e5e7eb' : '#0f172a',
-          color: disabled ? '#475569' : '#ffffff',
+          backgroundColor: disabled ? '#e5e7eb' : backgroundColor || '#0f172a',
+          color: disabled ? '#475569' : textColor || '#ffffff',
           fontSize: (fontSize ?? 14) * contentScale,
           fontWeight: 600,
           lineHeight: 1.2,

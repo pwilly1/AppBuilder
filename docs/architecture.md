@@ -193,14 +193,23 @@ The goal is parity: if a user chooses `scaleContent`, web preview and Android pr
 - grid constraints
 - default render metadata
 
-The visible add-block panel currently exposes the stable core blocks:
+The visible add-block panel currently exposes:
 
 - Hero
 - Text
 - Nav Button
 - Shape
+- Divider
+- Spacer
+- Input
+- Textarea
 
-Additional business blocks still exist in the codebase but are not the preferred public-demo block set right now.
+Hero, Text, Nav Button, and Shape are still the main public-demo blocks. The lighter primitives above are also available now, while the older business blocks remain in the codebase but are not the preferred public-demo direction.
+
+Behavior notes:
+
+- Nav Button now stores both navigation props and simple visual style props in the shared schema so web and Android previews stay aligned.
+- Input and Textarea are currently schema-backed visual primitives for mockup/design use, not connected form-processing blocks.
 
 ## Frontend Responsibilities
 

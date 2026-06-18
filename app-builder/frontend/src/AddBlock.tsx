@@ -101,6 +101,10 @@ export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
             <BlockEntry title="Text" note="Paragraphs or short body copy" onClick={() => onAdd(createBlock('text', { value: 'New text' }))} />
             <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
             <ShapeEntry onAdd={onAdd} />
+            <BlockEntry title="Divider" note="Horizontal or vertical separator" onClick={() => onAdd(createBlock('divider'))} />
+            <BlockEntry title="Spacer" note="Empty layout space" onClick={() => onAdd(createBlock('spacer'))} />
+            <BlockEntry title="Input" note="Visual single-line field" onClick={() => onAdd(createBlock('input'))} />
+            <BlockEntry title="Textarea" note="Visual multi-line field" onClick={() => onAdd(createBlock('textarea'))} />
           </div>
         </CollapsibleSection>
       </div>

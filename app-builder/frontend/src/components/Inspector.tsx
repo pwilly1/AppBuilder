@@ -82,6 +82,11 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
     if (props.fontSize) props.fontSize = Number(props.fontSize);
     if (props.headlineSize) props.headlineSize = Number(props.headlineSize);
     if (props.columns) props.columns = Number(props.columns);
+    if (props.thickness !== undefined) props.thickness = Number(props.thickness);
+    if (props.rows !== undefined) props.rows = Number(props.rows);
+    if (props.contentPadding !== undefined) props.contentPadding = Number(props.contentPadding);
+    if (props.buttonPaddingX !== undefined) props.buttonPaddingX = Number(props.buttonPaddingX);
+    if (props.buttonPaddingY !== undefined) props.buttonPaddingY = Number(props.buttonPaddingY);
     if (props.borderWidth !== undefined) props.borderWidth = Number(props.borderWidth);
     if (props.borderRadius !== undefined) props.borderRadius = Number(props.borderRadius);
     if (props.opacity !== undefined) props.opacity = Number(props.opacity);
@@ -227,22 +232,54 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
         )}
 
         {block.type === 'navButton' && (
-          <FormSection title="Navigation" description="Choose the label and where this button should take the user.">
-            <div className="grid gap-2">
-              <FieldLabel>Label</FieldLabel>
-              <TextInput {...register('label')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Target page</FieldLabel>
-              <select className="inspector-input" {...register('toPageId')}>
-                <option value="">Select a page...</option>
-                {(pages || []).map((page) => (
-                  <option key={page.id} value={page.id}>{page.title || page.id}</option>
-                ))}
-              </select>
-            </div>
-            <p className="text-xs text-slate-500">This button switches to the selected page in preview/runtime.</p>
-          </FormSection>
+          <>
+            <FormSection title="Navigation" description="Choose the label and where this button should take the user.">
+              <div className="grid gap-2">
+                <FieldLabel>Label</FieldLabel>
+                <TextInput {...register('label')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Target page</FieldLabel>
+                <select className="inspector-input" {...register('toPageId')}>
+                  <option value="">Select a page...</option>
+                  {(pages || []).map((page) => (
+                    <option key={page.id} value={page.id}>{page.title || page.id}</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs text-slate-500">This button switches to the selected page in preview/runtime.</p>
+            </FormSection>
+            <FormSection title="Button style" description="Tune the visual button without creating a separate button type.">
+              <div className="grid gap-2">
+                <FieldLabel>Font size (px)</FieldLabel>
+                <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Background color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Text color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Corner radius (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Button padding X (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('buttonPaddingX')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Button padding Y (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('buttonPaddingY')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Outer padding (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('contentPadding')} />
+              </div>
+            </FormSection>
+          </>
         )}
 
         {block.type === 'shape' && (
@@ -272,6 +309,128 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
             <div className="grid gap-2">
               <FieldLabel>Opacity</FieldLabel>
               <TextInput type="number" min={0} max={1} step={0.05} className="max-w-[120px]" {...register('opacity')} />
+            </div>
+          </FormSection>
+        )}
+
+        {block.type === 'divider' && (
+          <FormSection title="Divider" description="Add a simple visual separator.">
+            <div className="grid gap-2">
+              <FieldLabel>Orientation</FieldLabel>
+              <select className="inspector-input" {...register('orientation')}>
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('color')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Thickness (px)</FieldLabel>
+              <TextInput type="number" min={1} className="max-w-[120px]" {...register('thickness')} />
+            </div>
+          </FormSection>
+        )}
+
+        {block.type === 'spacer' && (
+          <FormSection title="Spacer" description="This block intentionally renders as empty space. Resize it on the canvas to control spacing.">
+            <p className="text-sm text-slate-500">Spacer has no content settings.</p>
+          </FormSection>
+        )}
+
+        {block.type === 'input' && (
+          <FormSection title="Input" description="Visual single-line field for app mockups. It is not connected to form submissions yet.">
+            <div className="grid gap-2">
+              <FieldLabel>Label</FieldLabel>
+              <TextInput {...register('label')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Placeholder</FieldLabel>
+              <TextInput {...register('placeholder')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Display value</FieldLabel>
+              <TextInput {...register('value')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Input type</FieldLabel>
+              <select className="inspector-input" {...register('inputType')}>
+                <option value="text">Text</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="number">Number</option>
+                <option value="password">Password</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Font size (px)</FieldLabel>
+              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Background color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Text color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Placeholder color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('placeholderColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Corner radius (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+            </div>
+          </FormSection>
+        )}
+
+        {block.type === 'textarea' && (
+          <FormSection title="Textarea" description="Visual multi-line field for app mockups. It is not connected to form submissions yet.">
+            <div className="grid gap-2">
+              <FieldLabel>Label</FieldLabel>
+              <TextInput {...register('label')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Placeholder</FieldLabel>
+              <TextInput {...register('placeholder')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Display value</FieldLabel>
+              <TextArea rows={3} {...register('value')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Rows</FieldLabel>
+              <TextInput type="number" min={1} className="max-w-[120px]" {...register('rows')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Font size (px)</FieldLabel>
+              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Background color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Text color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Placeholder color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('placeholderColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Corner radius (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
             </div>
           </FormSection>
         )}

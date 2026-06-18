@@ -89,12 +89,12 @@ Recommended order:
 | Status | Block |
 | --- | --- |
 | Completed | Shape |
-| Planned | Divider |
-| Planned | Spacer |
+| Completed | Divider |
+| Completed | Spacer |
+| Completed | Input |
+| Completed | Textarea |
 | Planned | Card/container |
 | Planned | Improved button |
-| Planned | Input |
-| Planned | Textarea |
 | Planned | Image |
 
 ### 6. Section / Container System
@@ -223,7 +223,7 @@ The best next sequence is:
 ```text
 1. Finish public demo polish.
 2. Keep core editor blocks stable.
-3. Add image/divider/spacer primitives.
+3. Add card/container and image primitives.
 4. Design containers/sections carefully.
 5. Improve Android parity after each schema change.
 6. Add screenshots/demo material.

@@ -64,7 +64,13 @@ export function DraggableBlock({
   onSnapChange,
 }: DraggableProps) {
   const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
-  const usesContainerResize = supportsInlineEdit || block.type === 'shape'
+  const usesContainerResize =
+    supportsInlineEdit ||
+    block.type === 'shape' ||
+    block.type === 'divider' ||
+    block.type === 'spacer' ||
+    block.type === 'input' ||
+    block.type === 'textarea'
   const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)

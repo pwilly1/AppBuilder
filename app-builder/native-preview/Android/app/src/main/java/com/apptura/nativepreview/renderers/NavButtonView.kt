@@ -26,6 +26,8 @@ fun NavButtonView(block: Block, onNavigate: ((String) -> Unit)?) {
     val buttonPaddingX = (block.props["buttonPaddingX"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 14.0
     val buttonPaddingY = (block.props["buttonPaddingY"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 10.0
     val borderRadius = (block.props["borderRadius"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 10.0
+    val backgroundColor = parseNavButtonColor((block.props["backgroundColor"] as? JsonPrimitive)?.content, Color(0xFF0F172A))
+    val textColor = parseNavButtonColor((block.props["textColor"] as? JsonPrimitive)?.content, Color.White)
     val enabled = !toPageId.isNullOrBlank()
     val contentScale = getBlockContentScale(block)
     val scaledFontSize = fontSize.toFloat() * contentScale
@@ -49,8 +51,8 @@ fun NavButtonView(block: Block, onNavigate: ((String) -> Unit)?) {
             ),
             shape = RoundedCornerShape((borderRadius.toFloat() * contentScale).dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (enabled) Color(0xFF0F172A) else Color(0xFFE5E7EB),
-                contentColor = if (enabled) Color.White else Color(0xFF475569),
+                containerColor = if (enabled) backgroundColor else Color(0xFFE5E7EB),
+                contentColor = if (enabled) textColor else Color(0xFF475569),
                 disabledContainerColor = Color(0xFFE5E7EB),
                 disabledContentColor = Color(0xFF475569),
             ),
@@ -62,5 +64,16 @@ fun NavButtonView(block: Block, onNavigate: ((String) -> Unit)?) {
                 style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
             )
         }
+    }
+}
+
+private fun parseNavButtonColor(raw: String?, fallback: Color): Color {
+    val value = raw?.trim()
+    if (value.isNullOrBlank()) return fallback
+
+    return try {
+        Color(android.graphics.Color.parseColor(value))
+    } catch (_: IllegalArgumentException) {
+        fallback
     }
 }
