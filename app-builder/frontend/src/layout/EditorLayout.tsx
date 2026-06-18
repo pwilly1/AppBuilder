@@ -74,9 +74,9 @@ export default function EditorLayout(props: Props) {
 
   return (
     <>
-      <div className="col-span-full editor-panel rounded-[1.75rem] px-4 py-3">
+      <div className="col-span-full editor-panel rounded-[1.85rem] px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200/70 bg-white/45 p-1">
             <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate('/dashboard')}>
               Back to Dashboard
             </button>
@@ -91,8 +91,8 @@ export default function EditorLayout(props: Props) {
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="min-w-[150px] text-right text-xs text-slate-500">
+          <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200/70 bg-white/45 p-1">
+            <div className="min-w-[150px] px-3 text-right text-xs text-slate-500">
               {isSaving ? 'Saving...' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'Not saved yet'}
               {saveError ? ` | ${saveError}` : null}
             </div>
@@ -119,18 +119,19 @@ export default function EditorLayout(props: Props) {
       </div>
 
       <aside className="sidebar-hidden-mobile">
-        <div className="editor-panel editor-side-panel rounded-[1.9rem] p-4">
-          <div className="editor-section shrink-0">
-            <div className="editor-section-title">Workspace</div>
-            <div className="mt-2 text-lg font-semibold text-slate-900">Structure</div>
-            <p className="editor-kicker mt-1">Organize pages first, then drop in blocks with a clear hierarchy.</p>
-            <div className="mt-3 flex flex-wrap gap-2">
+        <div className="editor-panel editor-side-panel editor-left-rail rounded-[2rem] p-4">
+          <div className="editor-rail-header">
+            <div>
+              <div className="editor-section-title">Workspace</div>
+              <div className="mt-1 text-base font-semibold text-slate-900">Build tools</div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
               <span className="editor-pill">{pageCount} pages</span>
               <span className="editor-pill">{blockCount} blocks</span>
             </div>
           </div>
 
-          <div className="editor-side-panel-body mt-4">
+          <div className="editor-side-panel-body mt-4 space-y-5">
             <PagesPanel
               pages={pages}
               selectedPageId={selectedPageId}
@@ -140,18 +141,14 @@ export default function EditorLayout(props: Props) {
               onDelete={(id) => deletePage?.(id)}
             />
 
-            <div className="mt-4 editor-section">
-              <div className="flex items-center justify-between">
+            <div>
+              <div className="editor-rail-section-heading">
                 <div>
-                  <div className="editor-section-title">Library</div>
-                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Block palette</h3>
+                  <div className="editor-section-title">Blocks</div>
+                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Add elements</h3>
                 </div>
-                <span className="editor-kicker">Dragless add</span>
+                <span className="editor-kicker">Click to add</span>
               </div>
-              <p className="editor-kicker mt-2">Pick the right section type first. Keep each page focused and short.</p>
-            </div>
-
-            <div className="mt-4">
               <AddBlock onAdd={addBlock} />
             </div>
           </div>
@@ -159,8 +156,8 @@ export default function EditorLayout(props: Props) {
       </aside>
 
       <section className="min-w-0 overflow-auto">
-        <div className="editor-panel rounded-[1.9rem] p-3">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[1.25rem] border border-[rgba(53,80,128,0.10)] bg-white/60 px-4 py-3">
+        <div className="editor-panel rounded-[2rem] p-3">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[1.35rem] border border-[rgba(53,80,128,0.10)] bg-[#fffcf6]/75 px-4 py-3 shadow-sm">
             <div>
               <div className="editor-section-title">Canvas</div>
               <h2 className="mt-1 text-lg font-semibold text-slate-900">{currentPageTitle}</h2>
@@ -199,7 +196,7 @@ export default function EditorLayout(props: Props) {
       </section>
 
       <aside>
-        <div className="editor-panel editor-side-panel rounded-[1.9rem] p-4">
+        <div className="editor-panel editor-side-panel rounded-[2rem] p-4">
           <div className="editor-section shrink-0">
             <div className="editor-section-title">Inspector</div>
             <div className="mt-1 text-lg font-semibold text-slate-900">Properties</div>
@@ -225,7 +222,7 @@ export default function EditorLayout(props: Props) {
 
       {showAndroidPreviewNote ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-lg rounded-[1.85rem] border border-slate-200 bg-[#fffcf6] p-6 shadow-2xl">
             <div className="editor-section-title">Android mobile preview</div>
             <h3 className="section-heading mt-2 text-2xl font-semibold text-slate-900">
               Public Android preview is not set up yet

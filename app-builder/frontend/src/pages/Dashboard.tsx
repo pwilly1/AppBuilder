@@ -32,13 +32,17 @@ type ContactFormRef = {
 
 function TopNav({ search, setSearch }: { search: string; setSearch: (s: string) => void }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-4">
-      <div className="max-w-xl flex-1">
+    <div className="flex items-center justify-between gap-4 py-2">
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100/70">Workspace</div>
+        <div className="section-heading text-3xl font-semibold text-white">Project studio</div>
+      </div>
+      <div className="max-w-md flex-1">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search projects or owners..."
-          className="field-input !rounded-full"
+          className="field-input !rounded-full !bg-[#fffcf6]"
         />
       </div>
     </div>
@@ -54,9 +58,13 @@ function Sidebar() {
 
   return (
     <nav className="shell-panel hidden rounded-[1.75rem] p-4 md:flex md:w-56 md:flex-col lg:w-64">
+      <div className="mb-4 rounded-2xl border border-slate-200/60 bg-white/45 p-3">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">Control center</div>
+        <div className="mt-1 text-sm font-semibold text-slate-900">Builder workspace</div>
+      </div>
       <ul className="space-y-2">
         {items.map((it) => (
-          <li key={it.key} className="flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-slate-700 transition-colors hover:bg-white/70">
+          <li key={it.key} className={`flex cursor-pointer items-center gap-3 rounded-2xl px-3 py-3 text-slate-700 transition-colors hover:bg-white/70 ${it.key === 'projects' ? 'bg-white/75 shadow-sm' : ''}`}>
             <div className="text-slate-500">{it.icon}</div>
             <div className="text-sm font-medium">{it.label}</div>
           </li>
@@ -248,9 +256,9 @@ function ProjectCard({
   const progress = Math.min(100, (project?.pages?.[0]?.blocks?.length ?? 0) * 20);
 
   return (
-    <div className="group shell-panel rounded-[1.75rem] p-4 transition-transform duration-200 hover:-translate-y-1">
-      <div className="overflow-hidden rounded-[1.2rem] bg-white shadow-sm" style={{ height: 160 }}>
-        <div className="h-full w-full bg-gradient-to-b from-white to-slate-50 p-3">
+    <div className="group shell-panel rounded-[1.85rem] p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_34px_72px_rgba(7,17,31,0.22)]">
+      <div className="overflow-hidden rounded-[1.35rem] border border-slate-200/70 bg-white shadow-sm" style={{ height: 170 }}>
+        <div className="h-full w-full bg-[linear-gradient(180deg,#fffcf6_0%,#eff6ff_100%)] p-3">
           {firstBlock ? (
             <div className="h-full w-full origin-top-left scale-90 transform">
               <BlockRenderer block={firstBlock} />
@@ -266,7 +274,7 @@ function ProjectCard({
             <div className="truncate text-base font-semibold text-slate-800" title={project.name}>{project.name}</div>
             <div className="mt-1 text-xs text-slate-500">Updated {updated} | {project.ownerId ?? 'You'}</div>
           </div>
-          <div className="rounded-full bg-[rgba(37,99,235,0.12)] px-3 py-1 text-xs font-semibold text-[var(--accent-deep)]">
+          <div className="rounded-full border border-blue-200/60 bg-[rgba(37,99,235,0.10)] px-3 py-1 text-xs font-semibold text-[var(--accent-deep)]">
             {progress}% built
           </div>
         </div>
@@ -436,21 +444,21 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-[var(--max-width)] px-4 py-6">
+      <div className="mx-auto max-w-[1600px] px-4 py-6">
         <TopNav search={search} setSearch={setSearch} />
         <div className="mt-2 rounded-lg bg-transparent shadow-none">
           <div className="flex gap-4">
             <Sidebar />
             <main className="flex-1">
-              <div className="shell-panel mb-4 rounded-[1.75rem] p-5">
-              <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="shell-panel mb-4 rounded-[1.9rem] p-5">
+              <div className="mb-5 flex items-center justify-between gap-4">
                 <div>
                   <div className="text-xs uppercase tracking-[0.18em] text-slate-500">Workspace</div>
-                  <h2 className="section-heading text-3xl font-semibold">Projects</h2>
-                  <p className="muted">A snapshot of your work. Open a project to edit it or review contact submissions.</p>
+                  <h2 className="section-heading text-4xl font-semibold text-slate-950">Projects</h2>
+                  <p className="muted max-w-2xl">Open a saved app, review submissions, or start a new native-ready project.</p>
                 </div>
                 {namingProject ? (
-                  <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white/80 p-3 shadow-sm sm:min-w-[320px]">
+                  <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-[#fffcf6]/90 p-3 shadow-sm sm:min-w-[320px]">
                     <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500" htmlFor="new-project-name">
                       Project name
                     </label>
@@ -482,7 +490,7 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
                 )}
               </div>
 
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {loading ? (
                   <div className="text-slate-500">Loading...</div>
                 ) : filtered.length ? (
@@ -525,4 +533,3 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
     </div>
   );
 }
-

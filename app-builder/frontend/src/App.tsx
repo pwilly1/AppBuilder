@@ -82,7 +82,6 @@ export default function App() {
           lastSavedAt={lastSavedAt}
           saveError={saveError}
         />
-        <Footer />
       </div>
     </BrowserRouter>
   )
@@ -121,6 +120,8 @@ function AppContent(props: any) {
     lastSavedAt,
     saveError,
   } = props
+  const isEditorRoute = location.pathname.startsWith('/editor')
+  const isDashboardRoute = location.pathname.startsWith('/dashboard')
   const editorElement = (
     <EditorScreen
       project={project}
@@ -177,12 +178,14 @@ function AppContent(props: any) {
 
   return (
     <>
-      <Header
-        authed={authed}
-        logout={logout}
-      />
+      {!isEditorRoute ? (
+        <Header
+          authed={authed}
+          logout={logout}
+        />
+      ) : null}
 
-      <main className={`app-grid ${location.pathname.startsWith('/editor') ? 'editor-mode' : ''}`}>
+      <main className={`app-grid ${isEditorRoute ? 'editor-mode' : ''} ${isDashboardRoute ? 'dashboard-mode' : ''}`}>
         <Routes>
           <Route
             path="/"
@@ -222,6 +225,7 @@ function AppContent(props: any) {
           />
         </Routes>
       </main>
+      <Footer />
     </>
   )
 }

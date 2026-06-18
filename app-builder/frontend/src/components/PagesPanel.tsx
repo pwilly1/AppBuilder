@@ -1,4 +1,4 @@
-// © 2025 Preston Willis. All rights reserved.
+// Copyright 2025 Preston Willis. All rights reserved.
 import { useMemo, useState } from 'react'
 
 export type PageLite = { id: string; title?: string; path?: string }
@@ -31,8 +31,8 @@ export default function PagesPanel({ pages, selectedPageId, onSelect, onAdd, onR
   }
 
   return (
-    <div className="card">
-      <div className="flex items-center justify-between gap-3">
+    <div>
+      <div className="editor-rail-section-heading">
         <div>
           <div className="editor-section-title">Pages</div>
           <div className="mt-1 text-sm font-semibold text-slate-900">Page map</div>
@@ -40,7 +40,7 @@ export default function PagesPanel({ pages, selectedPageId, onSelect, onAdd, onR
         <button className="btn-sm min-w-[96px]" onClick={onAdd}>+ Add Page</button>
       </div>
 
-      <div className="editor-ghost-surface mt-3 px-4 py-3">
+      <div className="editor-rail-surface mt-3 px-3 py-3">
         <div className="editor-kicker">Current page</div>
         <div className="mt-1 text-sm font-semibold text-slate-900">{selectedPage?.title || 'Nothing selected'}</div>
         <div className="mt-1 text-xs text-slate-500">{selectedPage?.path || 'No route path set yet'}</div>
@@ -52,10 +52,10 @@ export default function PagesPanel({ pages, selectedPageId, onSelect, onAdd, onR
           return (
             <li
               key={page.id}
-              className={`rounded-2xl border px-3 py-3 transition-colors ${
+              className={`editor-page-row ${
                 active
-                  ? 'border-[rgba(37,99,235,0.35)] bg-[rgba(37,99,235,0.08)]'
-                  : 'border-slate-200/70 bg-white/70'
+                  ? 'editor-page-row-active'
+                  : ''
               }`}
             >
               <div className="flex items-start gap-3">
