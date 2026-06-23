@@ -198,18 +198,22 @@ The visible add-block panel currently exposes:
 - Hero
 - Text
 - Nav Button
+- Badge
+- Icon
 - Shape
-- Divider
-- Spacer
+- Progress Bar
 - Input
 - Textarea
+- Checkbox
+- Toggle
 
 Hero, Text, Nav Button, and Shape are still the main public-demo blocks. The lighter primitives above are also available now, while the older business blocks remain in the codebase but are not the preferred public-demo direction.
 
 Behavior notes:
 
 - Nav Button now stores both navigation props and simple visual style props in the shared schema so web and Android previews stay aligned.
-- Input and Textarea are currently schema-backed visual primitives for mockup/design use, not connected form-processing blocks.
+- Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
+- Input, Textarea, Checkbox, and Toggle are currently schema-backed visual primitives for mockup/design use, not connected form-processing blocks.
 
 ## Frontend Responsibilities
 
@@ -226,7 +230,7 @@ Key files:
 | `editor/Preview.tsx` | Web preview rendering |
 | `shared/BlockRenderer.tsx` | Block type switchboard |
 | `shared/schema/gridLayout.ts` | Grid math, collisions, placement, render rect resolution |
-| `shared/schema/gridMigration.ts` | Load-time migration for older project data |
+| `shared/schema/gridMigration.ts` | Load-time migration for older project data, including filtering unsupported legacy block types removed from the registry |
 
 ## Backend Responsibilities
 
@@ -312,3 +316,9 @@ Planned GenAI features should generate or edit the same project schema the edito
 - Legacy fallback fields still exist for older project compatibility.
 - Android/web parity needs continued testing as block behavior evolves.
 - Complex section/container behavior is not fully designed or implemented yet.
+
+## Related Documentation
+
+- [Block and Schema Reference](block-reference.md) - exact project, block, layout, and migration contract
+- [How to Add a Block](how-to-add-a-block.md) - required implementation path across web and Android
+- [API Reference](api-reference.md) - current backend route surface

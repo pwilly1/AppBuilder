@@ -48,16 +48,20 @@ The current visible block palette is:
 - Hero
 - Text
 - Nav Button
+- Badge
+- Icon
 - Shape
-- Divider
-- Spacer
+- Progress Bar
 - Input
 - Textarea
+- Checkbox
+- Toggle
 
-Hero, Text, Nav Button, and Shape remain the main public-demo blocks. Divider, Spacer, Input, and Textarea are lightweight primitives that are already available in the editor and runtime.
+Hero, Text, Nav Button, and Shape remain the main public-demo blocks. Badge, Icon, Progress Bar, Input, Textarea, Checkbox, and Toggle are lightweight primitives that are already available in the editor and runtime.
 
 Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling. Nav Button supports page navigation plus inspector-based styling for colors, padding, and corner radius.
-Input and Textarea are visual mockup fields for app-design flows. They render in web and Android preview, but they are not wired into submission handling or generated app data yet.
+Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
+Input, Textarea, Checkbox, and Toggle are visual mockup controls for app-design flows. They render in web and Android preview, but they are not wired into submission handling or generated app data yet.
 
 ### Grid Layout
 
@@ -104,16 +108,18 @@ They are not currently the preferred public-demo block direction. The better lon
 
 Implemented primitives:
 
-- Divider
-- Spacer
+- Badge
+- Icon
+- Progress Bar
 - Input
 - Textarea
+- Checkbox
+- Toggle
 - Shape
 
 Still planned:
 
 - Card/container
-- Improved button variants
 - Image
 
 ### Sections And Containers

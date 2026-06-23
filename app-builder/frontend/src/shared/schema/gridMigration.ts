@@ -1,4 +1,4 @@
-﻿import { BlockRegistry } from './registry'
+import { BlockRegistry, isSupportedBlockType } from './registry'
 import {
   findFirstAvailablePlacement,
   getBlockGridConstraints,
@@ -43,12 +43,15 @@ function ensureRenderDefaults(block: Block): Block {
 }
 
 export function migratePageToGridLayout(page: Page, options: { scaleLegacyGridDensity?: boolean } = {}): Page {
-  if (!page.blocks.length) return page
+  const supportedBlocks = page.blocks.filter((block) => isSupportedBlockType(block.type))
+  if (!supportedBlocks.length) return supportedBlocks.length === page.blocks.length ? page : { ...page, blocks: [] }
+
+  const supportedPage = supportedBlocks.length === page.blocks.length ? page : { ...page, blocks: supportedBlocks }
 
   const migratedById = new Map<string, Block>()
   const placedBlocks: Block[] = []
 
-  for (const block of page.blocks) {
+  for (const block of supportedPage.blocks) {
     if (!block.layout?.grid) continue
 
     const constraints = getBlockGridConstraints(block)
@@ -67,7 +70,7 @@ export function migratePageToGridLayout(page: Page, options: { scaleLegacyGridDe
     placedBlocks.push(migrated)
   }
 
-  for (const block of sortByLegacyPlacement(page.blocks.filter((candidate) => !candidate.layout?.grid))) {
+  for (const block of sortByLegacyPlacement(supportedPage.blocks.filter((candidate) => !candidate.layout?.grid))) {
     const migrated = ensureRenderDefaults({
       ...block,
       layout: {
@@ -81,8 +84,8 @@ export function migratePageToGridLayout(page: Page, options: { scaleLegacyGridDe
   }
 
   return {
-    ...page,
-    blocks: page.blocks.map((block) => migratedById.get(block.id) ?? ensureRenderDefaults(block)),
+    ...supportedPage,
+    blocks: supportedPage.blocks.map((block) => migratedById.get(block.id) ?? ensureRenderDefaults(block)),
   }
 }
 

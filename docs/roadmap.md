@@ -89,12 +89,14 @@ Recommended order:
 | Status | Block |
 | --- | --- |
 | Completed | Shape |
-| Completed | Divider |
-| Completed | Spacer |
+| Completed | Badge |
+| Completed | Icon |
+| Completed | Progress Bar |
 | Completed | Input |
 | Completed | Textarea |
+| Completed | Checkbox |
+| Completed | Toggle |
 | Planned | Card/container |
-| Planned | Improved button |
 | Planned | Image |
 
 ### 6. Section / Container System

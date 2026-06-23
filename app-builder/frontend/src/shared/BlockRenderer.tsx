@@ -7,8 +7,11 @@ import { Hero } from './blocks/Hero';
 import { TextBlock } from './blocks/TextBlock';
 import { NavButton } from './blocks/NavButton';
 import { ShapeBlock } from './blocks/ShapeBlock';
-import { DividerBlock } from './blocks/DividerBlock';
-import { SpacerBlock } from './blocks/SpacerBlock';
+import { BadgeBlock } from './blocks/BadgeBlock';
+import { IconBlock } from './blocks/IconBlock';
+import { CheckboxBlock } from './blocks/CheckboxBlock';
+import { ToggleBlock } from './blocks/ToggleBlock';
+import { ProgressBarBlock } from './blocks/ProgressBarBlock';
 import { InputBlock } from './blocks/InputBlock';
 import { TextareaBlock } from './blocks/TextareaBlock';
 import { ServicesList } from './blocks/ServicesList';
@@ -21,8 +24,11 @@ const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   text: TextBlock,
   navButton: NavButton,
   shape: ShapeBlock,
-  divider: DividerBlock,
-  spacer: SpacerBlock,
+  badge: BadgeBlock,
+  icon: IconBlock,
+  checkbox: CheckboxBlock,
+  toggle: ToggleBlock,
+  progressBar: ProgressBarBlock,
   input: InputBlock,
   textarea: TextareaBlock,
   servicesList: ServicesList,

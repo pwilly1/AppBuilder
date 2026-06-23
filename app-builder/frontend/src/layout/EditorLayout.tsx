@@ -12,7 +12,7 @@ type Props = {
   selectedPageId?: string
   addBlock: (b: any) => void
   setSelectedBlock: (b: any) => void
-  editBlock: (b: any) => void
+  editBlock: (b: any, options?: { recordHistory?: boolean }) => void
   deleteBlock: (id: string) => void
   onReorder: (blocks: any[]) => void
   selectedBlock: any
@@ -209,6 +209,10 @@ export default function EditorLayout(props: Props) {
               onSave={(block: any) => {
                 setSelectedBlock(block)
                 editBlock(block)
+              }}
+              onPreview={(block: any) => {
+                setSelectedBlock(block)
+                editBlock(block, { recordHistory: false })
               }}
               onClose={() => setSelectedBlock(null)}
               onDelete={(id: string) => {

@@ -73,11 +73,14 @@ Visible editor palette today:
 - Hero
 - Text
 - Nav Button
+- Badge
+- Icon
 - Shape
-- Divider
-- Spacer
+- Progress Bar
 - Input
 - Textarea
+- Checkbox
+- Toggle
 
 Business/demo-experiment blocks still present in code but not the preferred public-demo direction:
 
@@ -88,7 +91,9 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 ## Key Docs
 
 - [Architecture](architecture.md)
-- [Development](development.md)
+- [API Reference](api-reference.md)
+- [Block and Schema Reference](block-reference.md)
+- [How to Add a Block](how-to-add-a-block.md)
 - [Deployment](deployment.md)
 - [Features](features.md)
 - [Roadmap](roadmap.md)

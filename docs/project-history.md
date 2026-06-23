@@ -177,7 +177,7 @@ Representative areas:
 
 Date range: June 2026 onward
 
-Recent work has focused on improving the deployed demo, editor organization, route protection, header/editor toolbar cleanup, direct editing behavior, content scaling behavior, lightweight primitive block support, and Android/web visual parity.
+Recent work has focused on improving the deployed demo, editor organization, route protection, header/editor toolbar cleanup, direct editing behavior, content scaling behavior, a focused lightweight primitive block set, richer inspector styling controls, and Android/web visual parity. Redundant Label, Divider, and Spacer block types were removed to keep the base library concise.
 
 Important outcome:
 

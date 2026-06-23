@@ -96,17 +96,32 @@ function ShapeEntry({ onAdd }: { onAdd: (b: Block) => void }) {
 
 export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
   return (
-    <CollapsibleSection title="Core Content" defaultOpen>
-      <div className="grid gap-2">
-        <BlockEntry title="Hero" note="Intro headline" onClick={() => onAdd(createBlock('hero', { headline: 'New Hero' }))} />
-        <BlockEntry title="Text" note="Paragraphs or short body copy" onClick={() => onAdd(createBlock('text', { value: 'New text' }))} />
-        <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
-        <ShapeEntry onAdd={onAdd} />
-        <BlockEntry title="Divider" note="Horizontal or vertical separator" onClick={() => onAdd(createBlock('divider'))} />
-        <BlockEntry title="Spacer" note="Empty layout space" onClick={() => onAdd(createBlock('spacer'))} />
-        <BlockEntry title="Input" note="Visual single-line field" onClick={() => onAdd(createBlock('input'))} />
-        <BlockEntry title="Textarea" note="Visual multi-line field" onClick={() => onAdd(createBlock('textarea'))} />
-      </div>
-    </CollapsibleSection>
+    <div className="grid gap-3">
+      <CollapsibleSection title="Text & Navigation" defaultOpen>
+        <div className="grid gap-2">
+          <BlockEntry title="Hero" note="Intro headline" onClick={() => onAdd(createBlock('hero', { headline: 'New Hero' }))} />
+          <BlockEntry title="Text" note="Paragraphs or short body copy" onClick={() => onAdd(createBlock('text', { value: 'New text' }))} />
+          <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Visual Elements" defaultOpen>
+        <div className="grid gap-2">
+          <BlockEntry title="Badge" note="Pill status or tag" onClick={() => onAdd(createBlock('badge'))} />
+          <BlockEntry title="Icon" note="Simple symbol from a safe set" onClick={() => onAdd(createBlock('icon'))} />
+          <ShapeEntry onAdd={onAdd} />
+          <BlockEntry title="Progress Bar" note="Visual completion/status bar" onClick={() => onAdd(createBlock('progressBar'))} />
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Form Mockups">
+        <div className="grid gap-2">
+          <BlockEntry title="Input" note="Visual single-line field" onClick={() => onAdd(createBlock('input'))} />
+          <BlockEntry title="Textarea" note="Visual multi-line field" onClick={() => onAdd(createBlock('textarea'))} />
+          <BlockEntry title="Checkbox" note="Visual checked/unchecked option" onClick={() => onAdd(createBlock('checkbox'))} />
+          <BlockEntry title="Toggle" note="Visual on/off switch" onClick={() => onAdd(createBlock('toggle'))} />
+        </div>
+      </CollapsibleSection>
+    </div>
   )
 }

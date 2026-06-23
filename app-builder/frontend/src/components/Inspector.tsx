@@ -10,6 +10,7 @@ type InspectorProps = {
   block?: Block | null;
   pages?: PageLite[];
   onSave?: (b: Block) => void;
+  onPreview?: (b: Block) => void;
   onClose?: () => void;
   onDelete?: (id: string) => void;
 };
@@ -58,12 +59,17 @@ function ArrayCard({ title, children, onRemove }: { title: string; children: Rea
   );
 }
 
-export default function Inspector({ block, pages, onSave, onClose, onDelete }: InspectorProps) {
-  const { register, control, handleSubmit, reset } = useForm({ defaultValues: block?.props || {} });
+export default function Inspector({ block, pages, onSave, onPreview, onClose, onDelete }: InspectorProps) {
+  const { register, control, handleSubmit, reset, getValues } = useForm<Record<string, any>>({ defaultValues: block?.props || {} });
   const servicesArray = useFieldArray({ control, name: 'items' });
   const galleryArray = useFieldArray({ control, name: 'images' });
+  const previewedPropsRef = React.useRef<Record<string, any> | null>(null);
 
   React.useEffect(() => {
+    if (previewedPropsRef.current === block?.props) {
+      previewedPropsRef.current = null;
+      return;
+    }
     reset(block?.props || {});
   }, [block, reset]);
 
@@ -87,11 +93,78 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
     if (props.contentPadding !== undefined) props.contentPadding = Number(props.contentPadding);
     if (props.buttonPaddingX !== undefined) props.buttonPaddingX = Number(props.buttonPaddingX);
     if (props.buttonPaddingY !== undefined) props.buttonPaddingY = Number(props.buttonPaddingY);
+    if (props.paddingX !== undefined) props.paddingX = Number(props.paddingX);
+    if (props.paddingY !== undefined) props.paddingY = Number(props.paddingY);
     if (props.borderWidth !== undefined) props.borderWidth = Number(props.borderWidth);
     if (props.borderRadius !== undefined) props.borderRadius = Number(props.borderRadius);
     if (props.opacity !== undefined) props.opacity = Number(props.opacity);
+    if (props.value !== undefined && block.type === 'progressBar') props.value = Number(props.value);
     onSave?.({ ...block, props });
   };
+
+  function candidateTextFits(nextText: string) {
+    if (!block || typeof document === 'undefined') return true;
+
+    const contentNode = Array.from(document.querySelectorAll<HTMLElement>('[data-editor-block-content]'))
+      .find((node) => node.dataset.editorBlockContent === block.id);
+    if (!contentNode) return true;
+
+    const clone = contentNode.cloneNode(true) as HTMLElement;
+    const renderedRoot = clone.firstElementChild as HTMLElement | null;
+    const textNode = block.type === 'navButton'
+      ? renderedRoot?.querySelector<HTMLElement>('button')
+      : block.type === 'text'
+        ? renderedRoot?.querySelector<HTMLElement>('p')
+        : block.type === 'badge'
+          ? renderedRoot?.querySelector<HTMLElement>('span')
+          : block.type === 'toggle'
+            ? renderedRoot?.lastElementChild as HTMLElement | null
+            : renderedRoot?.querySelector<HTMLElement>('div');
+    if (!textNode) return true;
+
+    textNode.textContent = nextText;
+    Object.assign(clone.style, {
+      position: 'fixed',
+      left: '-10000px',
+      top: '0',
+      visibility: 'hidden',
+      pointerEvents: 'none',
+      transform: 'none',
+      width: `${contentNode.clientWidth}px`,
+      maxWidth: `${contentNode.clientWidth}px`,
+      height: `${contentNode.clientHeight}px`,
+    });
+
+    document.body.appendChild(clone);
+    const measuredNodes = [clone, ...Array.from(clone.querySelectorAll<HTMLElement>('*'))];
+    const fits = measuredNodes.every((node) =>
+      node.scrollWidth <= node.clientWidth + 1 && node.scrollHeight <= node.clientHeight + 6,
+    );
+    clone.remove();
+    return fits;
+  }
+
+  function registerLiveText(field: 'value' | 'headline' | 'label' | 'text') {
+    const registration = register(field);
+    return {
+      ...registration,
+      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const previousValue = String(getValues(field) ?? '');
+        const nextValue = event.currentTarget.value;
+        const isShrinking = nextValue.length < previousValue.length;
+
+        if (!isShrinking && !candidateTextFits(nextValue)) {
+          event.currentTarget.value = previousValue;
+          return;
+        }
+
+        registration.onChange(event);
+        const nextProps = { ...(block!.props as Record<string, any>), ...getValues(), [field]: nextValue };
+        previewedPropsRef.current = nextProps;
+        onPreview?.({ ...block!, props: nextProps });
+      },
+    };
+  }
 
   const placement = getBlockEditorPlacement(block);
   const rawScaleX = Number(placement.scaleX ?? 1);
@@ -209,7 +282,7 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
           <FormSection title="Content" description="Edit the text copy and its display size.">
             <div className="grid gap-2">
               <FieldLabel>Text</FieldLabel>
-              <TextArea {...register('value')} />
+              <TextArea {...registerLiveText('value')} />
             </div>
             <div className="grid gap-2">
               <FieldLabel>Font size (px)</FieldLabel>
@@ -222,7 +295,7 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
           <FormSection title="Hero copy" description="Control the first headline users see on this page.">
             <div className="grid gap-2">
               <FieldLabel>Headline</FieldLabel>
-              <TextInput {...register('headline')} />
+              <TextInput {...registerLiveText('headline')} />
             </div>
             <div className="grid gap-2">
               <FieldLabel>Headline size (px)</FieldLabel>
@@ -236,7 +309,7 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
             <FormSection title="Navigation" description="Choose the label and where this button should take the user.">
               <div className="grid gap-2">
                 <FieldLabel>Label</FieldLabel>
-                <TextInput {...register('label')} />
+                <TextInput {...registerLiveText('label')} />
               </div>
               <div className="grid gap-2">
                 <FieldLabel>Target page</FieldLabel>
@@ -313,29 +386,174 @@ export default function Inspector({ block, pages, onSave, onClose, onDelete }: I
           </FormSection>
         )}
 
-        {block.type === 'divider' && (
-          <FormSection title="Divider" description="Add a simple visual separator.">
+        {block.type === 'badge' && (
+          <FormSection title="Badge" description="Create a compact status label or tag.">
             <div className="grid gap-2">
-              <FieldLabel>Orientation</FieldLabel>
-              <select className="inspector-input" {...register('orientation')}>
-                <option value="horizontal">Horizontal</option>
-                <option value="vertical">Vertical</option>
-              </select>
+              <FieldLabel>Text</FieldLabel>
+              <TextInput {...registerLiveText('text')} />
             </div>
             <div className="grid gap-2">
-              <FieldLabel>Color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('color')} />
+              <FieldLabel>Font size (px)</FieldLabel>
+              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
             </div>
             <div className="grid gap-2">
-              <FieldLabel>Thickness (px)</FieldLabel>
-              <TextInput type="number" min={1} className="max-w-[120px]" {...register('thickness')} />
+              <FieldLabel>Background color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Text color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Corner radius (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Padding X (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('paddingX')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Padding Y (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('paddingY')} />
             </div>
           </FormSection>
         )}
 
-        {block.type === 'spacer' && (
-          <FormSection title="Spacer" description="This block intentionally renders as empty space. Resize it on the canvas to control spacing.">
-            <p className="text-sm text-slate-500">Spacer has no content settings.</p>
+        {block.type === 'icon' && (
+          <FormSection title="Icon" description="Pick a simple native-safe symbol.">
+            <div className="grid gap-2">
+              <FieldLabel>Icon</FieldLabel>
+              <select className="inspector-input" {...register('iconName')}>
+                <option value="star">Star</option>
+                <option value="check">Check</option>
+                <option value="home">Home</option>
+                <option value="search">Search</option>
+                <option value="user">User</option>
+                <option value="heart">Heart</option>
+                <option value="bell">Bell</option>
+                <option value="plus">Plus</option>
+                <option value="arrow">Arrow</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Size (px)</FieldLabel>
+              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Icon color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('color')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Background color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Corner radius (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+            </div>
+          </FormSection>
+        )}
+
+        {block.type === 'checkbox' && (
+          <FormSection title="Checkbox" description="Visual-only checkbox for mockups and checklists.">
+            <div className="grid gap-2">
+              <FieldLabel>Label</FieldLabel>
+              <TextInput {...register('label')} />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+              <ToggleInput type="checkbox" {...register('checked')} />
+              Checked
+            </label>
+            <div className="grid gap-2">
+              <FieldLabel>Font size (px)</FieldLabel>
+              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Text color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Box color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('boxColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Check color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('checkColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
+            </div>
+          </FormSection>
+        )}
+
+        {block.type === 'toggle' && (
+          <FormSection title="Toggle" description="Visual-only on/off switch for mockups.">
+            <div className="grid gap-2">
+              <FieldLabel>Label</FieldLabel>
+              <TextInput {...registerLiveText('label')} />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+              <ToggleInput type="checkbox" {...register('checked')} />
+              On
+            </label>
+            <div className="grid gap-2">
+              <FieldLabel>Font size (px)</FieldLabel>
+              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Text color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Active color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('activeColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Inactive color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('inactiveColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Knob color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('knobColor')} />
+            </div>
+          </FormSection>
+        )}
+
+        {block.type === 'progressBar' && (
+          <FormSection title="Progress Bar" description="Show simple visual progress or completion state.">
+            <div className="grid gap-2">
+              <FieldLabel>Label</FieldLabel>
+              <TextInput {...register('label')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Value (%)</FieldLabel>
+              <TextInput type="number" min={0} max={100} className="max-w-[120px]" {...register('value')} />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+              <ToggleInput type="checkbox" {...register('showLabel')} />
+              Show label
+            </label>
+            <div className="grid gap-2">
+              <FieldLabel>Track color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('trackColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Fill color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('fillColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Text color</FieldLabel>
+              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Corner radius (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+            </div>
           </FormSection>
         )}
 

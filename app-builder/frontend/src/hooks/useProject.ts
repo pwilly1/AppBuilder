@@ -207,7 +207,21 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     return applyLoadedProject(full)
   }
 
-  function editBlock(updated: Block) {
+  function editBlock(updated: Block, options: { recordHistory?: boolean } = {}) {
+    if (options.recordHistory === false) {
+      setProject((current) => ({
+        ...current,
+        pages: current.pages.map((pg) =>
+          pg.id === selectedPageId
+            ? { ...pg, blocks: pg.blocks.map((b) => (b.id === updated.id ? updated : b)) }
+            : pg,
+        ),
+      }))
+      setSelectedBlock(updated)
+      setSaveError(null)
+      return
+    }
+
     applyChange((p) => ({
       ...p,
       pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: pg.blocks.map((b) => (b.id === updated.id ? updated : b)) } : pg)),

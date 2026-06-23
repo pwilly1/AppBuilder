@@ -67,8 +67,11 @@ export function DraggableBlock({
   const usesContainerResize =
     supportsInlineEdit ||
     block.type === 'shape' ||
-    block.type === 'divider' ||
-    block.type === 'spacer' ||
+    block.type === 'badge' ||
+    block.type === 'icon' ||
+    block.type === 'checkbox' ||
+    block.type === 'toggle' ||
+    block.type === 'progressBar' ||
     block.type === 'input' ||
     block.type === 'textarea'
   const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
@@ -607,6 +610,7 @@ export function DraggableBlock({
       >
         <div
           ref={contentRef}
+          data-editor-block-content={block.id}
           style={{
             width: contentWidth ?? 'max-content',
             maxWidth: contentWidth,

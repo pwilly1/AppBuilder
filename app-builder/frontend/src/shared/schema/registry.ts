@@ -89,35 +89,109 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       opacity: 1,
     },
   },
-  divider: {
-    displayName: 'Divider',
-    layoutClass: 'divider',
-    defaultLayout: { width: 'content', align: 'center', spacingTop: 'sm', spacingBottom: 'sm' },
+  badge: {
+    displayName: 'Badge',
+    layoutClass: 'badge',
+    defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'xs' },
     gridConstraints: {
-      defaultSpan: { cols: 8, rows: 1 },
+      defaultSpan: { cols: 4, rows: 2 },
       minSpan: { cols: 1, rows: 1 },
-      maxSpan: { cols: 16, rows: 4 },
+      maxSpan: { cols: 16, rows: 8 },
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
     defaultProps: {
-      orientation: 'horizontal',
-      color: '#cbd5e1',
-      thickness: 2,
+      text: 'Badge',
+      fontSize: 13,
+      backgroundColor: '#dbeafe',
+      textColor: '#1d4ed8',
+      borderColor: '#bfdbfe',
+      borderRadius: 999,
+      paddingX: 12,
+      paddingY: 6,
     },
   },
-  spacer: {
-    displayName: 'Spacer',
-    layoutClass: 'spacer',
-    defaultLayout: { width: 'content', align: 'center', spacingTop: 'none', spacingBottom: 'none' },
+  icon: {
+    displayName: 'Icon',
+    layoutClass: 'icon',
+    defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'xs' },
     gridConstraints: {
-      defaultSpan: { cols: 4, rows: 2 },
+      defaultSpan: { cols: 2, rows: 2 },
       minSpan: { cols: 1, rows: 1 },
-      maxSpan: { cols: 16, rows: 48 },
+      maxSpan: { cols: 8, rows: 8 },
       allowInnerMove: true,
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
-    defaultProps: {},
+    defaultProps: {
+      iconName: 'star',
+      fontSize: 28,
+      color: '#2563eb',
+      backgroundColor: '#ffffff',
+      borderRadius: 999,
+    },
+  },
+  checkbox: {
+    displayName: 'Checkbox',
+    layoutClass: 'control',
+    defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'xs' },
+    gridConstraints: {
+      defaultSpan: { cols: 6, rows: 2 },
+      minSpan: { cols: 2, rows: 1 },
+      maxSpan: { cols: 16, rows: 8 },
+      allowInnerMove: true,
+    },
+    defaultRender: { alignX: 'center', alignY: 'center' },
+    defaultProps: {
+      label: 'Checkbox',
+      checked: true,
+      fontSize: 14,
+      textColor: '#0f172a',
+      boxColor: '#2563eb',
+      checkColor: '#ffffff',
+      borderColor: '#94a3b8',
+    },
+  },
+  toggle: {
+    displayName: 'Toggle',
+    layoutClass: 'control',
+    defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'xs' },
+    gridConstraints: {
+      defaultSpan: { cols: 6, rows: 2 },
+      minSpan: { cols: 2, rows: 1 },
+      maxSpan: { cols: 16, rows: 8 },
+      allowInnerMove: true,
+    },
+    defaultRender: { alignX: 'center', alignY: 'center' },
+    defaultProps: {
+      label: 'Toggle',
+      checked: true,
+      fontSize: 14,
+      textColor: '#0f172a',
+      activeColor: '#2563eb',
+      inactiveColor: '#cbd5e1',
+      knobColor: '#ffffff',
+    },
+  },
+  progressBar: {
+    displayName: 'Progress Bar',
+    layoutClass: 'status',
+    defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'xs' },
+    gridConstraints: {
+      defaultSpan: { cols: 8, rows: 2 },
+      minSpan: { cols: 2, rows: 1 },
+      maxSpan: { cols: 16, rows: 8 },
+      allowInnerMove: true,
+    },
+    defaultRender: { alignX: 'center', alignY: 'center' },
+    defaultProps: {
+      label: 'Progress',
+      value: 65,
+      showLabel: true,
+      trackColor: '#e2e8f0',
+      fillColor: '#2563eb',
+      textColor: '#475569',
+      borderRadius: 999,
+    },
   },
   input: {
     displayName: 'Input',
@@ -234,6 +308,10 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       ],
     },
   },
+}
+
+export function isSupportedBlockType(value: unknown): value is BlockType {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(BlockRegistry, value)
 }
 
 export function createBlock<T extends BlockType = BlockType>(type: T, overrides: Record<string, any> = {}): Block {
