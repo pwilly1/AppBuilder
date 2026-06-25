@@ -15,12 +15,13 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - JWT signup/login and protected project APIs
 - Project dashboard with create/open/delete flows
 - Multi-page app projects
-- Visual editor with pages, block palette, canvas, and inspector
+- Visual editor with pages, drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
-- Lightweight primitive blocks: Shape, Badge, Icon, Progress Bar, Input, Textarea, Checkbox, and Toggle
+- Lightweight primitive blocks: Shape, Badge, Icon, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container
 - Nav Button supports page navigation plus inspector-based visual styling
 - Input, Textarea, Checkbox, and Toggle are currently visual mockup blocks, not live form-submission fields
+- Container blocks can group supported atomic child blocks, expose container styling in the inspector, and render in both web and Android preview
 - Web preview mode with page navigation
 - Android native preview runtime connected to backend project data
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending
@@ -57,6 +58,7 @@ docs/                Architecture, deployment, features, roadmap, project histor
 - [Deployment](docs/deployment.md) - Azure hosting, GitHub Actions, production configuration
 - [API Reference](docs/api-reference.md) - backend routes, authentication, payloads, and response behavior
 - [Block and Schema Reference](docs/block-reference.md) - project schema, grid contract, block inventory, and migration behavior
+- [Container and Template System](docs/container-template-system.md) - current container/template design and implementation direction
 - [How to Add a Block](docs/how-to-add-a-block.md) - end-to-end web and Android block implementation workflow
 - [Features](docs/features.md) - current capabilities, planned product areas, known feature limits
 - [Roadmap](docs/roadmap.md) - priorities, milestones, and next work
@@ -76,7 +78,7 @@ props = block-specific content and styling
 The long-term goal is for the same saved schema to power web preview, Android preview, future export targets, and eventual AI-assisted generation.
 
 Today the editor canvas is intentionally constrained to a phone-style 16-column by 29-row workspace so placement stays predictable and closer to the Android reference surface.
-The current add-block palette is grouped into text/navigation, visual elements, and form-mockup primitives so new schema-backed blocks can land without introducing more one-off business sections.
+The current add-block palette is grouped into text/navigation, visual elements, form-mockup primitives, and layout blocks so new schema-backed blocks can land without introducing more one-off business sections.
 
 ## License
 

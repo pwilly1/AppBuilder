@@ -59,9 +59,10 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 ### Rendering a project
 
 1. A page contains ordered blocks.
-2. Each block has `type`, `props`, optional `layout`, and optional `render` metadata.
+2. Each block has `type`, `props`, optional `parentId`, optional `layout`, and optional `render` metadata.
 3. `BlockRenderer` chooses the correct block component for the block type.
-4. Web preview and Android preview both prefer the grid/render layout contract.
+4. Page-level hierarchy helpers split top-level blocks from container children before rendering.
+5. Web preview and Android preview both prefer the grid/render layout contract.
 
 ## Current Project Schema
 
@@ -91,6 +92,7 @@ A block has:
 type Block = {
   id: string
   type: BlockType
+  parentId?: string
   props: Record<string, any>
   layout?: BlockRuntimeLayout
   render?: BlockRenderMetadata
@@ -129,6 +131,8 @@ Meaning:
 
 The web implementation is in `gridLayout.ts`; the Android counterpart is in `GridLayout.kt`.
 The current parity target is shared column/span math with surface-specific outer padding, not pixel-identical frame chrome.
+
+For container children, `layout.grid` is relative to the parent container span rather than the page. The parent relationship is stored separately in `parentId`.
 
 ## Grid Placement
 
@@ -206,6 +210,7 @@ The visible add-block panel currently exposes:
 - Textarea
 - Checkbox
 - Toggle
+- Container
 
 Hero, Text, Nav Button, and Shape are still the main public-demo blocks. The lighter primitives above are also available now, while the older business blocks remain in the codebase but are not the preferred public-demo direction.
 
@@ -214,6 +219,7 @@ Behavior notes:
 - Nav Button now stores both navigation props and simple visual style props in the shared schema so web and Android previews stay aligned.
 - Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
 - Input, Textarea, Checkbox, and Toggle are currently schema-backed visual primitives for mockup/design use, not connected form-processing blocks.
+- Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
 ## Frontend Responsibilities
 
@@ -229,8 +235,9 @@ Key files:
 | `editor/InlineBlockEditor.tsx` | Direct text editing on the canvas |
 | `editor/Preview.tsx` | Web preview rendering |
 | `shared/BlockRenderer.tsx` | Block type switchboard |
+| `shared/schema/blockHierarchy.ts` | Container hierarchy validation, repair, coordinate conversion, and resize helpers |
 | `shared/schema/gridLayout.ts` | Grid math, collisions, placement, render rect resolution |
-| `shared/schema/gridMigration.ts` | Load-time migration for older project data, including filtering unsupported legacy block types removed from the registry |
+| `shared/schema/gridMigration.ts` | Load-time migration for older project data, including filtering unsupported legacy block types removed from the registry and repairing invalid container hierarchy data |
 
 ## Backend Responsibilities
 
@@ -264,7 +271,7 @@ Important files:
 | File | Responsibility |
 | --- | --- |
 | `MainActivity.kt` | App entry, login/project loading flows |
-| `models/SchemaModels.kt` | Kotlin versions of project/page/block schema |
+| `models/SchemaModels.kt` | Kotlin versions of project/page/block schema, including `parentId` |
 | `layout/GridLayout.kt` | Android grid math matching the web model |
 | `navigation/ProjectPreviewScreen.kt` | Page preview, scrollable canvas, navigation |
 | `renderers/BlockRenderer.kt` | Kotlin block type switchboard |
@@ -292,6 +299,12 @@ render
 props
 ```
 
+Container hierarchy is also transitional but now part of the current schema contract:
+
+```text
+Block.parentId
+```
+
 ## Important Design Decisions
 
 ### Grid-first layout
@@ -306,6 +319,10 @@ The editor currently prevents overlapping occupied grid cells. This keeps the ru
 
 Complex business sections should eventually be built as compositions/templates from smaller primitives instead of becoming large one-off block types.
 
+### Flat page block list with parent references
+
+Container work keeps `Page.blocks` flat and derives ownership through `parentId` rather than storing nested page JSON trees. That keeps migration, saving, and Android parity closer to the existing project model.
+
 ### AI should operate on schema
 
 Planned GenAI features should generate or edit the same project schema the editor already understands. AI should not create a separate app format.
@@ -315,7 +332,7 @@ Planned GenAI features should generate or edit the same project schema the edito
 - `PageRenderer` and related editor files still contain complex interaction logic.
 - Legacy fallback fields still exist for older project compatibility.
 - Android/web parity needs continued testing as block behavior evolves.
-- Complex section/container behavior is not fully designed or implemented yet.
+- Container editing is live but still constrained to one level; nested containers and templates remain unfinished.
 
 ## Related Documentation
 

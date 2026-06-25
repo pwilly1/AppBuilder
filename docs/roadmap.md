@@ -96,7 +96,7 @@ Recommended order:
 | Completed | Textarea |
 | Completed | Checkbox |
 | Completed | Toggle |
-| Planned | Card/container |
+| In Progress | Container |
 | Planned | Image |
 
 ### 6. Section / Container System
@@ -114,12 +114,12 @@ Tasks:
 
 | Status | Task |
 | --- | --- |
-| Planned | Write section/container schema design. |
-| Planned | Add basic container block. |
-| Planned | Support child blocks inside a container. |
-| Planned | Support moving/resizing a whole container. |
-| Planned | Support selecting/editing child blocks. |
-| Planned | Add Android rendering after web behavior is stable. |
+| Completed | Write section/container schema design draft. |
+| In Progress | Add basic container block. |
+| In Progress | Support child blocks inside a container. |
+| In Progress | Support moving/resizing a whole container. |
+| In Progress | Support selecting/editing child blocks. |
+| In Progress | Add Android rendering for container hierarchy. |
 
 ### 7. Templates
 
@@ -225,8 +225,8 @@ The best next sequence is:
 ```text
 1. Finish public demo polish.
 2. Keep core editor blocks stable.
-3. Add card/container and image primitives.
-4. Design containers/sections carefully.
+3. Stabilize the new container primitive and hierarchy rules.
+4. Add image support and only then broaden templates.
 5. Improve Android parity after each schema change.
 6. Add screenshots/demo material.
 ```

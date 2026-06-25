@@ -29,7 +29,8 @@ The current editor includes:
 - block palette
 - central phone-style canvas
 - right-side inspector
-- editor toolbar for save, undo, redo, web preview, and Android preview setup note
+- editor toolbar for save, undo, redo, web preview, Android preview setup note, and active-container exit
+- drag-to-place block palette with click-to-add still available
 
 ### Pages
 
@@ -56,12 +57,14 @@ The current visible block palette is:
 - Textarea
 - Checkbox
 - Toggle
+- Container
 
-Hero, Text, Nav Button, and Shape remain the main public-demo blocks. Badge, Icon, Progress Bar, Input, Textarea, Checkbox, and Toggle are lightweight primitives that are already available in the editor and runtime.
+Hero, Text, Nav Button, and Shape remain the main public-demo blocks. Badge, Icon, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
 Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling. Nav Button supports page navigation plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
 Input, Textarea, Checkbox, and Toggle are visual mockup controls for app-design flows. They render in web and Android preview, but they are not wired into submission handling or generated app data yet.
+Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
 
 ### Grid Layout
 
@@ -232,9 +235,10 @@ Later AI features:
 
 ## Current Known Feature Limits
 
-- Complex sections/containers are not fully implemented.
+- Templates are not implemented yet.
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
+- Container editing is intentionally limited to one level; nested containers are not supported.
 - App data storage for generated apps is not implemented.
 - Export and app-store pipeline features are not implemented.
 - GenAI generation is planned, not currently implemented.

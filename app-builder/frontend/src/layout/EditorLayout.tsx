@@ -1,9 +1,20 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { PageRenderer } from '../editor/PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'
+import type { Block } from '../shared/schema/types'
+import {
+  canBlockBeContainerChild,
+  containerToPagePlacement,
+  isContainerBlock,
+  isPlacementWithinPlacement,
+  pageToContainerPlacement,
+  validateContainerResize,
+} from '../shared/schema/blockHierarchy'
+import { collidesWithBlocks, findFirstAvailablePlacement, getBlockGridConstraints } from '../shared/schema/gridLayout'
+import type { BlockGridConstraints, GridPlacement } from '../shared/schema/types'
 
 type Props = {
   projectId?: string
@@ -11,6 +22,7 @@ type Props = {
   pages?: Array<{ id: string; title?: string; path?: string; blocks?: any[] }>
   selectedPageId?: string
   addBlock: (b: any) => void
+  applyBlockTransaction?: (mutator: (blocks: Block[]) => Block[], options?: { pageId?: string }) => void
   setSelectedBlock: (b: any) => void
   editBlock: (b: any, options?: { recordHistory?: boolean }) => void
   deleteBlock: (id: string) => void
@@ -39,6 +51,7 @@ export default function EditorLayout(props: Props) {
     pages = [],
     selectedPageId,
     addBlock,
+    applyBlockTransaction,
     setSelectedBlock,
     editBlock,
     deleteBlock,
@@ -67,10 +80,347 @@ export default function EditorLayout(props: Props) {
   const modeLabel = previewMode ? 'Preview mode' : 'Edit mode'
   const pageIndex = Math.max(0, pages.findIndex((entry: any) => entry.id === selectedPageId)) + 1
   const [showAndroidPreviewNote, setShowAndroidPreviewNote] = useState(false)
+  const [activeContainerId, setActiveContainerId] = useState<string | null>(null)
+  const [pendingContainerDelete, setPendingContainerDelete] = useState<Block | null>(null)
+  const activeContainer = useMemo(
+    () => (page?.blocks || []).find((block: Block) => block.id === activeContainerId && isContainerBlock(block)) ?? null,
+    [activeContainerId, page?.blocks],
+  )
   const pageSummary = useMemo(() => {
     if (!pageCount) return 'No pages yet'
     return `Page ${pageIndex} of ${pageCount}`
   }, [pageCount, pageIndex])
+
+  useEffect(() => {
+    if (!activeContainerId) return
+    if (!activeContainer) setActiveContainerId(null)
+  }, [activeContainer, activeContainerId])
+
+  useEffect(() => {
+    if (previewMode) setActiveContainerId(null)
+  }, [previewMode])
+
+  function handleAddBlock(block: Block) {
+    if (!activeContainer || isContainerBlock(block) || !canBlockBeContainerChild(block)) {
+      addBlock(block)
+      return
+    }
+
+    const activeChildren = (page?.blocks || []).filter((candidate: Block) => candidate.parentId === activeContainer.id)
+    const containerGrid = activeContainer.layout?.grid
+    if (!containerGrid) {
+      addBlock(block)
+      return
+    }
+
+    const childBlock: Block = {
+      ...block,
+      parentId: activeContainer.id,
+      layout: {
+        ...(block.layout || {}),
+        grid: findFirstAvailablePlacement(
+          activeChildren,
+          getContainerChildConstraints(getBlockGridConstraints(block), containerGrid),
+          containerGrid.colSpan,
+          containerGrid.rowSpan,
+        ),
+      },
+    }
+
+    if (applyBlockTransaction) {
+      applyBlockTransaction((blocks: Block[]) => [...blocks, childBlock])
+    } else {
+      addBlock(childBlock)
+    }
+    setSelectedBlock(childBlock)
+  }
+
+  function handleDropNewBlock(block: Block, placement: GridPlacement, parentId?: string) {
+    const parent = parentId ? (page?.blocks || []).find((candidate: Block) => candidate.id === parentId) : null
+    const shouldAddToContainer =
+      parent &&
+      isContainerBlock(parent) &&
+      !isContainerBlock(block) &&
+      canBlockBeContainerChild(block)
+
+    if (parentId && !shouldAddToContainer) return
+
+    const siblings = shouldAddToContainer
+      ? (page?.blocks || []).filter((candidate: Block) => candidate.parentId === parentId)
+      : (page?.blocks || []).filter((candidate: Block) => !candidate.parentId)
+
+    if (collidesWithBlocks(placement, siblings)) return
+
+    const nextBlock: Block = {
+      ...block,
+      parentId: shouldAddToContainer ? parentId : undefined,
+      layout: {
+        ...(block.layout || {}),
+        grid: placement,
+      },
+      render: {
+        ...(block.render || {}),
+        offsetX: 0,
+        offsetY: 0,
+      },
+    }
+
+    if (applyBlockTransaction) {
+      applyBlockTransaction((blocks: Block[]) => [...blocks, nextBlock])
+    } else {
+      addBlock(nextBlock)
+    }
+
+    if (shouldAddToContainer) setActiveContainerId(parentId ?? null)
+    setSelectedBlock(nextBlock)
+  }
+
+  function enterContainer(container: Block) {
+    if (!isContainerBlock(container)) return
+    setActiveContainerId(container.id)
+    setSelectedBlock(container)
+  }
+
+  function exitContainer() {
+    setActiveContainerId(null)
+    setSelectedBlock(null)
+  }
+
+  function handleSelectBlock(block: Block | null) {
+    if (!block) {
+      setSelectedBlock(null)
+      return
+    }
+
+    if (activeContainerId && block.id !== activeContainerId && block.parentId !== activeContainerId) {
+      setActiveContainerId(null)
+    }
+
+    setSelectedBlock(block)
+  }
+
+  function handleUpdateBlock(block: Block, options?: { recordHistory?: boolean }) {
+    const currentBlock = (page?.blocks || []).find((candidate: Block) => candidate.id === block.id)
+    const oldGrid = currentBlock?.layout?.grid
+    const newGrid = block.layout?.grid
+    const activeContainerGrid = activeContainer?.layout?.grid
+    const isAttachToActiveContainer =
+      activeContainer &&
+      activeContainerGrid &&
+      currentBlock &&
+      !currentBlock.parentId &&
+      currentBlock.id !== activeContainer.id &&
+      !isContainerBlock(currentBlock) &&
+      canBlockBeContainerChild(currentBlock) &&
+      newGrid
+
+    if (isAttachToActiveContainer) {
+      const relativePlacement = pageToContainerPlacement(newGrid, activeContainerGrid)
+      const activeChildren = (page?.blocks || []).filter((candidate: Block) => candidate.parentId === activeContainer.id)
+      const canAttach =
+        isPlacementWithinPlacement(relativePlacement, activeContainerGrid) &&
+        !collidesWithBlocks(relativePlacement, activeChildren, block.id)
+
+      if (canAttach && applyBlockTransaction) {
+        const attachedBlock: Block = {
+          ...block,
+          parentId: activeContainer.id,
+          layout: {
+            ...(block.layout || {}),
+            grid: relativePlacement,
+          },
+          render: {
+            ...(block.render || {}),
+            offsetX: 0,
+            offsetY: 0,
+          },
+        }
+
+        applyBlockTransaction((blocks: Block[]) =>
+          blocks.map((candidate) => (candidate.id === attachedBlock.id ? attachedBlock : candidate)),
+        )
+        setSelectedBlock(attachedBlock)
+        return
+      }
+    }
+
+    const isContainerResize =
+      currentBlock &&
+      isContainerBlock(currentBlock) &&
+      oldGrid &&
+      newGrid &&
+      (oldGrid.colSpan !== newGrid.colSpan || oldGrid.rowSpan !== newGrid.rowSpan)
+
+    if (!isContainerResize) {
+      editBlock(block, options)
+      return
+    }
+
+    const children = (page?.blocks || []).filter((candidate: Block) => candidate.parentId === block.id)
+    if (!children.length || !applyBlockTransaction) {
+      editBlock(block, options)
+      return
+    }
+
+    const resizeResult = validateContainerResize(children, oldGrid, newGrid)
+    if (!resizeResult.valid) {
+      setSelectedBlock(currentBlock)
+      return
+    }
+
+    applyBlockTransaction((blocks: Block[]) =>
+      blocks.map((candidate) => {
+        if (candidate.id === block.id) return block
+        const nextPlacement = resizeResult.placements.get(candidate.id)
+        if (!nextPlacement) return candidate
+
+        return {
+          ...candidate,
+          layout: {
+            ...(candidate.layout || {}),
+            grid: nextPlacement,
+          },
+          render: {
+            ...(candidate.render || {}),
+            widthPx: undefined,
+            heightPx: undefined,
+            offsetX: 0,
+            offsetY: 0,
+          },
+        }
+      }),
+    )
+    setSelectedBlock(block)
+  }
+
+  function detachBlockToPage(block: Block) {
+    if (!block.parentId || !applyBlockTransaction) return
+
+    const topLevelBlocks = (page?.blocks || []).filter((candidate: Block) => !candidate.parentId && candidate.id !== block.id)
+    const detachedBlock: Block = {
+      ...block,
+      parentId: undefined,
+      layout: {
+        ...(block.layout || {}),
+        grid: findFirstAvailablePlacement(topLevelBlocks, getBlockGridConstraints(block)),
+      },
+      render: {
+        ...(block.render || {}),
+        offsetX: 0,
+        offsetY: 0,
+      },
+    }
+
+    applyBlockTransaction((blocks: Block[]) =>
+      blocks.map((candidate) => (candidate.id === detachedBlock.id ? detachedBlock : candidate)),
+    )
+    setActiveContainerId(null)
+    setSelectedBlock(detachedBlock)
+  }
+
+  function detachBlockToPagePlacement(block: Block, placement: GridPlacement) {
+    if (!block.parentId || !applyBlockTransaction) return
+
+    const detachedBlock: Block = {
+      ...block,
+      parentId: undefined,
+      layout: {
+        ...(block.layout || {}),
+        grid: placement,
+      },
+      render: {
+        ...(block.render || {}),
+        offsetX: 0,
+        offsetY: 0,
+      },
+    }
+
+    applyBlockTransaction((blocks: Block[]) =>
+      blocks.map((candidate) => (candidate.id === detachedBlock.id ? detachedBlock : candidate)),
+    )
+    setActiveContainerId(null)
+    setSelectedBlock(detachedBlock)
+  }
+
+  function deleteContainerAndChildren(container: Block) {
+    setPendingContainerDelete(null)
+    setSelectedBlock(null)
+    if (container.id === activeContainerId) setActiveContainerId(null)
+    deleteBlock(container.id)
+  }
+
+  function deleteContainerKeepChildren(container: Block) {
+    if (!applyBlockTransaction) {
+      deleteContainerAndChildren(container)
+      return
+    }
+
+    const containerGrid = container.layout?.grid
+    applyBlockTransaction((blocks: Block[]) => {
+      const placedTopLevel: Block[] = blocks.filter(
+        (candidate) => !candidate.parentId && candidate.id !== container.id,
+      )
+
+      return blocks.flatMap((candidate) => {
+        if (candidate.id === container.id) return []
+        if (candidate.parentId !== container.id) return [candidate]
+
+        const proposedGrid = candidate.layout?.grid && containerGrid
+          ? containerToPagePlacement(candidate.layout.grid, containerGrid)
+          : null
+        const nextGrid =
+          proposedGrid && !collidesWithBlocks(proposedGrid, placedTopLevel)
+            ? proposedGrid
+            : findFirstAvailablePlacement(placedTopLevel, getBlockGridConstraints(candidate))
+
+        const detachedChild: Block = {
+          ...candidate,
+          parentId: undefined,
+          layout: {
+            ...(candidate.layout || {}),
+            grid: nextGrid,
+          },
+          render: {
+            ...(candidate.render || {}),
+            offsetX: 0,
+            offsetY: 0,
+          },
+        }
+        placedTopLevel.push(detachedChild)
+        return [detachedChild]
+      })
+    })
+
+    setPendingContainerDelete(null)
+    setSelectedBlock(null)
+    if (container.id === activeContainerId) setActiveContainerId(null)
+  }
+
+  function getContainerChildConstraints(
+    constraints: BlockGridConstraints,
+    containerGrid: GridPlacement,
+  ): BlockGridConstraints {
+    const maxCols = Math.max(1, containerGrid.colSpan)
+    const maxRows = Math.max(1, containerGrid.rowSpan)
+    const defaultCols = Math.min(constraints.defaultSpan.cols, maxCols)
+    const defaultRows = Math.min(constraints.defaultSpan.rows, maxRows)
+
+    return {
+      ...constraints,
+      defaultSpan: {
+        cols: Math.max(1, defaultCols),
+        rows: Math.max(1, defaultRows),
+      },
+      minSpan: {
+        cols: Math.min(constraints.minSpan.cols, Math.max(1, defaultCols)),
+        rows: Math.min(constraints.minSpan.rows, Math.max(1, defaultRows)),
+      },
+      maxSpan: {
+        cols: Math.min(constraints.maxSpan.cols, maxCols),
+        rows: Math.min(constraints.maxSpan.rows, maxRows),
+      },
+    }
+  }
 
   return (
     <>
@@ -96,13 +446,25 @@ export default function EditorLayout(props: Props) {
               {isSaving ? 'Saving...' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'Not saved yet'}
               {saveError ? ` | ${saveError}` : null}
             </div>
+            {activeContainer ? (
+              <button
+                type="button"
+                className="ghost-btn !px-4 !py-3 text-sm"
+                onClick={exitContainer}
+              >
+                Exit Container
+              </button>
+            ) : null}
             <button
               type="button"
               className="btn min-w-[120px]"
               onClick={() => {
                 const next = !previewMode
                 onPreviewModeChange?.(next)
-                if (next) setSelectedBlock(null)
+                if (next) {
+                  setSelectedBlock(null)
+                  setActiveContainerId(null)
+                }
               }}
             >
               {previewMode ? 'Back to Edit' : 'Open Preview'}
@@ -147,9 +509,14 @@ export default function EditorLayout(props: Props) {
                   <div className="editor-section-title">Blocks</div>
                   <h3 className="mt-1 text-sm font-semibold text-slate-900">Add elements</h3>
                 </div>
-                <span className="editor-kicker">Click to add</span>
+                <span className="editor-kicker">Drag to place</span>
               </div>
-              <AddBlock onAdd={addBlock} />
+              <AddBlock onAdd={handleAddBlock} />
+              {activeContainer ? (
+                <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
+                  Adding into selected container. Click Exit Container to add to the page again.
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -164,6 +531,7 @@ export default function EditorLayout(props: Props) {
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="editor-pill">{modeLabel}</span>
+              {activeContainer ? <span className="editor-pill">Editing container</span> : null}
               <span className="editor-pill">{pageSummary}</span>
               <span className="editor-pill">{blockCount} blocks</span>
             </div>
@@ -174,13 +542,18 @@ export default function EditorLayout(props: Props) {
               page={page}
               projectId={projectId}
               selectedBlockId={selectedBlock?.id}
+              activeContainerId={activeContainerId}
               previewMode={previewMode}
               onNavigate={(targetPageId: string) => {
                 if (!previewMode) return
                 selectPage?.(targetPageId)
               }}
-              onSelectBlock={(block: any) => setSelectedBlock(block)}
-              onUpdateBlock={editBlock}
+              onSelectBlock={(block: any) => handleSelectBlock(block)}
+              onEnterContainer={(block: any) => enterContainer(block)}
+              onExitContainer={exitContainer}
+              onUpdateBlock={handleUpdateBlock}
+              onDetachBlockFromContainer={detachBlockToPagePlacement}
+              onDropNewBlock={handleDropNewBlock}
               onReorder={(newBlocks: any[]) => onReorder(newBlocks)}
             />
           ) : (
@@ -206,23 +579,72 @@ export default function EditorLayout(props: Props) {
             <Inspector
               block={selectedBlock}
               pages={pages}
+              activeContainerId={activeContainerId}
+              onEditContainer={(block: any) => enterContainer(block)}
+              onExitContainer={exitContainer}
+              onDetachBlock={(block: any) => detachBlockToPage(block)}
               onSave={(block: any) => {
                 setSelectedBlock(block)
-                editBlock(block)
+                handleUpdateBlock(block)
               }}
               onPreview={(block: any) => {
                 setSelectedBlock(block)
-                editBlock(block, { recordHistory: false })
+                handleUpdateBlock(block, { recordHistory: false })
               }}
               onClose={() => setSelectedBlock(null)}
               onDelete={(id: string) => {
+                const block = (page?.blocks || []).find((candidate: Block) => candidate.id === id)
+                if (block && isContainerBlock(block) && (page?.blocks || []).some((candidate: Block) => candidate.parentId === id)) {
+                  setPendingContainerDelete(block)
+                  return
+                }
+
                 setSelectedBlock(null)
+                if (id === activeContainerId) setActiveContainerId(null)
                 deleteBlock(id)
               }}
             />
           </div>
         </div>
       </aside>
+
+      {pendingContainerDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-[1.85rem] border border-slate-200 bg-[#fffcf6] p-6 shadow-2xl">
+            <div className="editor-section-title">Delete container</div>
+            <h3 className="section-heading mt-2 text-2xl font-semibold text-slate-900">
+              What should happen to the blocks inside?
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              This container has child blocks. You can delete everything, move the child blocks back onto the page,
+              or cancel.
+            </p>
+            <div className="mt-6 grid gap-3">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => deleteContainerKeepChildren(pendingContainerDelete)}
+              >
+                Delete container, keep child blocks
+              </button>
+              <button
+                type="button"
+                className="ghost-btn !justify-center !text-red-700"
+                onClick={() => deleteContainerAndChildren(pendingContainerDelete)}
+              >
+                Delete container and children
+              </button>
+              <button
+                type="button"
+                className="ghost-btn !justify-center"
+                onClick={() => setPendingContainerDelete(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showAndroidPreviewNote ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">

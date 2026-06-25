@@ -9,9 +9,11 @@ fun BlockRenderer(
     block: Block,
     projectId: String? = null,
     baseUrl: String? = null,
+    content: @Composable () -> Unit = {},
     onNavigate: ((String) -> Unit)? = null
 ) {
     when (block.type) {
+        "container" -> ContainerView(block, content = content)
         "hero" -> HeroView(block)
         "text" -> TextView(block)
         "navButton" -> NavButtonView(block, onNavigate = onNavigate)

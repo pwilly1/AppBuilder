@@ -25,6 +25,7 @@ export default function App() {
     selectedBlock,
     setSelectedBlock,
     addBlock,
+    applyBlockTransaction,
     addPage,
     selectPage,
     renamePage,
@@ -64,6 +65,7 @@ export default function App() {
           setSelectedBlock={setSelectedBlock}
           page={page}
           addBlock={addBlock}
+          applyBlockTransaction={applyBlockTransaction}
           addPage={addPage}
           selectPage={selectPage}
           renamePage={renamePage}
@@ -102,6 +104,7 @@ function AppContent(props: any) {
     setSelectedBlock,
     page,
     addBlock,
+    applyBlockTransaction,
     addPage,
     selectPage,
     renamePage,
@@ -129,6 +132,7 @@ function AppContent(props: any) {
       pages={project?.pages || []}
       selectedPageId={selectedPageId}
       addBlock={addBlock}
+      applyBlockTransaction={applyBlockTransaction}
       setSelectedBlock={setSelectedBlock}
       editBlock={editBlock}
       deleteBlock={deleteBlock}
@@ -241,6 +245,7 @@ function EditorScreen(props: any) {
     pages,
     selectedPageId,
     addBlock,
+    applyBlockTransaction,
     setSelectedBlock,
     editBlock,
     deleteBlock,
@@ -282,6 +287,7 @@ function EditorScreen(props: any) {
       pages={pages}
       selectedPageId={selectedPageId}
       addBlock={addBlock}
+      applyBlockTransaction={applyBlockTransaction}
       setSelectedBlock={setSelectedBlock}
       editBlock={editBlock}
       deleteBlock={deleteBlock}

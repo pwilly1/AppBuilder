@@ -6,9 +6,12 @@ import {
   GRID_COLUMN_COUNT,
 } from './gridLayout'
 import { getBlockEditorPlacement } from './runtimeLayout'
+import { repairBlockHierarchy } from './blockHierarchy'
 import type { Block, GridPlacement, Page, Project } from './types'
 
 export const GRID_DENSITY_SCHEMA_VERSION = 2
+export const CONTAINER_SCHEMA_VERSION = 3
+export const CURRENT_SCHEMA_VERSION = CONTAINER_SCHEMA_VERSION
 
 function scalePlacementFromEightColumnGrid(placement: GridPlacement): GridPlacement {
   return {
@@ -83,9 +86,14 @@ export function migratePageToGridLayout(page: Page, options: { scaleLegacyGridDe
     placedBlocks.push(migrated)
   }
 
-  return {
+  const migratedPage = {
     ...supportedPage,
     blocks: supportedPage.blocks.map((block) => migratedById.get(block.id) ?? ensureRenderDefaults(block)),
+  }
+
+  return {
+    ...migratedPage,
+    blocks: repairBlockHierarchy(migratedPage.blocks).blocks,
   }
 }
 
@@ -94,7 +102,7 @@ export function migrateProjectToGridLayout(project: Project): Project {
 
   return {
     ...project,
-    schemaVersion: GRID_DENSITY_SCHEMA_VERSION,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     pages: project.pages.map((page) => migratePageToGridLayout(page, { scaleLegacyGridDensity })),
   }
 }

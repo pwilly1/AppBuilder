@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from 'react'
 import { BlockRenderer } from '../shared/BlockRenderer'
 import type { Block, GridPlacement } from '../shared/schema/types'
 import {
@@ -44,6 +44,9 @@ type DraggableProps = {
   onSelect?: (b: Block) => void
   onUpdate?: (b: Block) => void
   onSnapChange?: (snap: { h: boolean; v: boolean }) => void
+  onEnterContainer?: (b: Block) => void
+  allowDragOutsideBounds?: boolean
+  children?: ReactNode
 }
 
 export function DraggableBlock({
@@ -62,6 +65,9 @@ export function DraggableBlock({
   onSelect,
   onUpdate,
   onSnapChange,
+  onEnterContainer,
+  allowDragOutsideBounds,
+  children,
 }: DraggableProps) {
   const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
   const usesContainerResize =
@@ -73,7 +79,8 @@ export function DraggableBlock({
     block.type === 'toggle' ||
     block.type === 'progressBar' ||
     block.type === 'input' ||
-    block.type === 'textarea'
+    block.type === 'textarea' ||
+    block.type === 'container'
   const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)
@@ -170,6 +177,7 @@ export function DraggableBlock({
 
   function begin(e: PointerEvent) {
     if (previewMode || inlineEditing) return
+    e.stopPropagation()
     const targetNode = e.target as Node
     if (
       innerMoveHandleRef.current?.contains(targetNode) ||
@@ -366,8 +374,13 @@ export function DraggableBlock({
     let nx = startPos.x + dx
     let ny = startPos.y + dy
 
-    nx = clamp(nx, 0, Math.max(0, containerWidth - width))
-    ny = clamp(ny, 0, Math.max(0, containerHeight - height))
+    if (allowDragOutsideBounds) {
+      nx = clamp(nx, -width, containerWidth)
+      ny = clamp(ny, -height, containerHeight)
+    } else {
+      nx = clamp(nx, 0, Math.max(0, containerWidth - width))
+      ny = clamp(ny, 0, Math.max(0, containerHeight - height))
+    }
 
     const snapDistance = 8
     const centerX = containerWidth / 2
@@ -587,10 +600,14 @@ export function DraggableBlock({
       onPointerUp={previewMode ? undefined : end}
       onPointerCancel={previewMode ? undefined : end}
       onDoubleClick={
-        previewMode || !supportsInlineEdit
+        previewMode || (!supportsInlineEdit && block.type !== 'container')
           ? undefined
           : (event) => {
               event.stopPropagation()
+              if (block.type === 'container') {
+                onEnterContainer?.(block)
+                return
+              }
               setInlineEditing(true)
               onSelect?.(block)
             }
@@ -628,7 +645,9 @@ export function DraggableBlock({
             projectId={projectId}
             previewMode={previewMode}
             onNavigate={previewMode ? onNavigate : undefined}
-          />
+          >
+            {children}
+          </BlockRenderer>
         </div>
 
         {inlineEditorVisible ? (

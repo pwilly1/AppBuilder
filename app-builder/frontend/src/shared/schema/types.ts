@@ -2,6 +2,7 @@
 
 // © 2025 Preston Willis. All rights reserved.
 export type BlockType =
+  | 'container'
   | 'hero'
   | 'text'
   | 'navButton'
@@ -19,6 +20,7 @@ export type BlockType =
 
 // Runtime layout classifications describe what kind of slot a block can live in.
 export type BlockLayoutClass =
+  | 'container'
   | 'hero'
   | 'content'
   | 'action'
@@ -100,6 +102,7 @@ export type BlockEditorPlacement = {
 export type Block<Props = Record<string, any>> = {
   id: string;
   type: BlockType;
+  parentId?: string;
   props: Props;
   layout?: BlockRuntimeLayout;
   render?: BlockRenderMetadata;

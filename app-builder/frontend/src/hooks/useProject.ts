@@ -3,13 +3,13 @@
 import type { Project, Block } from '../shared/schema/types'
 import { getProject, updateProject, createProject, getToken, listProjects } from '../api'
 import { findFirstAvailablePlacement, getBlockGridConstraints } from '../shared/schema/gridLayout'
-import { GRID_DENSITY_SCHEMA_VERSION, migrateProjectToGridLayout } from '../shared/schema/gridMigration'
+import { CURRENT_SCHEMA_VERSION, migrateProjectToGridLayout } from '../shared/schema/gridMigration'
 
 const LAST_PROJECT_ID_KEY = 'app_last_project_id'
 
 export default function useProject(setAuthed: (a: boolean) => void) {
   const initialProject: Project = {
-    schemaVersion: GRID_DENSITY_SCHEMA_VERSION,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     id: 'proj1',
     name: 'My App',
     pages: [
@@ -133,15 +133,32 @@ export default function useProject(setAuthed: (a: boolean) => void) {
 
         const nextBlock = { ...b }
         if (!nextBlock.layout?.grid) {
+          const collisionScope = nextBlock.parentId
+            ? pg.blocks.filter((block) => block.parentId === nextBlock.parentId)
+            : pg.blocks.filter((block) => !block.parentId)
           nextBlock.layout = {
             ...(nextBlock.layout || {}),
-            grid: findFirstAvailablePlacement(pg.blocks, getBlockGridConstraints(nextBlock)),
+            grid: findFirstAvailablePlacement(collisionScope, getBlockGridConstraints(nextBlock)),
           }
         }
 
         return { ...pg, blocks: [...pg.blocks, nextBlock] }
       }),
     }))
+  }
+
+  function applyBlockTransaction(
+    mutator: (blocks: Block[]) => Block[],
+    options: { pageId?: string } = {},
+  ) {
+    const targetPageId = options.pageId ?? selectedPageId
+    applyChange((p) => ({
+      ...p,
+      pages: p.pages.map((pg) => (
+        pg.id === targetPageId ? { ...pg, blocks: mutator(pg.blocks) } : pg
+      )),
+    }))
+    setSaveError(null)
   }
 
   function selectPage(id: string) {
@@ -233,7 +250,11 @@ export default function useProject(setAuthed: (a: boolean) => void) {
   function deleteBlock(id: string) {
     applyChange((p) => ({
       ...p,
-      pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: pg.blocks.filter((b) => b.id !== id) } : pg)),
+      pages: p.pages.map((pg) => (
+        pg.id === selectedPageId
+          ? { ...pg, blocks: pg.blocks.filter((b) => b.id !== id && b.parentId !== id) }
+          : pg
+      )),
     }))
   }
 
@@ -334,6 +355,7 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     selectedBlock,
     setSelectedBlock,
     addBlock,
+    applyBlockTransaction,
     addPage,
     selectPage,
     renamePage,

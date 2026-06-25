@@ -2,6 +2,13 @@
 import React from 'react'
 import type { Block } from './shared/schema/types'
 import { createBlock } from './shared/schema/registry'
+import {
+  BLOCK_DRAG_DATA_TYPE,
+  BLOCK_DRAG_FALLBACK_TYPE,
+  clearActiveDraggedBlock,
+  encodeDraggedBlock,
+  setActiveDraggedBlock,
+} from './editor/blockDrag'
 
 type SectionProps = {
   title: string
@@ -38,9 +45,45 @@ const shapeOptions = [
 
 type ShapeOption = (typeof shapeOptions)[number]['value']
 
-function BlockEntry({ title, note, onClick }: { title: string; note: string; onClick: () => void }) {
+function BlockEntry({
+  title,
+  note,
+  create,
+  onAdd,
+}: {
+  title: string
+  note: string
+  create: () => Block
+  onAdd: (b: Block) => void
+}) {
+  const draggedRef = React.useRef(false)
+
   return (
-    <button className={blockButton} onClick={onClick}>
+    <button
+      className={blockButton}
+      draggable
+      onDragStart={(event) => {
+        draggedRef.current = true
+        const block = create()
+        setActiveDraggedBlock(block)
+        event.dataTransfer.effectAllowed = 'copy'
+        event.dataTransfer.setData(BLOCK_DRAG_DATA_TYPE, encodeDraggedBlock(block))
+        event.dataTransfer.setData(BLOCK_DRAG_FALLBACK_TYPE, block.type)
+      }}
+      onDragEnd={() => {
+        clearActiveDraggedBlock()
+        window.setTimeout(() => {
+          draggedRef.current = false
+        }, 0)
+      }}
+      onClick={() => {
+        if (draggedRef.current) {
+          draggedRef.current = false
+          return
+        }
+        onAdd(create())
+      }}
+    >
       <span className="editor-block-entry-dot" aria-hidden="true" />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold text-slate-900">{title}</span>
@@ -53,9 +96,28 @@ function BlockEntry({ title, note, onClick }: { title: string; note: string; onC
 function ShapeEntry({ onAdd }: { onAdd: (b: Block) => void }) {
   const [shapeType, setShapeType] = React.useState<ShapeOption>('rectangle')
   const selectedShape = shapeOptions.find((option) => option.value === shapeType) ?? shapeOptions[0]
+  const draggedRef = React.useRef(false)
+  const createShapeBlock = () => createBlock('shape', { shapeType })
 
   return (
-    <div className="editor-shape-entry">
+    <div
+      className="editor-shape-entry"
+      draggable
+      onDragStart={(event) => {
+        draggedRef.current = true
+        const block = createShapeBlock()
+        setActiveDraggedBlock(block)
+        event.dataTransfer.effectAllowed = 'copy'
+        event.dataTransfer.setData(BLOCK_DRAG_DATA_TYPE, encodeDraggedBlock(block))
+        event.dataTransfer.setData(BLOCK_DRAG_FALLBACK_TYPE, block.type)
+      }}
+      onDragEnd={() => {
+        clearActiveDraggedBlock()
+        window.setTimeout(() => {
+          draggedRef.current = false
+        }, 0)
+      }}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-slate-900">Shape</div>
@@ -85,7 +147,13 @@ function ShapeEntry({ onAdd }: { onAdd: (b: Block) => void }) {
         <button
           type="button"
           className="btn-sm w-full"
-          onClick={() => onAdd(createBlock('shape', { shapeType }))}
+          onClick={() => {
+            if (draggedRef.current) {
+              draggedRef.current = false
+              return
+            }
+            onAdd(createShapeBlock())
+          }}
         >
           Add {selectedShape.label}
         </button>
@@ -99,27 +167,33 @@ export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
     <div className="grid gap-3">
       <CollapsibleSection title="Text & Navigation" defaultOpen>
         <div className="grid gap-2">
-          <BlockEntry title="Hero" note="Intro headline" onClick={() => onAdd(createBlock('hero', { headline: 'New Hero' }))} />
-          <BlockEntry title="Text" note="Paragraphs or short body copy" onClick={() => onAdd(createBlock('text', { value: 'New text' }))} />
-          <BlockEntry title="Nav Button" note="Link to another page in the app" onClick={() => onAdd(createBlock('navButton', { label: 'Go', toPageId: '' }))} />
+          <BlockEntry title="Hero" note="Intro headline" create={() => createBlock('hero', { headline: 'New Hero' })} onAdd={onAdd} />
+          <BlockEntry title="Text" note="Paragraphs or short body copy" create={() => createBlock('text', { value: 'New text' })} onAdd={onAdd} />
+          <BlockEntry title="Nav Button" note="Link to another page in the app" create={() => createBlock('navButton', { label: 'Go', toPageId: '' })} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
 
       <CollapsibleSection title="Visual Elements" defaultOpen>
         <div className="grid gap-2">
-          <BlockEntry title="Badge" note="Pill status or tag" onClick={() => onAdd(createBlock('badge'))} />
-          <BlockEntry title="Icon" note="Simple symbol from a safe set" onClick={() => onAdd(createBlock('icon'))} />
+          <BlockEntry title="Badge" note="Pill status or tag" create={() => createBlock('badge')} onAdd={onAdd} />
+          <BlockEntry title="Icon" note="Simple symbol from a safe set" create={() => createBlock('icon')} onAdd={onAdd} />
           <ShapeEntry onAdd={onAdd} />
-          <BlockEntry title="Progress Bar" note="Visual completion/status bar" onClick={() => onAdd(createBlock('progressBar'))} />
+          <BlockEntry title="Progress Bar" note="Visual completion/status bar" create={() => createBlock('progressBar')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
 
       <CollapsibleSection title="Form Mockups">
         <div className="grid gap-2">
-          <BlockEntry title="Input" note="Visual single-line field" onClick={() => onAdd(createBlock('input'))} />
-          <BlockEntry title="Textarea" note="Visual multi-line field" onClick={() => onAdd(createBlock('textarea'))} />
-          <BlockEntry title="Checkbox" note="Visual checked/unchecked option" onClick={() => onAdd(createBlock('checkbox'))} />
-          <BlockEntry title="Toggle" note="Visual on/off switch" onClick={() => onAdd(createBlock('toggle'))} />
+          <BlockEntry title="Input" note="Visual single-line field" create={() => createBlock('input')} onAdd={onAdd} />
+          <BlockEntry title="Textarea" note="Visual multi-line field" create={() => createBlock('textarea')} onAdd={onAdd} />
+          <BlockEntry title="Checkbox" note="Visual checked/unchecked option" create={() => createBlock('checkbox')} onAdd={onAdd} />
+          <BlockEntry title="Toggle" note="Visual on/off switch" create={() => createBlock('toggle')} onAdd={onAdd} />
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Layout">
+        <div className="grid gap-2">
+          <BlockEntry title="Container" note="Group simple blocks together" create={() => createBlock('container')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
     </div>

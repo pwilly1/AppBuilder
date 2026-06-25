@@ -9,10 +9,14 @@ type PageLite = { id: string; title?: string; path?: string };
 type InspectorProps = {
   block?: Block | null;
   pages?: PageLite[];
+  activeContainerId?: string | null;
   onSave?: (b: Block) => void;
   onPreview?: (b: Block) => void;
   onClose?: () => void;
   onDelete?: (id: string) => void;
+  onEditContainer?: (b: Block) => void;
+  onExitContainer?: () => void;
+  onDetachBlock?: (b: Block) => void;
 };
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -59,7 +63,18 @@ function ArrayCard({ title, children, onRemove }: { title: string; children: Rea
   );
 }
 
-export default function Inspector({ block, pages, onSave, onPreview, onClose, onDelete }: InspectorProps) {
+export default function Inspector({
+  block,
+  pages,
+  activeContainerId,
+  onSave,
+  onPreview,
+  onClose,
+  onDelete,
+  onEditContainer,
+  onExitContainer,
+  onDetachBlock,
+}: InspectorProps) {
   const { register, control, handleSubmit, reset, getValues } = useForm<Record<string, any>>({ defaultValues: block?.props || {} });
   const servicesArray = useFieldArray({ control, name: 'items' });
   const galleryArray = useFieldArray({ control, name: 'images' });
@@ -166,12 +181,35 @@ export default function Inspector({ block, pages, onSave, onPreview, onClose, on
     };
   }
 
+  function registerLiveContainerStyle(field: 'backgroundColor' | 'borderColor' | 'borderWidth' | 'borderRadius' | 'opacity') {
+    const registration = register(field);
+    return {
+      ...registration,
+      onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+        registration.onChange(event);
+        const rawValue = event.currentTarget.value;
+        const parsedValue =
+          field === 'borderWidth' || field === 'borderRadius' || field === 'opacity'
+            ? Number(rawValue)
+            : rawValue;
+        const nextProps = {
+          ...(block!.props as Record<string, any>),
+          ...getValues(),
+          [field]: Number.isNaN(parsedValue) ? 0 : parsedValue,
+        };
+        previewedPropsRef.current = nextProps;
+        onPreview?.({ ...block!, props: nextProps });
+      },
+    };
+  }
+
   const placement = getBlockEditorPlacement(block);
   const rawScaleX = Number(placement.scaleX ?? 1);
   const rawScaleY = Number(placement.scaleY ?? 1);
   const hasCustomScale = Math.abs(rawScaleX - 1) > 0.001 || Math.abs(rawScaleY - 1) > 0.001;
   const supportsContentScaling = block!.type === 'hero' || block!.type === 'text' || block!.type === 'navButton';
   const resizeBehavior = block!.layout?.resizeBehavior ?? 'boxOnly';
+  const isEditingThisContainer = block!.type === 'container' && activeContainerId === block!.id;
 
   function setResizeBehavior(nextBehavior: 'boxOnly' | 'scaleContent') {
     const grid = block!.layout?.grid;
@@ -277,7 +315,65 @@ export default function Inspector({ block, pages, onSave, onPreview, onClose, on
           ) : null}
         </FormSection>
       ) : null}
+      {block.type === 'container' ? (
+        <FormSection
+          title="Container contents"
+          description="Click Edit contents, then click blocks in the left sidebar. New blocks will be placed inside this container until you exit."
+        >
+          <div className="grid gap-2">
+            {isEditingThisContainer ? (
+              <>
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900">
+                  Container editing is active. Use the left sidebar to add child blocks here.
+                </div>
+                <button type="button" className="ghost-btn !justify-start !px-4 !py-3 text-left text-sm" onClick={onExitContainer}>
+                  Exit container editing
+                </button>
+              </>
+            ) : (
+              <button type="button" className="btn" onClick={() => onEditContainer?.(block)}>
+                Edit contents
+              </button>
+            )}
+          </div>
+        </FormSection>
+      ) : null}
+      {block.parentId ? (
+        <FormSection
+          title="Container membership"
+          description="This block is inside a container. Moving it to the page will place it in the first open page-grid position."
+        >
+          <button type="button" className="ghost-btn !justify-start !px-4 !py-3 text-left text-sm" onClick={() => onDetachBlock?.(block)}>
+            Move block to page
+          </button>
+        </FormSection>
+      ) : null}
       <form onSubmit={handleSubmit(submit)} className="grid gap-4">
+        {block.type === 'container' && (
+          <FormSection title="Container style" description="Containers are transparent by default. Add a surface only when it helps structure the screen.">
+            <div className="grid gap-2">
+              <FieldLabel>Background color</FieldLabel>
+              <TextInput placeholder="transparent or #ffffff" {...registerLiveContainerStyle('backgroundColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border color</FieldLabel>
+              <TextInput placeholder="transparent or #2563eb" {...registerLiveContainerStyle('borderColor')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Border width (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...registerLiveContainerStyle('borderWidth')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Corner radius (px)</FieldLabel>
+              <TextInput type="number" min={0} className="max-w-[120px]" {...registerLiveContainerStyle('borderRadius')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Opacity</FieldLabel>
+              <TextInput type="number" min={0} max={1} step={0.05} className="max-w-[120px]" {...registerLiveContainerStyle('opacity')} />
+            </div>
+          </FormSection>
+        )}
+
         {block.type === 'text' && (
           <FormSection title="Content" description="Edit the text copy and its display size.">
             <div className="grid gap-2">
@@ -778,14 +874,16 @@ export default function Inspector({ block, pages, onSave, onPreview, onClose, on
           <button className="btn" type="submit">Save Changes</button>
           {onDelete ? (
             <button
-              type="button"
-              className="ghost-btn !text-red-700"
-              onClick={() => {
-                const ok = confirm('Delete this block?');
-                if (!ok) return;
-                onDelete(block.id);
-              }}
-            >
+                type="button"
+                className="ghost-btn !text-red-700"
+                onClick={() => {
+                  if (block.type !== 'container') {
+                    const ok = confirm('Delete this block?');
+                    if (!ok) return;
+                  }
+                  onDelete(block.id);
+                }}
+              >
               Delete Block
             </button>
           ) : null}

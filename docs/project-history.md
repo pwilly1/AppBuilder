@@ -207,3 +207,23 @@ public demo quality
 ```
 
 The recommended next phase is to add atomic blocks and design containers/templates carefully before expanding into app export, app-store automation, offline-first runtime, compliance, plugin SDK, or GenAI generation.
+
+## Phase 10: Container Hierarchy Start
+
+Date range: June 2026
+
+Current in-progress work introduces a schema-backed `container` block, flat `parentId` hierarchy, editor child-editing mode, drag-to-place palette behavior, load-time hierarchy repair, and matching container rendering in web and Android preview.
+
+Important outcome:
+
+```text
+The project is starting the transition from isolated atomic blocks toward composed layouts without giving up the shared schema contract.
+```
+
+Representative areas:
+
+- `frontend/src/shared/schema/blockHierarchy.ts`
+- `frontend/src/shared/schema/gridMigration.ts`
+- `frontend/src/editor/PageRenderer.tsx`
+- `frontend/src/layout/EditorLayout.tsx`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`

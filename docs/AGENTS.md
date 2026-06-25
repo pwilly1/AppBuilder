@@ -46,6 +46,12 @@ web editor padding: 0 horizontal, centered vertical inset
 Android preview padding: 16
 ```
 
+Container hierarchy now also exists in the live schema:
+
+```text
+Block.parentId
+```
+
 Do not treat legacy freeform fields as the preferred runtime truth.
 
 Legacy compatibility fields still exist:
@@ -81,6 +87,7 @@ Visible editor palette today:
 - Textarea
 - Checkbox
 - Toggle
+- Container
 
 Business/demo-experiment blocks still present in code but not the preferred public-demo direction:
 
@@ -94,6 +101,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 - [API Reference](api-reference.md)
 - [Block and Schema Reference](block-reference.md)
 - [How to Add a Block](how-to-add-a-block.md)
+- [Container and Template System](container-template-system.md)
 - [Deployment](deployment.md)
 - [Features](features.md)
 - [Roadmap](roadmap.md)
@@ -145,8 +153,8 @@ Good next steps:
 1. keep public demo stable
 2. test core block editing/resizing thoroughly
 3. keep Android parity close after each schema change
-4. add atomic blocks before complex sections
-5. design containers/templates before rebuilding business blocks
+4. stabilize the new container primitive before broader templates
+5. design templates carefully before rebuilding business blocks
 6. document decisions when architecture changes
 
 Risky changes:

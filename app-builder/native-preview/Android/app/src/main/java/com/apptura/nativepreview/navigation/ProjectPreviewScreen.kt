@@ -39,6 +39,7 @@ import com.apptura.nativepreview.layout.GridMetrics
 import com.apptura.nativepreview.layout.getColumnWidth
 import com.apptura.nativepreview.layout.getGridRowCount
 import com.apptura.nativepreview.layout.resolveBlockRenderRect
+import com.apptura.nativepreview.models.Block
 import com.apptura.nativepreview.models.Project
 import com.apptura.nativepreview.renderers.BlockRenderer
 
@@ -56,8 +57,19 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
         }
     } else {
         val page = pages[pageIndex.value]
-        val gridBlocks = page.blocks.filter { it.layout?.grid != null }
-        val legacyBlocks = page.blocks.filter { it.layout?.grid == null }
+        val containerIds = page.blocks
+            .filter { it.type == "container" }
+            .map { it.id }
+            .toSet()
+        val childrenByParentId = page.blocks
+            .filter { it.parentId != null && containerIds.contains(it.parentId) }
+            .groupBy { it.parentId ?: "" }
+        val gridBlocks = page.blocks.filter {
+            it.layout?.grid != null && (it.parentId == null || !containerIds.contains(it.parentId))
+        }
+        val legacyBlocks = page.blocks.filter {
+            it.layout?.grid == null && (it.parentId == null || !containerIds.contains(it.parentId))
+        }
         val scroll = rememberScrollState()
 
         Box(
@@ -100,19 +112,17 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                         )
 
                         gridBlocks.forEach { block ->
-                            val rect = resolveBlockRenderRect(block, metrics) ?: return@forEach
-                            Box(
-                                modifier = Modifier
-                                    .offset(x = rect.left, y = rect.top)
-                                    .width(rect.width)
-                                    .height(rect.height)
-                                    .clipToBounds()
-                            ) {
-                                BlockRenderer(block, projectId = project.id, baseUrl = baseUrl) { targetPageId ->
+                            GridBlockLayer(
+                                block = block,
+                                childrenByParentId = childrenByParentId,
+                                metrics = metrics,
+                                projectId = project.id,
+                                baseUrl = baseUrl,
+                                onNavigate = { targetPageId ->
                                     val idx = pages.indexOfFirst { it.id == targetPageId }
                                     if (idx >= 0) pageIndex.value = idx
                                 }
-                            }
+                            )
                         }
                     }
 
@@ -148,6 +158,58 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun GridBlockLayer(
+    block: Block,
+    childrenByParentId: Map<String, List<Block>>,
+    metrics: GridMetrics,
+    projectId: String?,
+    baseUrl: String,
+    onNavigate: (String) -> Unit,
+) {
+    val rect = resolveBlockRenderRect(block, metrics) ?: return
+    val placement = block.layout?.grid
+    val children = childrenByParentId[block.id].orEmpty()
+
+    Box(
+        modifier = Modifier
+            .offset(x = rect.left, y = rect.top)
+            .width(rect.width)
+            .height(rect.height)
+            .clipToBounds()
+    ) {
+        BlockRenderer(
+            block = block,
+            projectId = projectId,
+            baseUrl = baseUrl,
+            content = {
+                if (block.type == "container" && placement != null) {
+                    val childMetrics = GridMetrics(
+                        canvasWidth = rect.width,
+                        columnCount = placement.colSpan.coerceAtLeast(1),
+                        rowHeight = metrics.rowHeight,
+                        gap = metrics.gap,
+                        paddingX = 0.dp,
+                        paddingY = 0.dp,
+                    )
+
+                    children.forEach { child ->
+                        GridBlockLayer(
+                            block = child,
+                            childrenByParentId = childrenByParentId,
+                            metrics = childMetrics,
+                            projectId = projectId,
+                            baseUrl = baseUrl,
+                            onNavigate = onNavigate,
+                        )
+                    }
+                }
+            },
+            onNavigate = onNavigate,
+        )
     }
 }
 

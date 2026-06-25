@@ -19,6 +19,25 @@ export type BlockRegistryEntry = {
 }
 
 export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
+  container: {
+    displayName: 'Container',
+    layoutClass: 'container',
+    defaultLayout: { width: 'full', align: 'start', spacingTop: 'none', spacingBottom: 'none' },
+    gridConstraints: {
+      defaultSpan: { cols: 12, rows: 8 },
+      minSpan: { cols: 1, rows: 1 },
+      maxSpan: { cols: 16, rows: 29 },
+      allowInnerMove: false,
+    },
+    defaultRender: { alignX: 'center', alignY: 'center' },
+    defaultProps: {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+      borderWidth: 0,
+      borderRadius: 0,
+      opacity: 1,
+    },
+  },
   hero: {
     displayName: 'Hero',
     layoutClass: 'hero',

@@ -18,6 +18,7 @@ import android.content.Context
 data class Block(
     val id: String,
     val type: String,
+    val parentId: String? = null,
     val props: JsonObject = buildJsonObject { },
     val layout: BlockRuntimeLayout? = null,
     val render: BlockRenderMetadata? = null
