@@ -40,10 +40,11 @@ Current grid constants:
 ```text
 columns: 16
 default editor rows: 29
+default Android preview rows: 29 minimum, then grow to fit viewport/content
 row height: 28
 gap: 0
 web editor padding: 0 horizontal, centered vertical inset
-Android preview padding: 16
+Android preview padding: 0
 ```
 
 Container hierarchy now also exists in the live schema:

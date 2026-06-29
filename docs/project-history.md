@@ -143,7 +143,7 @@ Key concepts:
 - collision prevention
 - bounded render metadata
 - migration from older layout data
-- Android grid-renderer parity work with surface-specific padding
+- Android grid-renderer parity work with edge-to-edge grid sizing and shared row defaults
 
 Representative areas:
 
@@ -208,17 +208,19 @@ public demo quality
 
 The recommended next phase is to add atomic blocks and design containers/templates carefully before expanding into app export, app-store automation, offline-first runtime, compliance, plugin SDK, or GenAI generation.
 
-## Phase 10: Container Hierarchy Start
+## Phase 10: Container Hierarchy Milestone
 
 Date range: June 2026
 
-Current in-progress work introduces a schema-backed `container` block, flat `parentId` hierarchy, editor child-editing mode, drag-to-place palette behavior, load-time hierarchy repair, and matching container rendering in web and Android preview.
+Recent work introduced a schema-backed `container` block, flat `parentId` hierarchy, editor child-editing mode, drag-to-place palette behavior, load-time hierarchy repair, and matching container rendering in web and Android preview.
 
 Important outcome:
 
 ```text
 The project is starting the transition from isolated atomic blocks toward composed layouts without giving up the shared schema contract.
 ```
+
+The next phase is to stabilize the container UX, keep Android/web parity tight, and use that foundation for template insertion work instead of adding broader section complexity too early.
 
 Representative areas:
 

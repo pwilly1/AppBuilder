@@ -115,11 +115,12 @@ Tasks:
 | Status | Task |
 | --- | --- |
 | Completed | Write section/container schema design draft. |
-| In Progress | Add basic container block. |
-| In Progress | Support child blocks inside a container. |
-| In Progress | Support moving/resizing a whole container. |
-| In Progress | Support selecting/editing child blocks. |
-| In Progress | Add Android rendering for container hierarchy. |
+| Completed | Add basic container block. |
+| Completed | Support child blocks inside a container. |
+| Completed | Support moving/resizing a whole container. |
+| Completed | Support selecting/editing child blocks. |
+| Completed | Add Android rendering for container hierarchy. |
+| In Progress | Stabilize container UX, regression coverage, and template handoff points. |
 
 ### 7. Templates
 

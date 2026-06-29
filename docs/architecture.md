@@ -109,10 +109,11 @@ Current grid constants:
 ```text
 columns: 16
 default editor rows: 29
+default Android preview rows: 29 minimum, then grow to fit viewport/content
 row height: 28px / 28dp
 gap: 0
 web editor padding: 0px horizontal, centered vertical inset
-Android preview padding: 16dp
+Android preview padding: 0dp
 Android reference canvas width: 390dp
 ```
 
@@ -130,7 +131,7 @@ Meaning:
 - `props` defines the content and block-specific styling.
 
 The web implementation is in `gridLayout.ts`; the Android counterpart is in `GridLayout.kt`.
-The current parity target is shared column/span math with surface-specific outer padding, not pixel-identical frame chrome.
+The current parity target is shared column/span math with matching edge-to-edge grid surfaces, not pixel-identical frame chrome.
 
 For container children, `layout.grid` is relative to the parent container span rather than the page. The parent relationship is stored separately in `parentId`.
 

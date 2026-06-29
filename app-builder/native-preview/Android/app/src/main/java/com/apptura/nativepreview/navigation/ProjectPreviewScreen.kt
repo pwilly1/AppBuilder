@@ -31,6 +31,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.dp
+import com.apptura.nativepreview.layout.GRID_DEFAULT_ROW_COUNT
 import com.apptura.nativepreview.layout.GRID_GAP
 import com.apptura.nativepreview.layout.GRID_CANVAS_WIDTH
 import com.apptura.nativepreview.layout.GRID_PADDING
@@ -85,7 +86,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
             ) {
                 val canvasWidth = if (maxWidth.value > 1f) maxWidth else GRID_CANVAS_WIDTH
                 val metrics = GridMetrics(canvasWidth = canvasWidth)
-                val gridRowCount = maxOf(1, getGridRowCount(gridBlocks))
+                val gridRowCount = maxOf(GRID_DEFAULT_ROW_COUNT, getGridRowCount(gridBlocks))
                 val rowContentHeight = GRID_ROW_HEIGHT * gridRowCount.toFloat() +
                     GRID_GAP * (gridRowCount - 1).toFloat() +
                     GRID_PADDING * 2f
@@ -95,7 +96,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                     if (bottom > currentMax) bottom else currentMax
                 }
                 val contentHeight = if (renderBottom > rowContentHeight) renderBottom else rowContentHeight
-                val gridHeight = if (contentHeight > 640.dp) contentHeight else 640.dp
+                val gridHeight = maxOf(maxHeight, contentHeight)
 
                 Column(
                     modifier = Modifier.fillMaxWidth()
