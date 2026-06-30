@@ -333,7 +333,7 @@ Planned GenAI features should generate or edit the same project schema the edito
 - `PageRenderer` and related editor files still contain complex interaction logic.
 - Legacy fallback fields still exist for older project compatibility.
 - Android/web parity needs continued testing as block behavior evolves.
-- Container editing is live but still constrained to one level; nested containers and templates remain unfinished.
+- Container editing is live but still constrained to one level; nested containers, reusable template instances, and user-created templates remain unfinished.
 
 ## Related Documentation
 

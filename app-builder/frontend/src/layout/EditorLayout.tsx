@@ -4,7 +4,9 @@ import { PageRenderer } from '../editor/PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'
-import type { Block } from '../shared/schema/types'
+import type { Block, Page, Project } from '../shared/schema/types'
+import type { TemplateDefinition } from '../shared/schema/templates'
+import { instantiateSectionTemplate, instantiateTemplatePage, isSectionTemplate } from '../shared/schema/templates'
 import {
   canBlockBeContainerChild,
   containerToPagePlacement,
@@ -13,7 +15,13 @@ import {
   pageToContainerPlacement,
   validateContainerResize,
 } from '../shared/schema/blockHierarchy'
-import { collidesWithBlocks, findFirstAvailablePlacement, getBlockGridConstraints } from '../shared/schema/gridLayout'
+import {
+  GRID_COLUMN_COUNT,
+  GRID_DEFAULT_ROW_COUNT,
+  collidesWithBlocks,
+  findFirstAvailablePlacement,
+  getBlockGridConstraints,
+} from '../shared/schema/gridLayout'
 import type { BlockGridConstraints, GridPlacement } from '../shared/schema/types'
 
 type Props = {
@@ -23,6 +31,7 @@ type Props = {
   selectedPageId?: string
   addBlock: (b: any) => void
   applyBlockTransaction?: (mutator: (blocks: Block[]) => Block[], options?: { pageId?: string }) => void
+  applyProjectTransaction?: (mutator: (project: Project) => Project, options?: { selectedPageId?: string }) => void
   setSelectedBlock: (b: any) => void
   editBlock: (b: any, options?: { recordHistory?: boolean }) => void
   deleteBlock: (id: string) => void
@@ -52,6 +61,7 @@ export default function EditorLayout(props: Props) {
     selectedPageId,
     addBlock,
     applyBlockTransaction,
+    applyProjectTransaction,
     setSelectedBlock,
     editBlock,
     deleteBlock,
@@ -82,6 +92,7 @@ export default function EditorLayout(props: Props) {
   const [showAndroidPreviewNote, setShowAndroidPreviewNote] = useState(false)
   const [activeContainerId, setActiveContainerId] = useState<string | null>(null)
   const [pendingContainerDelete, setPendingContainerDelete] = useState<Block | null>(null)
+  const [templateInsertError, setTemplateInsertError] = useState<string | null>(null)
   const activeContainer = useMemo(
     () => (page?.blocks || []).find((block: Block) => block.id === activeContainerId && isContainerBlock(block)) ?? null,
     [activeContainerId, page?.blocks],
@@ -101,6 +112,7 @@ export default function EditorLayout(props: Props) {
   }, [previewMode])
 
   function handleAddBlock(block: Block) {
+    setTemplateInsertError(null)
     if (!activeContainer || isContainerBlock(block) || !canBlockBeContainerChild(block)) {
       addBlock(block)
       return
@@ -133,6 +145,71 @@ export default function EditorLayout(props: Props) {
       addBlock(childBlock)
     }
     setSelectedBlock(childBlock)
+  }
+
+  function handleAddTemplate(template: TemplateDefinition) {
+    setTemplateInsertError(null)
+
+    if (isSectionTemplate(template)) {
+      if (!page || !applyBlockTransaction) {
+        setTemplateInsertError('Section templates need an active page before they can be inserted.')
+        return
+      }
+
+      const topLevelBlocks = (page.blocks || []).filter((candidate: Block) => !candidate.parentId)
+      const templateConstraints = {
+        defaultSpan: template.bounds,
+        minSpan: { cols: 1, rows: 1 },
+        maxSpan: template.bounds,
+      }
+      const placement = findFirstAvailablePlacement(
+        topLevelBlocks,
+        templateConstraints,
+        GRID_COLUMN_COUNT,
+        GRID_DEFAULT_ROW_COUNT,
+      )
+
+      if (collidesWithBlocks(placement, topLevelBlocks)) {
+        setTemplateInsertError(`No open space for ${template.name}. Move or delete blocks, then try again.`)
+        return
+      }
+
+      const insertedBlocks = instantiateSectionTemplate(template, placement)
+      const rootBlock = insertedBlocks.find((block) => !block.parentId) ?? insertedBlocks[0]
+
+      applyBlockTransaction((blocks: Block[]) => [...blocks, ...insertedBlocks])
+      setActiveContainerId(rootBlock?.type === 'container' ? rootBlock.id : null)
+      setSelectedBlock(rootBlock)
+      return
+    }
+
+    if (!applyProjectTransaction) {
+      setTemplateInsertError('Page and app templates need project-level editing before they can be inserted.')
+      return
+    }
+
+    const pageIdByKey = new Map(template.pages.map((pageDefinition) => [pageDefinition.key, crypto.randomUUID()]))
+    const usedPaths = new Set<string>(
+      (pages || [])
+        .map((entry: Page) => entry.path)
+        .filter((path: string | undefined): path is string => typeof path === 'string' && path.length > 0),
+    )
+    const newPages = template.pages.map((pageDefinition) => {
+      const pageId = pageIdByKey.get(pageDefinition.key) ?? crypto.randomUUID()
+      const path = getUniqueTemplatePath(pageDefinition.pathBase || pageDefinition.title, usedPaths)
+      usedPaths.add(path)
+      return instantiateTemplatePage(pageDefinition, pageId, path, pageIdByKey)
+    })
+
+    applyProjectTransaction(
+      (project: Project) => ({
+        ...project,
+        pages: [...(project.pages || []), ...newPages],
+      }),
+      { selectedPageId: newPages[0]?.id },
+    )
+    setActiveContainerId(null)
+    setSelectedBlock(null)
   }
 
   function handleDropNewBlock(block: Block, placement: GridPlacement, parentId?: string) {
@@ -511,7 +588,12 @@ export default function EditorLayout(props: Props) {
                 </div>
                 <span className="editor-kicker">Drag to place</span>
               </div>
-              <AddBlock onAdd={handleAddBlock} />
+              <AddBlock onAdd={handleAddBlock} onAddTemplate={handleAddTemplate} />
+              {templateInsertError ? (
+                <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                  {templateInsertError}
+                </div>
+              ) : null}
               {activeContainer ? (
                 <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
                   Adding into selected container. Click Exit Container to add to the page again.
@@ -677,4 +759,26 @@ export default function EditorLayout(props: Props) {
       ) : null}
     </>
   )
+}
+
+function getUniqueTemplatePath(base: string, usedPaths: Set<string>): string {
+  const baseSlug = slugifyTemplatePath(base) || 'page'
+  let candidate = `/${baseSlug}`
+  let index = 2
+
+  while (usedPaths.has(candidate)) {
+    candidate = `/${baseSlug}-${index}`
+    index += 1
+  }
+
+  return candidate
+}
+
+function slugifyTemplatePath(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
 }

@@ -1,0 +1,118 @@
+import { createBlock } from '../registry'
+import type { Block, GridPlacement, Page } from '../types'
+import { APP_TEMPLATE_DEFINITIONS } from './templateApps'
+import { PAGE_TEMPLATE_DEFINITIONS } from './templatePages'
+import { SECTION_TEMPLATE_DEFINITIONS } from './templateSections'
+import type {
+  AppTemplateDefinition,
+  PageTemplateDefinition,
+  SectionTemplateDefinition,
+  TemplateDefinition,
+  TemplatePageDefinition,
+} from './templateTypes'
+
+export const TEMPLATE_DEFINITIONS: TemplateDefinition[] = [
+  ...SECTION_TEMPLATE_DEFINITIONS,
+  ...PAGE_TEMPLATE_DEFINITIONS,
+  ...APP_TEMPLATE_DEFINITIONS,
+]
+
+export function isSectionTemplate(template: TemplateDefinition): template is SectionTemplateDefinition {
+  return template.category === 'section'
+}
+
+export function isPageTemplate(template: TemplateDefinition): template is PageTemplateDefinition {
+  return template.category === 'page'
+}
+
+export function isAppTemplate(template: TemplateDefinition): template is AppTemplateDefinition {
+  return template.category === 'app'
+}
+
+export function getSectionTemplate(sectionId: string): SectionTemplateDefinition {
+  const section = SECTION_TEMPLATE_DEFINITIONS.find((template) => template.id === sectionId)
+  if (!section) throw new Error(`Unknown section template: ${sectionId}`)
+  return section
+}
+
+export function instantiateSectionTemplate(
+  template: SectionTemplateDefinition,
+  placement: GridPlacement,
+  options: {
+    blockProps?: Record<string, Record<string, any>>
+    pageIdByKey?: Map<string, string>
+  } = {},
+): Block[] {
+  const idByKey = new Map<string, string>()
+
+  for (const block of template.blocks) {
+    idByKey.set(block.key, crypto.randomUUID())
+  }
+
+  return template.blocks.map((definition) => {
+    const overrideProps = options.blockProps?.[definition.key] ?? {}
+    const base = createBlock(
+      definition.type,
+      resolveTemplateProps({ ...(definition.props || {}), ...overrideProps }, options.pageIdByKey),
+    )
+    const id = idByKey.get(definition.key) ?? crypto.randomUUID()
+    const parentId = definition.parentKey ? idByKey.get(definition.parentKey) : undefined
+    const grid = definition.parentKey
+      ? definition.grid
+      : {
+          ...definition.grid,
+          colStart: placement.colStart,
+          rowStart: placement.rowStart,
+          colSpan: placement.colSpan,
+          rowSpan: placement.rowSpan,
+        }
+
+    return {
+      ...base,
+      id,
+      parentId,
+      layout: {
+        ...(base.layout || {}),
+        grid,
+      },
+      render: {
+        ...(base.render || {}),
+        ...(definition.render || {}),
+      },
+    }
+  })
+}
+
+export function instantiateTemplatePage(
+  pageDefinition: TemplatePageDefinition,
+  pageId: string,
+  path: string,
+  pageIdByKey: Map<string, string>,
+): Page {
+  const blocks = pageDefinition.sections.flatMap((placement) => {
+    const sectionTemplate = getSectionTemplate(placement.sectionId)
+    return instantiateSectionTemplate(sectionTemplate, placement.grid, {
+      blockProps: placement.blockProps,
+      pageIdByKey,
+    })
+  })
+
+  return {
+    id: pageId,
+    title: pageDefinition.title,
+    path,
+    blocks,
+  }
+}
+
+export function instantiateTemplate(template: SectionTemplateDefinition, placement: GridPlacement): Block[] {
+  return instantiateSectionTemplate(template, placement)
+}
+
+function resolveTemplateProps(props: Record<string, any>, pageIdByKey?: Map<string, string>) {
+  const next = { ...props }
+  const toPageKey = typeof next.toPageKey === 'string' ? next.toPageKey : null
+  if (toPageKey && pageIdByKey?.has(toPageKey)) next.toPageId = pageIdByKey.get(toPageKey)
+  delete next.toPageKey
+  return next
+}

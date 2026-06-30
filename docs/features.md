@@ -138,15 +138,17 @@ This should allow users to resize or move a whole section while still editing th
 
 ### Templates
 
-Templates should insert useful groups of normal blocks instead of creating large, rigid one-off blocks.
+Templates insert useful groups of normal blocks instead of creating large, rigid one-off blocks.
 
-Examples:
+Template architecture supports:
 
 ```text
-Hero template = heading + text + button
-Services template = heading + cards
-Contact template = heading + inputs + button
+Section template = one container plus child blocks on the current page
+Page template    = one complete generated page
+App template     = multiple generated pages with nav buttons wired together
 ```
+
+The current visible catalog is intentionally limited to section templates: Hero CTA, Signup Form, Feature List, Checklist Card, and Contact Card. Page and app template scaffolding exists in code, but those catalogs are empty for now.
 
 ### Android Preview Improvements
 
@@ -235,7 +237,7 @@ Later AI features:
 
 ## Current Known Feature Limits
 
-- Templates are not implemented yet.
+- Templates are implemented as static editor-time recipes, not user-created or marketplace templates.
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
 - Container editing is intentionally limited to one level; nested containers are not supported.

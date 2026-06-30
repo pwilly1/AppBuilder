@@ -10,7 +10,7 @@ This design separates three concepts:
 
 ```text
 Container = saved runtime parent and optional visual surface
-Template  = editor-time recipe that inserts independent blocks
+Template  = editor-time recipe that inserts normal blocks
 Component = future linked/reusable instance system
 ```
 
@@ -29,7 +29,15 @@ Page
     `-- Atomic block
 ```
 
-Templates are not stored as reusable instances. In v1, a template inserts normal independent atomic blocks onto the page. After insertion, there is no link back to the template definition.
+Templates are not stored as reusable instances. In v1, a template inserts normal blocks onto the page. The first shipped templates use one root container plus child atomic blocks so the inserted section can be moved, resized, edited, and deleted as a group. After insertion, there is no link back to the template definition.
+
+Template levels:
+
+```text
+Section template = adds one container-based section to the current page
+Page template    = adds one complete page made from section templates
+App template     = adds multiple pages and wires nav buttons to generated pages
+```
 
 ## Confirmed Behavior
 
@@ -49,9 +57,9 @@ Templates are not stored as reusable instances. In v1, a template inserts normal
 - Containers cannot be nested initially.
 - Containers have optional visual styling with transparent defaults.
 - Deleting a container asks whether to delete its children or preserve them on the page.
-- Templates are available through a `Blocks | Templates` control in the left panel.
-- Template insertion uses a grid placement ghost/preview.
-- Template insertion succeeds only when the full template fits.
+- Templates are available through a Templates section in the left panel.
+- Template insertion automatically uses the first open page-grid placement for the root container.
+- Template insertion succeeds only when the root container fits without top-level collision.
 - Inserted template blocks are independent and are not linked to the template definition.
 
 ## Supported Container Children
@@ -387,34 +395,46 @@ type TemplateDefinition = {
   id: string
   name: string
   description: string
-  category: 'section' | 'page'
+  category: 'section' | 'page' | 'app'
   preview: string
-  bounds: GridSpan
-  blocks: TemplateBlockDefinition[]
+  bounds?: GridSpan
+  blocks?: TemplateBlockDefinition[]
+  pages?: TemplatePageDefinition[]
 }
 ```
 
-V1 templates contain only independent atomic blocks. They do not contain containers yet.
+V1 section templates contain one root container and child atomic blocks. Page and app templates compose those section templates into generated pages. This keeps template output editable without adding a new runtime block type or linked component system.
 
-Insertion flow:
+Section insertion flow:
 
-1. User opens the Templates tab.
-2. User chooses a template preview card.
-3. The editor displays a ghost preview for the complete template bounds.
-4. Grid collision logic validates every block in the template.
-5. If any block collides or leaves the page, insertion is blocked.
-6. On a valid click, generate new IDs for every inserted block.
-7. Insert all blocks atomically as one undo-history entry.
+1. User opens the Templates section in the block palette.
+2. User chooses a section template card.
+3. The editor finds the first open page-grid placement for the template root bounds.
+4. If the root container would collide with existing top-level blocks, insertion is blocked.
+5. On a valid insertion, generate new IDs for the root container and every child block.
+6. Insert all blocks atomically as one undo-history entry.
+7. Select the inserted root container and enter container-editing scope.
 
-After insertion, the project contains only normal blocks. Editing the template definition later does not update existing projects.
+Page/app insertion flow:
 
-Initial templates should stay simple:
+1. User chooses a page or app template card.
+2. The editor generates new page IDs and unique page paths.
+3. Section definitions are instantiated into each generated page.
+4. App-template nav buttons are wired to the generated page IDs.
+5. The new pages are appended atomically as one project-history entry.
+6. The editor switches to the first generated page.
+
+After insertion, the project contains only normal pages and blocks. Editing the template definition later does not update existing projects.
+
+Current visible section templates include:
 
 - Hero layout using hero/text/navButton
 - Basic form mockup using text/input/textarea/navButton
-- Feature row using icon/badge/text blocks
+- Feature list using icon/text rows
+- Checklist card using text/checkbox
+- Contact card using text/textarea/navButton
 
-Container-based section templates can be added after containers are stable.
+Page template and app template scaffolding exists in code, but the page and app catalogs are intentionally empty for now. User-created templates, marketplace publishing, and template drag-preview placement are deferred.
 
 ## Failure Handling
 
@@ -429,6 +449,7 @@ Container-based section templates can be added after containers are stable.
 | Container resize creates invalid child state | Block the resize and keep the last valid dimensions. |
 | Template has invalid internal schema | Reject insertion and show a clear editor error. |
 | Template placement partially collides | Reject the full insertion; do not insert partial templates. |
+| Page/app template path collides | Generate a unique path suffix such as `/dashboard-2`. |
 | Project save fails after a hierarchy edit | Preserve local state and expose retry through existing save behavior. |
 | Android sees unsupported container data | Treat invalid/orphaned children as top-level or skip invalid hierarchy safely rather than crash. |
 
@@ -460,8 +481,9 @@ Container-based section templates can be added after containers are stable.
 
 - Add `Blocks | Templates` navigation.
 - Add static template definitions and preview cards.
-- Add placement preview and all-or-nothing atomic insertion.
-- Ship simple atomic templates first.
+- Add all-or-nothing atomic insertion.
+- Ship a small set of simple section templates first.
+- Keep page and app template scaffolding in place for the next expansion.
 
 ### Phase 5: Cross-runtime QA and documentation
 
@@ -514,6 +536,8 @@ Manual checks:
 - Resize a non-empty container.
 - Delete a non-empty container with both delete choices.
 - Insert each template into open space.
+- When page templates are reintroduced, confirm a new page appears.
+- When app templates are reintroduced, confirm all generated pages appear and nav buttons point to the generated pages.
 - Confirm blocked template insertion does not partially insert blocks.
 - Save, reload, undo, and redo each compound operation.
 - Open the same project in Android preview.
@@ -524,7 +548,8 @@ Manual checks:
 - Memoize hierarchy grouping from the current `page.blocks` array.
 - Keep collision checks scoped to the active parent where possible.
 - Avoid recursive traversal in v1 because nested containers are not supported.
-- Template insertion should validate the full block list once, then commit once.
+- Section template insertion should validate the root placement once, then commit the full generated block group once.
+- Page/app template insertion should generate pages once and commit the full page set in one project transaction when those catalogs are populated.
 - Android should use the same page-level grouping concept rather than filtering the full block list repeatedly for every container.
 
 ## Success Criteria
@@ -535,7 +560,8 @@ Manual checks:
 - Resizing a container proportionally updates child bounds without changing content styling.
 - Invalid operations never corrupt project state or create overlaps.
 - Undo and redo treat each container operation atomically.
-- Templates insert valid independent block groups through placement preview.
+- Section templates insert valid container-based block groups as one undoable operation.
+- Page and app template scaffolding remains ready to add generated pages as one undoable project operation when the catalog is populated.
 - The same saved project renders without crashes in web preview and Android preview.
 - Legacy and malformed project data remain loadable through migration safeguards.
 
@@ -551,16 +577,15 @@ Manual checks:
 - Data binding or functional form submission for mockup controls
 - User-created template publishing or marketplace distribution
 - Template updates applied to existing projects
-- Templates containing containers
+- Linked templates or reusable template instances
 - Backend-owned template storage
 - Strict backend hierarchy validation
 
 ## Open Questions
 
 - Exact initial container default span and visual defaults.
-- Whether page-level templates belong in the Templates tab or project/page creation flow.
 - Whether to add Vitest or another frontend unit-test runner for pure hierarchy helper tests.
 
 ## Recommended Next Step
 
-Implement Phase 1 only after this design is accepted. Do not combine schema helpers with canvas interaction changes in the first commit.
+QA the retained section templates across save/reload, undo/redo, web preview, and Android preview before expanding into page and app template catalogs.

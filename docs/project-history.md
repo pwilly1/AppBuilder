@@ -229,3 +229,22 @@ Representative areas:
 - `frontend/src/editor/PageRenderer.tsx`
 - `frontend/src/layout/EditorLayout.tsx`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`
+
+## Phase 11: Static Template Catalog
+
+Date range: June 2026
+
+Recent work added static editor-time templates built from existing containers and atomic blocks. The architecture includes section, page, and app template scaffolding, while the visible catalog is currently limited to a small set of section templates.
+
+Important outcome:
+
+```text
+Users can start from reusable section patterns without introducing new runtime block types or breaking Android preview parity.
+```
+
+Representative areas:
+
+- `frontend/src/shared/schema/templates.ts`
+- `frontend/src/AddBlock.tsx`
+- `frontend/src/layout/EditorLayout.tsx`
+- `frontend/src/hooks/useProject.ts`

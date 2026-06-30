@@ -128,12 +128,17 @@ Goal: let users add useful app sections quickly using normal blocks.
 
 | Status | Task |
 | --- | --- |
-| Planned | Template picker UI. |
-| Planned | Template insertion logic. |
-| Planned | Hero template. |
-| Planned | Services template. |
-| Planned | Contact template. |
-| Planned | Landing page starter template. |
+| Completed | Template picker UI that can group section, page, and app templates. |
+| Completed | Section template insertion logic. |
+| Completed | Page template scaffolding and insertion path. |
+| Completed | App template scaffolding and insertion path with generated page IDs and nav wiring. |
+| Completed | Hero, form, feature, checklist, and contact section templates. |
+| Planned | Full page template catalog. |
+| Planned | Full app template catalog. |
+| Planned | Template drag-to-place preview for section templates. |
+| Planned | Template thumbnails/live previews. |
+| Planned | Broader vertical template catalog. |
+| Later | User-created templates and marketplace/distribution model. |
 
 ## Strategic Future Roadmap
 
@@ -227,7 +232,7 @@ The best next sequence is:
 1. Finish public demo polish.
 2. Keep core editor blocks stable.
 3. Stabilize the new container primitive and hierarchy rules.
-4. Add image support and only then broaden templates.
+4. QA section/page/app templates across save, reload, undo, redo, and Android preview.
 5. Improve Android parity after each schema change.
 6. Add screenshots/demo material.
 ```

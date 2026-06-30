@@ -161,6 +161,15 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     setSaveError(null)
   }
 
+  function applyProjectTransaction(
+    mutator: (project: Project) => Project,
+    options: { selectedPageId?: string } = {},
+  ) {
+    applyChange((p) => mutator(p))
+    if (options.selectedPageId) setSelectedPageId(options.selectedPageId)
+    setSaveError(null)
+  }
+
   function selectPage(id: string) {
     setSelectedPageId(id)
   }
@@ -356,6 +365,7 @@ export default function useProject(setAuthed: (a: boolean) => void) {
     setSelectedBlock,
     addBlock,
     applyBlockTransaction,
+    applyProjectTransaction,
     addPage,
     selectPage,
     renamePage,

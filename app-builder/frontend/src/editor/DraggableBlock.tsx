@@ -23,7 +23,7 @@ import {
   MIN_TEXTLIKE_WIDTH,
 } from './editorGeometry'
 
-type ResizeMode = 'uniform' | 'horizontal' | 'vertical'
+type ResizeEdge = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
 type SaveBlockOptions = {
   usePreviewRect?: boolean
 }
@@ -85,12 +85,9 @@ export function DraggableBlock({
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)
   const contentRef = useRef<HTMLDivElement | null>(null)
-  const cornerResizeHandleRef = useRef<HTMLButtonElement | null>(null)
-  const horizontalResizeHandleRef = useRef<HTMLButtonElement | null>(null)
-  const verticalResizeHandleRef = useRef<HTMLButtonElement | null>(null)
   const innerMoveHandleRef = useRef<HTMLButtonElement | null>(null)
   const [dragging, setDragging] = useState(false)
-  const [resizingMode, setResizingMode] = useState<ResizeMode | null>(null)
+  const [resizingMode, setResizingMode] = useState<ResizeEdge | null>(null)
   const [innerMoving, setInnerMoving] = useState(false)
   const [startPt, setStartPt] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [startPos, setStartPos] = useState<{ x: number; y: number }>({ x: placement.x, y: placement.y })
@@ -178,13 +175,8 @@ export function DraggableBlock({
   function begin(e: PointerEvent) {
     if (previewMode || inlineEditing) return
     e.stopPropagation()
-    const targetNode = e.target as Node
-    if (
-      innerMoveHandleRef.current?.contains(targetNode) ||
-      cornerResizeHandleRef.current?.contains(targetNode) ||
-      horizontalResizeHandleRef.current?.contains(targetNode) ||
-      verticalResizeHandleRef.current?.contains(targetNode)
-    ) return
+    const targetNode = e.target as Element
+    if (targetNode.closest('[data-editor-handle="true"]')) return
     const target = e.currentTarget as Element
     ;(target as any).setPointerCapture?.(e.pointerId)
     setStartPt({ x: e.clientX, y: e.clientY })
@@ -199,7 +191,7 @@ export function DraggableBlock({
     onSnapChange?.({ h: false, v: false })
   }
 
-  function beginResize(mode: ResizeMode, e: PointerEvent<HTMLButtonElement>) {
+  function beginResize(mode: ResizeEdge, e: PointerEvent<HTMLButtonElement>) {
     if (previewMode || inlineEditing) return
     e.stopPropagation()
     const target = e.currentTarget as Element
@@ -221,6 +213,7 @@ export function DraggableBlock({
         currentHeight,
     )
     setStartPt({ x: e.clientX, y: e.clientY })
+    setStartPos(pos)
     setStartScale({ x: scaleX, y: scaleY })
     setStartBoxSize({ width: currentWidth, height: currentHeight })
     setStartContentSize({ width: contentWidth, height: contentHeight })
@@ -282,81 +275,84 @@ export function DraggableBlock({
       const container = containerRef.current
       const containerWidth = container?.clientWidth ?? gridMetrics.canvasWidth
       const containerHeight = container?.clientHeight ?? (gridMetrics.rowHeight ?? GRID_ROW_HEIGHT) * 24
-      const maxResizeWidth = Math.max(MIN_BLOCK_WIDTH, containerWidth - pos.x)
-      const maxResizeHeight = Math.max(MIN_BLOCK_HEIGHT, containerHeight - pos.y)
+
+      const changesWidth = resizingMode.includes('e') || resizingMode.includes('w')
+      const changesHeight = resizingMode.includes('n') || resizingMode.includes('s')
+      const resizesFromLeft = resizingMode.includes('w')
+      const resizesFromTop = resizingMode.includes('n')
+      const resizesFromRight = resizingMode.includes('e')
+      const resizesFromBottom = resizingMode.includes('s')
 
       if (usesContainerResize) {
-        const nextWidthRaw =
-          resizingMode === 'vertical' ? startBoxSize.width : startBoxSize.width + dx
-        const nextHeightRaw =
-          resizingMode === 'horizontal' ? startBoxSize.height : startBoxSize.height + dy
         const minWidth =
-          resizingMode === 'vertical' || scalesContentWithBox || !supportsInlineEdit
-            ? MIN_TEXTLIKE_WIDTH
+          !changesWidth
+            ? startBoxSize.width
+            : scalesContentWithBox || !supportsInlineEdit
+              ? MIN_TEXTLIKE_WIDTH
             : Math.max(MIN_TEXTLIKE_WIDTH, startContentSize.width)
         const minHeight =
-          resizingMode === 'horizontal' || scalesContentWithBox || !supportsInlineEdit
-            ? MIN_TEXTLIKE_HEIGHT
+          !changesHeight
+            ? startBoxSize.height
+            : scalesContentWithBox || !supportsInlineEdit
+              ? MIN_TEXTLIKE_HEIGHT
             : Math.max(MIN_TEXTLIKE_HEIGHT, startContentSize.height)
-        const maxCanvasWidth = Math.max(minWidth, maxResizeWidth)
-        const maxCanvasHeight = Math.max(minHeight, maxResizeHeight)
-        const nextWidth = clamp(nextWidthRaw, minWidth, maxCanvasWidth)
-        const nextHeight = clamp(nextHeightRaw, minHeight, maxCanvasHeight)
+        const nextRect = getResizedRect({
+          dx,
+          dy,
+          minWidth,
+          minHeight,
+          containerWidth,
+          containerHeight,
+          resizesFromLeft,
+          resizesFromTop,
+          resizesFromRight,
+          resizesFromBottom,
+        })
 
-        const nextScaleX = startBoxSize.width > 0 ? nextWidth / startBoxSize.width : 1
-        const nextScaleY = startBoxSize.height > 0 ? nextHeight / startBoxSize.height : 1
+        const nextScaleX = startBoxSize.width > 0 ? nextRect.width / startBoxSize.width : 1
+        const nextScaleY = startBoxSize.height > 0 ? nextRect.height / startBoxSize.height : 1
+        setPos({ x: Math.round(nextRect.left), y: Math.round(nextRect.top) })
         setScaleX(Number(nextScaleX.toFixed(3)))
         setScaleY(Number(nextScaleY.toFixed(3)))
         onGridPreviewChange?.({
           blockId: block.id,
-          left: pos.x,
-          top: pos.y,
-          width: Math.round(nextWidth),
-          height: Math.round(nextHeight),
+          left: Math.round(nextRect.left),
+          top: Math.round(nextRect.top),
+          width: Math.round(nextRect.width),
+          height: Math.round(nextRect.height),
         })
         return
       }
 
-      if (resizingMode === 'horizontal') {
-        const nextWidth = clamp(baseWidth * startScale.x + dx, baseWidth * MIN_SCALE, Math.min(baseWidth * MAX_SCALE, maxResizeWidth))
-        const nextScaleX = nextWidth / baseWidth
-        setScaleX(Number(nextScaleX.toFixed(3)))
-        onGridPreviewChange?.({
-          blockId: block.id,
-          left: pos.x,
-          top: pos.y,
-          width: Math.round(nextWidth),
-          height: renderedHeight ?? Math.round(baseHeight * scaleY),
-        })
-        return
-      }
-
-      if (resizingMode === 'vertical') {
-        const nextHeight = clamp(baseHeight * startScale.y + dy, baseHeight * MIN_SCALE, Math.min(baseHeight * MAX_SCALE, maxResizeHeight))
-        const nextScaleY = nextHeight / baseHeight
-        setScaleY(Number(nextScaleY.toFixed(3)))
-        onGridPreviewChange?.({
-          blockId: block.id,
-          left: pos.x,
-          top: pos.y,
-          width: renderedWidth ?? Math.round(baseWidth * scaleX),
-          height: Math.round(nextHeight),
-        })
-        return
-      }
-
-      const nextWidth = clamp(baseWidth * startScale.x + dx, baseWidth * MIN_SCALE, Math.min(baseWidth * MAX_SCALE, maxResizeWidth))
-      const nextHeight = clamp(baseHeight * startScale.y + dy, baseHeight * MIN_SCALE, Math.min(baseHeight * MAX_SCALE, maxResizeHeight))
-      const nextScaleX = nextWidth / baseWidth
-      const nextScaleY = nextHeight / baseHeight
+      const minWidth = changesWidth ? baseWidth * MIN_SCALE : startBoxSize.width
+      const minHeight = changesHeight ? baseHeight * MIN_SCALE : startBoxSize.height
+      const maxWidth = baseWidth * MAX_SCALE
+      const maxHeight = baseHeight * MAX_SCALE
+      const nextRect = getResizedRect({
+        dx,
+        dy,
+        minWidth,
+        minHeight,
+        maxWidth,
+        maxHeight,
+        containerWidth,
+        containerHeight,
+        resizesFromLeft,
+        resizesFromTop,
+        resizesFromRight,
+        resizesFromBottom,
+      })
+      const nextScaleX = nextRect.width / baseWidth
+      const nextScaleY = nextRect.height / baseHeight
+      setPos({ x: Math.round(nextRect.left), y: Math.round(nextRect.top) })
       setScaleX(Number(nextScaleX.toFixed(3)))
       setScaleY(Number(nextScaleY.toFixed(3)))
       onGridPreviewChange?.({
         blockId: block.id,
-        left: pos.x,
-        top: pos.y,
-        width: Math.round(nextWidth),
-        height: Math.round(nextHeight),
+        left: Math.round(nextRect.left),
+        top: Math.round(nextRect.top),
+        width: Math.round(nextRect.width),
+        height: Math.round(nextRect.height),
       })
       return
     }
@@ -496,6 +492,7 @@ export function DraggableBlock({
       onSnapChange?.({ h: false, v: false })
       onGridPreviewChange?.(null)
       if (dropPreviewValid === false) {
+        setPos(startPos)
         setScaleX(startScale.x)
         setScaleY(startScale.y)
         return
@@ -583,6 +580,143 @@ export function DraggableBlock({
       props: { ...(block.props as Record<string, any>), ...normalizedProps },
     })
     setInlineEditing(false)
+  }
+
+  function getResizedRect({
+    dx,
+    dy,
+    minWidth,
+    minHeight,
+    maxWidth,
+    maxHeight,
+    containerWidth,
+    containerHeight,
+    resizesFromLeft,
+    resizesFromTop,
+    resizesFromRight,
+    resizesFromBottom,
+  }: {
+    dx: number
+    dy: number
+    minWidth: number
+    minHeight: number
+    maxWidth?: number
+    maxHeight?: number
+    containerWidth: number
+    containerHeight: number
+    resizesFromLeft: boolean
+    resizesFromTop: boolean
+    resizesFromRight: boolean
+    resizesFromBottom: boolean
+  }) {
+    const startRight = startPos.x + startBoxSize.width
+    const startBottom = startPos.y + startBoxSize.height
+    let left = startPos.x
+    let top = startPos.y
+    let width = startBoxSize.width
+    let height = startBoxSize.height
+
+    if (resizesFromLeft) {
+      const maxAllowedWidth = maxWidth ?? startRight
+      const minLeft = Math.max(0, startRight - maxAllowedWidth)
+      const maxLeft = startRight - minWidth
+      left = clamp(startPos.x + dx, minLeft, maxLeft)
+      width = startRight - left
+    } else if (resizesFromRight) {
+      const maxAllowedWidth = Math.min(maxWidth ?? containerWidth, containerWidth - startPos.x)
+      width = clamp(startBoxSize.width + dx, minWidth, Math.max(minWidth, maxAllowedWidth))
+    }
+
+    if (resizesFromTop) {
+      const maxAllowedHeight = maxHeight ?? startBottom
+      const minTop = Math.max(0, startBottom - maxAllowedHeight)
+      const maxTop = startBottom - minHeight
+      top = clamp(startPos.y + dy, minTop, maxTop)
+      height = startBottom - top
+    } else if (resizesFromBottom) {
+      const maxAllowedHeight = Math.min(maxHeight ?? containerHeight, containerHeight - startPos.y)
+      height = clamp(startBoxSize.height + dy, minHeight, Math.max(minHeight, maxAllowedHeight))
+    }
+
+    return { left, top, width, height }
+  }
+
+  const resizeHandles: Array<{
+    edge: ResizeEdge
+    ariaLabel: string
+    className: string
+    cursor: string
+    glyph: 'horizontal' | 'vertical' | 'diagonalDown' | 'diagonalUp'
+  }> = [
+    {
+      edge: 'n',
+      ariaLabel: 'Resize block from top',
+      className: 'left-1/2 top-[-10px] h-5 w-8 -translate-x-1/2',
+      cursor: 'ns-resize',
+      glyph: 'vertical',
+    },
+    {
+      edge: 's',
+      ariaLabel: 'Resize block from bottom',
+      className: 'bottom-[-10px] left-1/2 h-5 w-8 -translate-x-1/2',
+      cursor: 'ns-resize',
+      glyph: 'vertical',
+    },
+    {
+      edge: 'e',
+      ariaLabel: 'Resize block from right',
+      className: 'right-[-10px] top-1/2 h-8 w-5 -translate-y-1/2',
+      cursor: 'ew-resize',
+      glyph: 'horizontal',
+    },
+    {
+      edge: 'w',
+      ariaLabel: 'Resize block from left',
+      className: 'left-[-10px] top-1/2 h-8 w-5 -translate-y-1/2',
+      cursor: 'ew-resize',
+      glyph: 'horizontal',
+    },
+    {
+      edge: 'nw',
+      ariaLabel: 'Resize block from top left',
+      className: 'left-[-10px] top-[-10px] h-6 w-6',
+      cursor: 'nwse-resize',
+      glyph: 'diagonalDown',
+    },
+    {
+      edge: 'ne',
+      ariaLabel: 'Resize block from top right',
+      className: 'right-[-10px] top-[-10px] h-6 w-6',
+      cursor: 'nesw-resize',
+      glyph: 'diagonalUp',
+    },
+    {
+      edge: 'sw',
+      ariaLabel: 'Resize block from bottom left',
+      className: 'bottom-[-10px] left-[-10px] h-6 w-6',
+      cursor: 'nesw-resize',
+      glyph: 'diagonalUp',
+    },
+    {
+      edge: 'se',
+      ariaLabel: 'Resize block from bottom right',
+      className: 'bottom-[-10px] right-[-10px] h-6 w-6',
+      cursor: 'nwse-resize',
+      glyph: 'diagonalDown',
+    },
+  ]
+
+  function resizeHandleIcon(glyph: 'horizontal' | 'vertical' | 'diagonalDown' | 'diagonalUp') {
+    if (glyph === 'horizontal') {
+      return <path d="M1 5H9M3 2L1 5L3 8M7 2L9 5L7 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    }
+    if (glyph === 'vertical') {
+      return <path d="M5 1V9M2 3L5 1L8 3M2 7L5 9L8 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    }
+    if (glyph === 'diagonalUp') {
+      return <path d="M2 8L8 2M4 2H8V6M2 4V8H6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    }
+    return <path d="M2 2L8 8M6 2H2V6M8 4V8H4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
   }
 
   return (
@@ -680,57 +814,26 @@ export function DraggableBlock({
                 </svg>
               </button>
             ) : null}
-            <button
-              ref={horizontalResizeHandleRef}
-              type="button"
-              aria-label="Resize block width"
-              className={`absolute right-[-10px] top-1/2 flex h-8 w-5 -translate-y-1/2 items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-md transition-opacity hover:bg-blue-50 ${
-                showActiveFrame ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
-              style={{ touchAction: 'none', cursor: 'ew-resize' }}
-              onPointerDown={(event) => beginResize('horizontal', event)}
-              onPointerMove={move}
-              onPointerUp={end}
-              onPointerCancel={end}
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                <path d="M1 5H9M6 2L9 5L6 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button
-              ref={verticalResizeHandleRef}
-              type="button"
-              aria-label="Resize block height"
-              className={`absolute bottom-[-10px] left-1/2 flex h-5 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-md transition-opacity hover:bg-blue-50 ${
-                showActiveFrame ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
-              style={{ touchAction: 'none', cursor: 'ns-resize' }}
-              onPointerDown={(event) => beginResize('vertical', event)}
-              onPointerMove={move}
-              onPointerUp={end}
-              onPointerCancel={end}
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                <path d="M5 1V9M2 4L5 1L8 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button
-              ref={cornerResizeHandleRef}
-              type="button"
-              aria-label="Resize block"
-              className={`absolute bottom-[-10px] right-[-10px] flex h-6 w-6 items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-md transition-opacity hover:bg-blue-50 ${
-                showActiveFrame ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
-              style={{ touchAction: 'none', cursor: 'nwse-resize' }}
-              onPointerDown={(event) => beginResize('uniform', event)}
-              onPointerMove={move}
-              onPointerUp={end}
-              onPointerCancel={end}
-            >
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
-                <path d="M1 9L9 1M4 9H9V4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            {resizeHandles.map((handle) => (
+              <button
+                key={handle.edge}
+                type="button"
+                data-editor-handle="true"
+                aria-label={handle.ariaLabel}
+                className={`absolute flex items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-md transition-opacity hover:bg-blue-50 ${handle.className} ${
+                  showActiveFrame ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}
+                style={{ touchAction: 'none', cursor: handle.cursor }}
+                onPointerDown={(event) => beginResize(handle.edge, event)}
+                onPointerMove={move}
+                onPointerUp={end}
+                onPointerCancel={end}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  {resizeHandleIcon(handle.glyph)}
+                </svg>
+              </button>
+            ))}
           </>
         ) : null}
       </div>

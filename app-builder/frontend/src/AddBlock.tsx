@@ -2,6 +2,8 @@
 import React from 'react'
 import type { Block } from './shared/schema/types'
 import { createBlock } from './shared/schema/registry'
+import type { TemplateDefinition } from './shared/schema/templates'
+import { APP_TEMPLATE_DEFINITIONS, PAGE_TEMPLATE_DEFINITIONS, SECTION_TEMPLATE_DEFINITIONS } from './shared/schema/templates'
 import {
   BLOCK_DRAG_DATA_TYPE,
   BLOCK_DRAG_FALLBACK_TYPE,
@@ -162,9 +164,74 @@ function ShapeEntry({ onAdd }: { onAdd: (b: Block) => void }) {
   )
 }
 
-export function AddBlock({ onAdd }: { onAdd: (b: Block) => void }) {
+function TemplateEntry({
+  template,
+  onAddTemplate,
+}: {
+  template: TemplateDefinition
+  onAddTemplate: (template: TemplateDefinition) => void
+}) {
+  return (
+    <button
+      type="button"
+      className="editor-block-entry group"
+      onClick={() => onAddTemplate(template)}
+    >
+      <span className="editor-block-entry-dot" aria-hidden="true" />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold text-slate-900">{template.name}</span>
+        <span className="mt-0.5 block truncate text-xs font-medium text-slate-500">{template.description}</span>
+      </span>
+      <span className="ml-auto hidden shrink-0 rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-blue-700 sm:inline-flex">
+        {template.preview}
+      </span>
+    </button>
+  )
+}
+
+export function AddBlock({
+  onAdd,
+  onAddTemplate,
+}: {
+  onAdd: (b: Block) => void
+  onAddTemplate?: (template: TemplateDefinition) => void
+}) {
   return (
     <div className="grid gap-3">
+      {onAddTemplate ? (
+        <>
+          {SECTION_TEMPLATE_DEFINITIONS.length ? (
+            <CollapsibleSection title="Section Templates" defaultOpen>
+              <div className="grid gap-2">
+                {SECTION_TEMPLATE_DEFINITIONS.map((template) => (
+                  <TemplateEntry key={template.id} template={template} onAddTemplate={onAddTemplate} />
+                ))}
+              </div>
+            </CollapsibleSection>
+          ) : null}
+
+          {PAGE_TEMPLATE_DEFINITIONS.length ? (
+            <CollapsibleSection title="Page Templates">
+              <div className="grid gap-2">
+                {PAGE_TEMPLATE_DEFINITIONS.map((template) => (
+                  <TemplateEntry key={template.id} template={template} onAddTemplate={onAddTemplate} />
+                ))}
+              </div>
+            </CollapsibleSection>
+          ) : null}
+
+          {APP_TEMPLATE_DEFINITIONS.length ? (
+            <CollapsibleSection title="App Templates">
+              <div className="grid gap-2">
+                {APP_TEMPLATE_DEFINITIONS.map((template) => (
+                  <TemplateEntry key={template.id} template={template} onAddTemplate={onAddTemplate} />
+                ))}
+              </div>
+            </CollapsibleSection>
+          ) : null}
+        </>
+      ) : null}
+
       <CollapsibleSection title="Text & Navigation" defaultOpen>
         <div className="grid gap-2">
           <BlockEntry title="Hero" note="Intro headline" create={() => createBlock('hero', { headline: 'New Hero' })} onAdd={onAdd} />
