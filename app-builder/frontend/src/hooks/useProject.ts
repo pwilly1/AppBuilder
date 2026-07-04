@@ -1,390 +1,59 @@
-﻿import { useEffect, useRef, useState } from 'react'
 // 2025 Preston Willis. All rights reserved.
-import type { Project, Block } from '../shared/schema/types'
-import { getProject, updateProject, createProject, getToken, listProjects } from '../api'
-import { findFirstAvailablePlacement, getBlockGridConstraints } from '../shared/schema/gridLayout'
-import { CURRENT_SCHEMA_VERSION, migrateProjectToGridLayout } from '../shared/schema/gridMigration'
+import { createInitialProject } from './project/projectUtils';
+import { useProjectBlocks } from './project/useProjectBlocks';
+import { useProjectHistory } from './project/useProjectHistory';
+import { useProjectPages } from './project/useProjectPages';
+import { useProjectPersistence } from './project/useProjectPersistence';
 
-const LAST_PROJECT_ID_KEY = 'app_last_project_id'
-
-export default function useProject(setAuthed: (a: boolean) => void) {
-  const initialProject: Project = {
-    schemaVersion: CURRENT_SCHEMA_VERSION,
-    id: 'proj1',
-    name: 'My App',
-    pages: [
-      { id: 'home', title: 'Home', path: '/home', blocks: [] },
-    ],
-  }
-
-  const [project, setProject] = useState<Project>(initialProject)
-  const [history, setHistory] = useState<Project[]>(() => [JSON.parse(JSON.stringify(initialProject))])
-  const [historyIndex, setHistoryIndex] = useState<number>(0)
-  const [selectedPageId, setSelectedPageId] = useState<string>(() => initialProject.pages?.[0]?.id ?? '')
-  const [selectedBlock, setSelectedBlock] = useState<any | null>(null)
-
-  const [isSaving, setIsSaving] = useState<boolean>(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null)
-  const autosaveTimer = useRef<number | null>(null)
-  const isFirstMount = useRef<boolean>(true)
-
-  const page = project.pages.find((p) => p.id === selectedPageId)
-
-  function slugify(input: string): string {
-    return input
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-  }
-
-  function uniquePath(base: string, pages: any[], excludeId?: string): string {
-    const baseSlug = base || 'page'
-    let candidate = `/${baseSlug}`
-    let n = 2
-    const taken = new Set(pages.filter((pg) => pg.id !== excludeId).map((pg) => pg.path))
-    while (taken.has(candidate)) {
-      candidate = `/${baseSlug}-${n++}`
-    }
-    return candidate
-  }
-
-  function rememberProjectId(projectId?: string | null) {
-    try {
-      if (projectId && /^[0-9a-fA-F]{24}$/.test(projectId)) {
-        localStorage.setItem(LAST_PROJECT_ID_KEY, projectId)
-      } else {
-        localStorage.removeItem(LAST_PROJECT_ID_KEY)
-      }
-    } catch {}
-  }
-
-  function normalizeProject(full: any) {
-    const next = { ...full }
-    if (!next.schemaVersion) next.schemaVersion = 1
-    if (!next.pages || next.pages.length === 0) {
-      const id = crypto.randomUUID()
-      next.pages = [{ id, title: 'Home', path: '/home', blocks: [] }]
-    }
-    return migrateProjectToGridLayout(next)
-  }
-
-  function applyLoadedProject(full: any) {
-    const normalized = normalizeProject(full)
-    setProject(normalized)
-    setSelectedPageId(normalized.pages[0].id)
-    const snapshot = JSON.parse(JSON.stringify(normalized))
-    setHistory([snapshot])
-    setHistoryIndex(0)
-    rememberProjectId(normalized.id)
-    return normalized
-  }
-
-  function applyChange(mutator: (p: Project) => Project) {
-    setProject((current) => {
-      const updated = mutator(JSON.parse(JSON.stringify(current)))
-      setHistory((h) => {
-        const base = h.slice(0, historyIndex + 1)
-        const next = base.concat([JSON.parse(JSON.stringify(updated))])
-        const MAX = 100
-        if (next.length > MAX) next.splice(0, next.length - MAX)
-        setHistoryIndex(next.length - 1)
-        return next
-      })
-      return updated
-    })
-  }
-
-  function canUndo() {
-    return historyIndex > 0
-  }
-
-  function canRedo() {
-    return historyIndex < history.length - 1
-  }
-
-  function undo() {
-    setHistoryIndex((i) => {
-      if (i <= 0) return i
-      const ni = i - 1
-      const snap = history[ni]
-      setProject(JSON.parse(JSON.stringify(snap)))
-      return ni
-    })
-  }
-
-  function redo() {
-    setHistoryIndex((i) => {
-      if (i >= history.length - 1) return i
-      const ni = i + 1
-      const snap = history[ni]
-      setProject(JSON.parse(JSON.stringify(snap)))
-      return ni
-    })
-  }
-
-  const addBlock = (b: Block) => {
-    applyChange((p) => ({
-      ...p,
-      pages: p.pages.map((pg) => {
-        if (pg.id !== selectedPageId) return pg
-
-        const nextBlock = { ...b }
-        if (!nextBlock.layout?.grid) {
-          const collisionScope = nextBlock.parentId
-            ? pg.blocks.filter((block) => block.parentId === nextBlock.parentId)
-            : pg.blocks.filter((block) => !block.parentId)
-          nextBlock.layout = {
-            ...(nextBlock.layout || {}),
-            grid: findFirstAvailablePlacement(collisionScope, getBlockGridConstraints(nextBlock)),
-          }
-        }
-
-        return { ...pg, blocks: [...pg.blocks, nextBlock] }
-      }),
-    }))
-  }
-
-  function applyBlockTransaction(
-    mutator: (blocks: Block[]) => Block[],
-    options: { pageId?: string } = {},
-  ) {
-    const targetPageId = options.pageId ?? selectedPageId
-    applyChange((p) => ({
-      ...p,
-      pages: p.pages.map((pg) => (
-        pg.id === targetPageId ? { ...pg, blocks: mutator(pg.blocks) } : pg
-      )),
-    }))
-    setSaveError(null)
-  }
-
-  function applyProjectTransaction(
-    mutator: (project: Project) => Project,
-    options: { selectedPageId?: string } = {},
-  ) {
-    applyChange((p) => mutator(p))
-    if (options.selectedPageId) setSelectedPageId(options.selectedPageId)
-    setSaveError(null)
-  }
-
-  function selectPage(id: string) {
-    setSelectedPageId(id)
-  }
-
-  function addPage(title?: string) {
-    const id = crypto.randomUUID()
-    applyChange((p) => {
-      const nextIndex = p.pages.length + 1
-      const pageTitle = (title && title.trim()) || `Page ${nextIndex}`
-      const path = uniquePath(slugify(pageTitle), p.pages)
-      const newPage = { id, title: pageTitle, path, blocks: [] }
-      return { ...p, pages: [...p.pages, newPage] }
-    })
-    setSelectedPageId(id)
-  }
-
-  function renamePage(id: string, title: string, autoUpdatePath = true) {
-    applyChange((p) => {
-      const newTitle = title?.trim() || 'Untitled'
-      const newPages = p.pages.map((pg) => {
-        if (pg.id !== id) return pg
-        const next: any = { ...pg, title: newTitle }
-        if (autoUpdatePath) {
-          const proposed = slugify(newTitle) || 'page'
-          next.path = uniquePath(proposed, p.pages, id)
-        }
-        return next
-      })
-      return { ...p, pages: newPages }
-    })
-  }
-
-  function deletePage(id: string) {
-    let nextSelected: string | null = null
-    applyChange((p) => {
-      if (p.pages.length <= 1) return p
-      const idx = p.pages.findIndex((pg) => pg.id === id)
-      const remaining = p.pages.filter((pg) => pg.id !== id)
-      const pickIndex = Math.min(idx, Math.max(0, remaining.length - 1))
-      nextSelected = remaining[pickIndex]?.id ?? remaining[0].id
-      return { ...p, pages: remaining }
-    })
-    if (nextSelected) setSelectedPageId(nextSelected)
-  }
-
-  async function openProject(proj: any, navigate?: (path: string) => void) {
-    let full = proj
-    if (!full.pages) {
-      full = await getProject(proj.id)
-    }
-    const normalized = applyLoadedProject(full)
-
-    if (navigate) {
-      const isObjectIdLike = typeof normalized.id === 'string' && /^[0-9a-fA-F]{24}$/.test(normalized.id)
-      navigate(isObjectIdLike ? `/editor/${normalized.id}` : '/editor')
-    }
-  }
-
-  async function loadProjectById(projectId: string) {
-    const full = await getProject(projectId)
-    return applyLoadedProject(full)
-  }
-
-  function editBlock(updated: Block, options: { recordHistory?: boolean } = {}) {
-    if (options.recordHistory === false) {
-      setProject((current) => ({
-        ...current,
-        pages: current.pages.map((pg) =>
-          pg.id === selectedPageId
-            ? { ...pg, blocks: pg.blocks.map((b) => (b.id === updated.id ? updated : b)) }
-            : pg,
-        ),
-      }))
-      setSelectedBlock(updated)
-      setSaveError(null)
-      return
-    }
-
-    applyChange((p) => ({
-      ...p,
-      pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: pg.blocks.map((b) => (b.id === updated.id ? updated : b)) } : pg)),
-    }))
-    setSelectedBlock(updated)
-    setSaveError(null)
-  }
-
-  function deleteBlock(id: string) {
-    applyChange((p) => ({
-      ...p,
-      pages: p.pages.map((pg) => (
-        pg.id === selectedPageId
-          ? { ...pg, blocks: pg.blocks.filter((b) => b.id !== id && b.parentId !== id) }
-          : pg
-      )),
-    }))
-  }
-
-  async function saveProject() {
-    setIsSaving(true)
-    setSaveError(null)
-    try {
-      const isObjectIdLike = typeof project.id === 'string' && /^[0-9a-fA-F]{24}$/.test(project.id)
-      if (!isObjectIdLike) {
-        const created: any = await createProject(project)
-        setProject(created)
-        rememberProjectId(created?.id)
-        setLastSavedAt(Date.now())
-        return
-      }
-      await updateProject(project.id, project)
-      rememberProjectId(project.id)
-      setLastSavedAt(Date.now())
-    } catch (err: any) {
-      if (err?.status === 403) {
-        try { localStorage.removeItem('app_token') } catch {}
-        setAuthed(false)
-        return
-      }
-      setSaveError(err?.message ?? 'Save failed')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function apiSaveProjectSilent(proj: Project) {
-    if (!getToken()) throw new Error('Not authenticated')
-    const isObjectIdLike = typeof proj.id === 'string' && /^[0-9a-fA-F]{24}$/.test(proj.id)
-    if (!isObjectIdLike) {
-      const created: any = await createProject(proj)
-      rememberProjectId(created?.id)
-      return created
-    }
-    await updateProject(proj.id, proj)
-    rememberProjectId(proj.id)
-    return proj
-  }
-
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false
-      return
-    }
-    if (!getToken()) return
-    if (autosaveTimer.current) clearTimeout(autosaveTimer.current)
-    autosaveTimer.current = window.setTimeout(async () => {
-      setIsSaving(true)
-      try {
-        const res = await apiSaveProjectSilent(project)
-        if (res && res.id && res.id !== project.id) setProject(res)
-        setLastSavedAt(Date.now())
-        setSaveError(null)
-      } catch (e: any) {
-        setSaveError(e?.message ?? 'Autosave failed')
-      } finally {
-        setIsSaving(false)
-      }
-    }, 1500)
-
-    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current) }
-  }, [project])
-
-  function onReorder(newBlocks: any[]) {
-    applyChange((p) => ({
-      ...p,
-      pages: p.pages.map((pg) => (pg.id === selectedPageId ? { ...pg, blocks: newBlocks } : pg)),
-    }))
-  }
-
-  useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      if (!getToken()) return
-      try {
-        await listProjects()
-        if (mounted) setAuthed(true)
-      } catch (err: any) {
-        if ((err.message && err.message.toLowerCase().includes('unauthorized')) || err.message === 'Unauthorized') {
-          try { localStorage.removeItem('app_token') } catch {}
-        }
-        if (mounted) setAuthed(false)
-      }
-    })()
-    return () => { mounted = false }
-  }, [setAuthed])
+export default function useProject(setAuthed: (authed: boolean) => void) {
+  const initialProject = createInitialProject();
+  const history = useProjectHistory(initialProject);
+  const pages = useProjectPages({
+    project: history.project,
+    applyChange: history.applyChange,
+  });
+  const persistence = useProjectPersistence({
+    project: history.project,
+    setProject: history.setProject,
+    resetProject: history.resetProject,
+    setSelectedPageId: pages.setSelectedPageId,
+    setAuthed,
+  });
+  const blocks = useProjectBlocks({
+    selectedPageId: pages.selectedPageId,
+    applyChange: history.applyChange,
+    setProject: history.setProject,
+    setSelectedPageId: pages.setSelectedPageId,
+    setSaveError: persistence.setSaveError,
+  });
 
   return {
-    project,
-    setProject,
-    selectedPageId,
-    setSelectedPageId,
-    page,
-    selectedBlock,
-    setSelectedBlock,
-    addBlock,
-    applyBlockTransaction,
-    applyProjectTransaction,
-    addPage,
-    selectPage,
-    renamePage,
-    deletePage,
-    openProject,
-    loadProjectById,
-    editBlock,
-    deleteBlock,
-    saveProject,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    onReorder,
-    isSaving,
-    lastSavedAt,
-    saveError,
-  }
+    project: history.project,
+    setProject: history.setProject,
+    selectedPageId: pages.selectedPageId,
+    setSelectedPageId: pages.setSelectedPageId,
+    page: pages.page,
+    selectedBlock: blocks.selectedBlock,
+    setSelectedBlock: blocks.setSelectedBlock,
+    addBlock: blocks.addBlock,
+    applyBlockTransaction: blocks.applyBlockTransaction,
+    applyProjectTransaction: blocks.applyProjectTransaction,
+    addPage: pages.addPage,
+    selectPage: pages.selectPage,
+    renamePage: pages.renamePage,
+    deletePage: pages.deletePage,
+    openProject: persistence.openProject,
+    loadProjectById: persistence.loadProjectById,
+    editBlock: blocks.editBlock,
+    deleteBlock: blocks.deleteBlock,
+    saveProject: persistence.saveProject,
+    undo: history.undo,
+    redo: history.redo,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+    onReorder: blocks.onReorder,
+    isSaving: persistence.isSaving,
+    lastSavedAt: persistence.lastSavedAt,
+    saveError: persistence.saveError,
+  };
 }
-
-
-
