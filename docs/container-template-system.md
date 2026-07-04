@@ -74,6 +74,7 @@ Containers support only simple atomic blocks in v1:
 - icon
 - input
 - textarea
+- image
 - checkbox
 - toggle
 - progressBar
@@ -573,7 +574,7 @@ Manual checks:
 - Recursive layout trees
 - Automatic row/column flow layout
 - Container padding
-- Image assets
+- Shared asset library management beyond the current per-block image asset upload path
 - Data binding or functional form submission for mockup controls
 - User-created template publishing or marketplace distribution
 - Template updates applied to existing projects

@@ -72,6 +72,7 @@ props.scaleY
 - Do not remove migration/fallback paths until old projects are tested.
 - Do not claim planned strategic features are implemented unless the code supports them.
 - Update docs when architecture, deployment, schema, or roadmap changes.
+- Image file uploads should use the backend asset upload path when storage is configured; saved blocks store the returned URL in `props.src`. Data URLs are only a local/unsaved fallback.
 
 ## Current Block Inventory
 
@@ -83,6 +84,7 @@ Visible editor palette today:
 - Badge
 - Icon
 - Shape
+- Image
 - Progress Bar
 - Input
 - Textarea
@@ -130,7 +132,8 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/backend/src/index.ts` | Express app setup, CORS, routes, Mongo connection |
 | `app-builder/backend/src/config/index.ts` | Env variable loading |
 | `app-builder/backend/src/routes/AuthRoutes.ts` | Auth endpoints |
-| `app-builder/backend/src/routes/ProjectRoutes.ts` | Project endpoints |
+| `app-builder/backend/src/routes/ProjectRoutes.ts` | Project CRUD, form, and image-upload endpoints |
+| `app-builder/backend/src/services/AssetStorageService.ts` | Azure Blob Storage upload helper for project images |
 | `app-builder/backend/src/services/AuthService.ts` | Auth behavior |
 | `app-builder/backend/src/services/ProjectManager.ts` | Project behavior |
 | `app-builder/backend/src/services/SessionManager.ts` | Session/JWT helper |

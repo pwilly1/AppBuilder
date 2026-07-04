@@ -117,6 +117,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 | `progressBar` | `label`, `value`, visibility and colors | 8 x 2 | Visual status primitive |
 | `input` | label/value/placeholder/type/font/colors/radius | 8 x 3 | Visual mockup control only |
 | `textarea` | label/value/placeholder/rows/font/colors/radius | 8 x 4 | Visual mockup control only |
+| `image` | `src`, `alt`, `fit`, focus, background/border/radius/opacity | 8 x 6 | Atomic image block; supports pasted URLs and backend-uploaded asset URLs |
 | `servicesList` | `title`, `items` | 16 x 6 | Existing business block; hidden from the preferred palette |
 | `contactForm` | labels, field visibility, destination email | 16 x 8 | Functional submission block |
 | `imageGallery` | `title`, `columns`, `images` | 16 x 6 | Existing business block; hidden from the preferred palette |
@@ -152,6 +153,18 @@ Block JSON
 ```
 
 Unknown web types return no component. Unknown Android types currently render no content. The frontend migration removes unsupported types when older projects load.
+
+## Image Asset Storage
+
+Image blocks store their render source in `props.src`.
+
+Current source types:
+
+- pasted remote URL
+- backend-uploaded asset URL returned from `POST /projects/:id/assets/images`
+- local data URL fallback when a real backend project ID is not available
+
+The preferred production path is backend upload. The backend validates the file, writes the image bytes to Azure Blob Storage, and returns a URL. The project schema then stores that URL, not the raw image bytes.
 
 ## Schema Version And Migration
 

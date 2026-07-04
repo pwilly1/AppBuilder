@@ -14,6 +14,7 @@ import { ToggleBlock } from './blocks/ToggleBlock';
 import { ProgressBarBlock } from './blocks/ProgressBarBlock';
 import { InputBlock } from './blocks/InputBlock';
 import { TextareaBlock } from './blocks/TextareaBlock';
+import { ImageBlock } from './blocks/ImageBlock';
 import { ServicesList } from './blocks/ServicesList';
 import { ContactForm } from './blocks/ContactForm';
 import { ImageGallery } from './blocks/ImageGallery';
@@ -33,6 +34,7 @@ const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   progressBar: ProgressBarBlock,
   input: InputBlock,
   textarea: TextareaBlock,
+  image: ImageBlock,
   servicesList: ServicesList,
   contactForm: ContactForm,
   imageGallery: ImageGallery,

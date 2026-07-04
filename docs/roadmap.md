@@ -18,6 +18,7 @@ This roadmap tracks completed foundations, current priorities, and future work.
 | Completed | Repository foundation | Frontend, backend, native-preview folders, license, and documentation structure exist. |
 | Completed | Authentication | Signup, login, JWT sessions, guest/session support, protected routes. |
 | Completed | Project persistence | MongoDB-backed project create, list, open, update, delete. |
+| Completed | Image asset upload path | Saved projects can upload image files through the backend and store returned asset URLs in schema. |
 | Completed | Dashboard | Users can manage projects from the dashboard. |
 | Completed | Multi-page projects | Pages can be created, selected, renamed, deleted, and navigated. |
 | Completed | Basic editor shell | Three-column editor with left panel, canvas, inspector, and toolbar. |
@@ -96,8 +97,8 @@ Recommended order:
 | Completed | Textarea |
 | Completed | Checkbox |
 | Completed | Toggle |
+| Completed | Image |
 | In Progress | Container |
-| Planned | Image |
 
 ### 6. Section / Container System
 

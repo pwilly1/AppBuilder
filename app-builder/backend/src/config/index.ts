@@ -21,5 +21,8 @@ export const JWT_SECRET = jwtSecret;
 export const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() || '';
 export const EMAIL_FROM = process.env.EMAIL_FROM?.trim() || '';
 export const CORS_ORIGIN = process.env.CORS_ORIGIN?.trim() || '';
+export const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING?.trim() || '';
+export const AZURE_STORAGE_CONTAINER_NAME = process.env.AZURE_STORAGE_CONTAINER_NAME?.trim() || 'apptura-assets';
+export const AZURE_STORAGE_PUBLIC_BASE_URL = (process.env.AZURE_STORAGE_PUBLIC_BASE_URL?.trim() || '').replace(/\/+$/, '');
 
 

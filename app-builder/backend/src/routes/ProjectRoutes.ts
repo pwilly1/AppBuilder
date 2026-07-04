@@ -1,13 +1,24 @@
 // routes/ProjectRoutes.ts
 import { randomUUID } from 'node:crypto';
-import { Router } from 'express';
+import { Router, type NextFunction, type Request, type Response } from 'express';
+import multer from 'multer';
 import { ProjectManager } from '../services/ProjectManager.js';
 import { MongoProjectRepository } from '../repositories/MongoProjectRepository.js';
 import { requireAuth } from '../middleware/auth.js';
 import { EmailNotificationService } from '../services/EmailNotificationService.js';
+import {
+  AssetStorageNotConfiguredError,
+  AssetStorageService,
+  isSupportedImageContentType,
+} from '../services/AssetStorageService.js';
 
 const svc = new ProjectManager(new MongoProjectRepository());
 const emailNotifications = new EmailNotificationService();
+const assetStorage = new AssetStorageService();
+const uploadImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+});
 
 function buildSubmission(body: any, blockId: string) {
   return {
@@ -49,6 +60,17 @@ async function notifySubmission(project: any, block: any, submission: any) {
   }
 }
 
+function handleMulterError(error: any, _req: Request, res: Response, next: NextFunction) {
+  if (!error) return next();
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'Image must be 5 MB or smaller.' });
+    }
+    return res.status(400).json({ error: error.message });
+  }
+  return next(error);
+}
+
 export function makeProjectRoutes() {
   const router = Router();
 
@@ -78,6 +100,47 @@ export function makeProjectRoutes() {
       res.status(201).json(created);
     } catch (e) { next(e); }
   });
+
+  router.post(
+    '/:id/assets/images',
+    requireAuth,
+    (req, res, next) => uploadImage.single('file')(req, res, (error) => handleMulterError(error, req, res, next)),
+    async (req, res, next) => {
+      try {
+        const userId = (req as any).userId as string;
+        const user = (req as any).user as any;
+        if (user && user.isGuest) return res.status(403).json({ error: 'Guests cannot upload images. Please create an account.' });
+
+        const id = req.params.id as string | undefined;
+        if (!id) return res.status(400).json({ error: 'Missing id' });
+
+        const project = await loadOwnedProject(id, userId);
+        if (!project) return res.status(404).json({ error: 'Not found' });
+
+        const file = (req as any).file as Express.Multer.File | undefined;
+        if (!file) return res.status(400).json({ error: 'Missing image file.' });
+        if (!isSupportedImageContentType(file.mimetype)) {
+          return res.status(400).json({ error: 'Unsupported image file type.' });
+        }
+
+        const uploaded = await assetStorage.uploadProjectImage({
+          projectId: id,
+          buffer: file.buffer,
+          contentType: file.mimetype,
+        });
+
+        res.status(201).json({
+          ...uploaded,
+          fileName: file.originalname,
+        });
+      } catch (e) {
+        if (e instanceof AssetStorageNotConfiguredError) {
+          return res.status(503).json({ error: 'Image uploads are not configured for this environment.' });
+        }
+        next(e);
+      }
+    },
+  );
 
   router.get('/:id/forms/:blockId/submissions', requireAuth, async (req, res, next) => {
     try {

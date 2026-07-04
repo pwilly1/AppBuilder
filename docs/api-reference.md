@@ -28,7 +28,7 @@ Authorization: Bearer <token>
 
 Missing, invalid, and expired tokens return `401`. Tokens expire according to `JWT_EXPIRES_IN`, which defaults to `1h`.
 
-Guest tokens are valid authentication tokens, but guest users cannot create projects, save projects, or submit authenticated forms.
+Guest tokens are valid authentication tokens, but guest users cannot create projects, save projects, upload project images, or submit authenticated forms.
 
 ## Health Endpoints
 
@@ -138,7 +138,7 @@ Typical editor request:
 ```json
 {
   "name": "Updated App",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "pages": []
 }
 ```
@@ -146,6 +146,36 @@ Typical editor request:
 Guest users receive `403`.
 
 Current limitation: this route does not yet enforce a strict request schema or field allowlist. Clients should send only project fields they intend to update.
+
+### `POST /projects/:id/assets/images`
+
+Uploads one image asset for a saved project. This endpoint requires authentication and project ownership.
+
+Request:
+
+- `multipart/form-data`
+- file field name: `file`
+
+Success: `201`
+
+```json
+{
+  "url": "https://cdn.example.com/projects/<projectId>/images/<uuid>.png",
+  "blobName": "projects/<projectId>/images/<uuid>.png",
+  "contentType": "image/png",
+  "size": 12345,
+  "fileName": "example.png"
+}
+```
+
+Behavior notes:
+
+- Guest users receive `403`.
+- Missing files return `400`.
+- Files larger than 5 MB return `400`.
+- Supported content types are `image/jpeg`, `image/png`, `image/webp`, `image/gif`, and `image/svg+xml`.
+- If Azure asset storage is not configured, the backend returns `503` with `{ "error": "Image uploads are not configured for this environment." }`.
+- The returned `url` is what the editor stores in the Image block `props.src` field.
 
 ### `DELETE /projects/:id`
 

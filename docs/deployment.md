@@ -99,6 +99,9 @@ MONGO_URI=mongodb+srv://...
 JWT_SECRET=...
 CORS_ORIGIN=https://delightful-desert-04350a50f.7.azurestaticapps.net
 PORT=8080 or Azure-provided port behavior
+AZURE_STORAGE_CONNECTION_STRING=...
+AZURE_STORAGE_CONTAINER_NAME=apptura-assets
+AZURE_STORAGE_PUBLIC_BASE_URL=https://...
 ```
 
 Optional:
@@ -109,6 +112,8 @@ EMAIL_FROM=...
 ```
 
 `CORS_ORIGIN` can contain comma-separated origins if more than one frontend URL needs access.
+
+Image uploads require Azure Blob Storage configuration. The backend stores image bytes in the configured container and returns a URL for the Image block schema. The returned URL must be readable by web preview and Android preview. Use a public-read container, CDN/static website base URL, or another public asset base URL through `AZURE_STORAGE_PUBLIC_BASE_URL`.
 
 ## CORS Relationship
 

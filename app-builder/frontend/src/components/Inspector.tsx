@@ -3,11 +3,13 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import type { Block } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
+import { uploadProjectImage } from '../api';
 
 type PageLite = { id: string; title?: string; path?: string };
 
 type InspectorProps = {
   block?: Block | null;
+  projectId?: string;
   pages?: PageLite[];
   activeContainerId?: string | null;
   onSave?: (b: Block) => void;
@@ -65,6 +67,7 @@ function ArrayCard({ title, children, onRemove }: { title: string; children: Rea
 
 export default function Inspector({
   block,
+  projectId,
   pages,
   activeContainerId,
   onSave,
@@ -75,10 +78,12 @@ export default function Inspector({
   onExitContainer,
   onDetachBlock,
 }: InspectorProps) {
-  const { register, control, handleSubmit, reset, getValues } = useForm<Record<string, any>>({ defaultValues: block?.props || {} });
+  const { register, control, handleSubmit, reset, getValues, setValue } = useForm<Record<string, any>>({ defaultValues: block?.props || {} });
   const servicesArray = useFieldArray({ control, name: 'items' });
   const galleryArray = useFieldArray({ control, name: 'images' });
   const previewedPropsRef = React.useRef<Record<string, any> | null>(null);
+  const [imageUploadError, setImageUploadError] = React.useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = React.useState(false);
 
   React.useEffect(() => {
     if (previewedPropsRef.current === block?.props) {
@@ -86,6 +91,7 @@ export default function Inspector({
       return;
     }
     reset(block?.props || {});
+    setImageUploadError(null);
   }, [block, reset]);
 
   if (!block) {
@@ -113,6 +119,8 @@ export default function Inspector({
     if (props.borderWidth !== undefined) props.borderWidth = Number(props.borderWidth);
     if (props.borderRadius !== undefined) props.borderRadius = Number(props.borderRadius);
     if (props.opacity !== undefined) props.opacity = Number(props.opacity);
+    if (props.positionX !== undefined) props.positionX = Number(props.positionX);
+    if (props.positionY !== undefined) props.positionY = Number(props.positionY);
     if (props.value !== undefined && block.type === 'progressBar') props.value = Number(props.value);
     onSave?.({ ...block, props });
   };
@@ -201,6 +209,56 @@ export default function Inspector({
         onPreview?.({ ...block!, props: nextProps });
       },
     };
+  }
+
+  function setImageSource(src: string) {
+    setValue('src', src, { shouldDirty: true, shouldTouch: true });
+    const nextProps = { ...(block!.props as Record<string, any>), ...getValues(), src };
+    previewedPropsRef.current = nextProps;
+    onPreview?.({ ...block!, props: nextProps });
+  }
+
+  function readImageAsDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result !== 'string') {
+          reject(new Error('Could not read image file.'));
+          return;
+        }
+        resolve(reader.result);
+      };
+      reader.onerror = () => reject(new Error('Could not read image file.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please choose an image file.');
+      return;
+    }
+
+    setImageUploadError(null);
+    setIsUploadingImage(true);
+    try {
+      if (projectId && /^[0-9a-f]{24}$/i.test(projectId)) {
+        const uploaded = await uploadProjectImage(projectId, file);
+        setImageSource(uploaded.url);
+        return;
+      }
+
+      const dataUrl = await readImageAsDataUrl(file);
+      setImageSource(dataUrl);
+    } catch (error: any) {
+      setImageUploadError(error?.message || 'Image upload failed.');
+    } finally {
+      setIsUploadingImage(false);
+    }
   }
 
   const placement = getBlockEditorPlacement(block);
@@ -747,6 +805,79 @@ export default function Inspector({
               <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
             </div>
           </FormSection>
+        )}
+
+        {block.type === 'image' && (
+          <>
+            <FormSection title="Image source" description="Upload an image from your device or paste an image URL. Saved projects upload files to asset storage and keep the returned URL in the block schema.">
+              <div className="grid gap-2">
+                <FieldLabel>Upload image</FieldLabel>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="inspector-input file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+                  onChange={handleImageUpload}
+                  disabled={isUploadingImage}
+                />
+                {isUploadingImage ? <p className="text-xs text-slate-500">Uploading image...</p> : null}
+                {imageUploadError ? <p className="text-xs font-semibold text-red-600">{imageUploadError}</p> : null}
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Image URL or data URL</FieldLabel>
+                <TextArea rows={4} placeholder="https://example.com/image.jpg" {...register('src')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Alt text</FieldLabel>
+                <TextInput placeholder="Describe this image" {...register('alt')} />
+              </div>
+              <button
+                type="button"
+                className="ghost-btn !justify-start !px-4 !py-3 text-left text-sm"
+                onClick={() => setImageSource('')}
+              >
+                Clear image
+              </button>
+            </FormSection>
+
+            <FormSection title="Image display" description="Control how the image fills its block. Cover crops, contain preserves the full image, and fill stretches.">
+              <div className="grid gap-2">
+                <FieldLabel>Fit mode</FieldLabel>
+                <select className="inspector-input" {...register('fit')}>
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="fill">Fill</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Horizontal focus (%)</FieldLabel>
+                <TextInput type="number" min={0} max={100} className="max-w-[120px]" {...register('positionX')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Vertical focus (%)</FieldLabel>
+                <TextInput type="number" min={0} max={100} className="max-w-[120px]" {...register('positionY')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Background color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Border color</FieldLabel>
+                <TextInput placeholder="transparent or #2563eb" {...register('borderColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Border width (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderWidth')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Corner radius (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Opacity</FieldLabel>
+                <TextInput type="number" min={0} max={1} step={0.05} className="max-w-[120px]" {...register('opacity')} />
+              </div>
+            </FormSection>
+          </>
         )}
 
         {block.type === 'servicesList' && (

@@ -18,10 +18,11 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Visual editor with pages, drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
-- Lightweight primitive blocks: Shape, Badge, Icon, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container
+- Lightweight primitive blocks: Shape, Badge, Icon, Image, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container
 - Nav Button supports page navigation plus inspector-based visual styling
+- Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
 - Input, Textarea, Checkbox, and Toggle are currently visual mockup blocks, not live form-submission fields
-- Container blocks can group supported atomic child blocks, expose container styling in the inspector, and render in both web and Android preview
+- Container blocks can group supported atomic child blocks including Image, expose container styling in the inspector, and render in both web and Android preview
 - Web preview mode with page navigation
 - Android native preview runtime connected to backend project data
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending

@@ -55,14 +55,16 @@ The current visible block palette is:
 - Progress Bar
 - Input
 - Textarea
+- Image
 - Checkbox
 - Toggle
 - Container
 
-Hero, Text, Nav Button, and Shape remain the main public-demo blocks. Badge, Icon, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
+Hero, Text, Nav Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
 Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling. Nav Button supports page navigation plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
+Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
 Input, Textarea, Checkbox, and Toggle are visual mockup controls for app-design flows. They render in web and Android preview, but they are not wired into submission handling or generated app data yet.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
 
@@ -116,6 +118,7 @@ Implemented primitives:
 - Progress Bar
 - Input
 - Textarea
+- Image
 - Checkbox
 - Toggle
 - Shape
@@ -123,7 +126,6 @@ Implemented primitives:
 Still planned:
 
 - Card/container
-- Image
 
 ### Sections And Containers
 
@@ -156,7 +158,7 @@ Planned runtime work:
 
 - tighter block-by-block parity with web preview
 - better unsupported-block fallback UI
-- image block support after web image support exists
+- continued testing of URL/uploaded image rendering across device sizes
 - section/container rendering after the section model is stable
 
 ### Demo And Portfolio Polish

@@ -14,6 +14,7 @@ export type BlockType =
   | 'progressBar'
   | 'input'
   | 'textarea'
+  | 'image'
   | 'servicesList'
   | 'contactForm'
   | 'imageGallery';

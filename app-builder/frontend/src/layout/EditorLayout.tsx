@@ -660,6 +660,7 @@ export default function EditorLayout(props: Props) {
           <div className="editor-side-panel-body mt-4">
             <Inspector
               block={selectedBlock}
+              projectId={projectId}
               pages={pages}
               activeContainerId={activeContainerId}
               onEditContainer={(block: any) => enterContainer(block)}

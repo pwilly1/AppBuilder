@@ -35,6 +35,29 @@ async function request(path: string, options: RequestInit = {}) {
   return res.json().catch(() => null);
 }
 
+async function multipartRequest(path: string, formData: FormData) {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(apiUrl(path), {
+    method: 'POST',
+    headers,
+    body: formData,
+    credentials: 'same-origin',
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      try { localStorage.removeItem('app_token'); } catch {}
+    }
+    const body = await res.json().catch(() => ({}));
+    const err: any = new Error(body.error || res.statusText);
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
+  return res.json().catch(() => null);
+}
+
 export function signup(username: string, email: string, password: string) {
   return request('/auth/signup', { method: 'POST', body: JSON.stringify({ username, email, password }) });
 }
@@ -70,6 +93,20 @@ export function deleteProject(id: string) {
 
 export function getProject(id: string) {
   return request(`/projects/${id}`);
+}
+
+export type UploadedImageAsset = {
+  url: string;
+  blobName: string;
+  contentType: string;
+  size: number;
+  fileName?: string;
+};
+
+export function uploadProjectImage(projectId: string, file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return multipartRequest(`/projects/${projectId}/assets/images`, formData) as Promise<UploadedImageAsset>;
 }
 
 export type ProjectFormSubmission = {

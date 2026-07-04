@@ -248,3 +248,24 @@ Representative areas:
 - `frontend/src/AddBlock.tsx`
 - `frontend/src/layout/EditorLayout.tsx`
 - `frontend/src/hooks/useProject.ts`
+
+## Phase 12: Atomic Media Block
+
+Date range: June 2026
+
+The editor gained a schema-backed atomic Image block. It supports pasted image URLs, local image uploads, fit modes, focal-position controls, borders, corner radius, opacity, and matching web/Android preview rendering. The upload path now supports backend asset storage so saved projects can keep asset URLs in the block schema instead of embedding raw image data in MongoDB project documents.
+
+Important outcome:
+
+```text
+The base block library now supports normal image placement without relying on the older Image Gallery business block.
+```
+
+Representative areas:
+
+- `frontend/src/shared/schema/registry.ts`
+- `frontend/src/shared/blocks/ImageBlock.tsx`
+- `frontend/src/components/Inspector.tsx`
+- `backend/src/services/AssetStorageService.ts`
+- `backend/src/routes/ProjectRoutes.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ImageBlockView.kt`

@@ -25,6 +25,7 @@ fun BlockRenderer(
         "progressBar" -> ProgressBarView(block)
         "input" -> InputView(block)
         "textarea" -> TextareaView(block)
+        "image" -> ImageBlockView(block)
         "servicesList" -> ServicesListView(block)
         "contactForm" -> ContactFormView(block, projectId = projectId, baseUrl = baseUrl)
         "imageGallery" -> ImageGalleryView(block)

@@ -10,10 +10,12 @@ Apptura has three main runtime surfaces:
 React web editor
   -> Express API
   -> MongoDB Atlas
+  -> Azure Blob Storage for uploaded image assets
 
 Android native preview
   -> Express API
   -> MongoDB Atlas
+  -> remote image URLs from saved block schema
 ```
 
 The central product idea is schema-driven app creation. The web editor saves a project schema, and preview/runtime clients render that schema.
@@ -55,6 +57,17 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 4. The editor renders the active page through `EditorLayout` and `PageRenderer`.
 5. Block changes update frontend state and are saved back through `PATCH /projects/:id`.
 6. MongoDB stores the project schema.
+
+### Uploading image assets
+
+1. The image inspector sends a selected file to `POST /projects/:id/assets/images`.
+2. The backend verifies the user owns the project and rejects guests.
+3. The backend validates the MIME type and size.
+4. Azure Blob Storage stores the image bytes under a project-scoped blob path.
+5. The backend returns an asset URL.
+6. The Image block stores that URL in `props.src`.
+
+This keeps large image bytes out of the MongoDB project document. Pasted remote image URLs are still stored directly in `props.src`. Local data URLs remain only as a development/unsaved-project fallback.
 
 ### Rendering a project
 
@@ -209,16 +222,18 @@ The visible add-block panel currently exposes:
 - Progress Bar
 - Input
 - Textarea
+- Image
 - Checkbox
 - Toggle
 - Container
 
-Hero, Text, Nav Button, and Shape are still the main public-demo blocks. The lighter primitives above are also available now, while the older business blocks remain in the codebase but are not the preferred public-demo direction.
+Hero, Text, Nav Button, Shape, and Image are still the main public-demo blocks. The lighter primitives above are also available now, while the older business blocks remain in the codebase but are not the preferred public-demo direction.
 
 Behavior notes:
 
 - Nav Button now stores both navigation props and simple visual style props in the shared schema so web and Android previews stay aligned.
 - Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
+- Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, and opacity controls across web and Android preview.
 - Input, Textarea, Checkbox, and Toggle are currently schema-backed visual primitives for mockup/design use, not connected form-processing blocks.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
@@ -246,10 +261,12 @@ The backend provides:
 
 - auth routes under `/auth`
 - project routes under `/projects`
+- project image upload under `/projects/:id/assets/images`
 - public project routes under `/public`
 - MongoDB persistence through Mongoose
 - JWT session validation
 - optional email notification support for contact submissions
+- Azure-backed image asset storage for saved-project uploads
 
 Important files:
 
@@ -259,6 +276,7 @@ Important files:
 | `src/config/index.ts` | Environment variables |
 | `src/routes/AuthRoutes.ts` | Signup/login/session endpoints |
 | `src/routes/ProjectRoutes.ts` | Project CRUD and public project routes |
+| `src/services/AssetStorageService.ts` | Azure Blob Storage upload logic for project image assets |
 | `src/services/ProjectManager.ts` | Project business logic |
 | `src/services/AuthService.ts` | Authentication logic |
 | `src/services/SessionManager.ts` | JWT/session behavior |

@@ -19,6 +19,7 @@ export const CONTAINER_CHILD_BLOCK_TYPES = [
   'icon',
   'input',
   'textarea',
+  'image',
   'checkbox',
   'toggle',
   'progressBar',

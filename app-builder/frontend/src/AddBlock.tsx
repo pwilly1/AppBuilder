@@ -244,6 +244,7 @@ export function AddBlock({
         <div className="grid gap-2">
           <BlockEntry title="Badge" note="Pill status or tag" create={() => createBlock('badge')} onAdd={onAdd} />
           <BlockEntry title="Icon" note="Simple symbol from a safe set" create={() => createBlock('icon')} onAdd={onAdd} />
+          <BlockEntry title="Image" note="Upload or link a photo" create={() => createBlock('image')} onAdd={onAdd} />
           <ShapeEntry onAdd={onAdd} />
           <BlockEntry title="Progress Bar" note="Visual completion/status bar" create={() => createBlock('progressBar')} onAdd={onAdd} />
         </div>

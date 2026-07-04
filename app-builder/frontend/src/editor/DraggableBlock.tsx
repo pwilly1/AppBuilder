@@ -80,6 +80,7 @@ export function DraggableBlock({
     block.type === 'progressBar' ||
     block.type === 'input' ||
     block.type === 'textarea' ||
+    block.type === 'image' ||
     block.type === 'container'
   const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
   const placement = getBlockEditorPlacement(block, index)
