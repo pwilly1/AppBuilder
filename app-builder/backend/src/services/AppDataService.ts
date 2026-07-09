@@ -5,7 +5,6 @@ type ProjectLike = {
   _id?: unknown;
   ownerId?: string;
   name?: string;
-  formSubmissions?: unknown[];
   pages?: Array<{
     id: string;
     title?: string;
@@ -147,10 +146,7 @@ export async function listAppDataSources(project: ProjectLike, ownerId: string, 
       pageId: source.pageId,
       pageTitle: source.pageTitle,
       fields: source.fields,
-      recordCount:
-        source.type === 'contactForm'
-          ? getContactFormSubmissions(project, source.sourceId).length
-          : await AppSubmissionModel.countDocuments({ ownerId, projectId, formBlockId: source.sourceId }),
+      recordCount: await AppSubmissionModel.countDocuments({ ownerId, projectId, formBlockId: source.sourceId }),
     })),
   );
 }
@@ -160,12 +156,6 @@ export async function createAppDataRecord(project: ProjectLike, sourceId: string
   if (!source) {
     const error: any = new Error('App data source not found');
     error.status = 404;
-    throw error;
-  }
-
-  if (source.type === 'contactForm') {
-    const error: any = new Error('Legacy contact forms must be saved through the project form-submission route');
-    error.status = 400;
     throw error;
   }
 
@@ -202,10 +192,6 @@ export async function listAppDataRecords(project: ProjectLike, ownerId: string, 
     const error: any = new Error('App data source not found');
     error.status = 404;
     throw error;
-  }
-
-  if (source.type === 'contactForm') {
-    return getContactFormSubmissions(project, sourceId).map((submission) => serializeContactFormRecord(source, submission));
   }
 
   const submissions = await AppSubmissionModel.find({ ownerId, projectId, formBlockId: sourceId })
@@ -338,22 +324,6 @@ function assertHasValue(data: Record<string, AppSubmissionValue | undefined>) {
     error.status = 400;
     throw error;
   }
-}
-
-function getContactFormSubmissions(project: ProjectLike, sourceId: string) {
-  return ((project.formSubmissions as any[]) || []).filter((entry) => entry.blockId === sourceId || entry.formBlockId === sourceId);
-}
-
-function serializeContactFormRecord(source: AppDataSourceMatch, submission: any): SerializedAppDataRecord {
-  return {
-    id: String(submission.id || submission._id),
-    sourceId: source.sourceId,
-    blockId: submission.blockId || source.sourceId,
-    formBlockId: submission.formBlockId || submission.blockId || source.sourceId,
-    pageId: submission.pageId || source.pageId,
-    data: submission.data || {},
-    submittedAt: submission.submittedAt,
-  };
 }
 
 function serializeAppDataRecord(submission: any): SerializedAppDataRecord {

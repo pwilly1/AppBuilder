@@ -1,5 +1,4 @@
 // routes/ProjectRoutes.ts
-import { randomUUID } from 'node:crypto';
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import multer from 'multer';
 import { ProjectManager } from '../services/ProjectManager.js';
@@ -27,20 +26,6 @@ const uploadImage = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024, files: 1 },
 });
-
-function buildSubmission(body: any, blockId: string) {
-  return {
-    id: randomUUID(),
-    blockId,
-    data: {
-      name: typeof body?.name === 'string' ? body.name.trim() : undefined,
-      email: typeof body?.email === 'string' ? body.email.trim() : undefined,
-      phone: typeof body?.phone === 'string' ? body.phone.trim() : undefined,
-      message: typeof body?.message === 'string' ? body.message.trim() : undefined,
-    },
-    submittedAt: new Date(),
-  };
-}
 
 function getDestinationEmail(block: any) {
   const raw = typeof block?.props?.destinationEmail === 'string' ? block.props.destinationEmail.trim() : '';
@@ -230,23 +215,9 @@ export function makeProjectRoutes() {
       const source = findAppDataSource(project, blockId);
       if (!source) return res.status(404).json({ error: 'App data source not found' });
 
-      if (source.type !== 'contactForm') {
-        const submission = await createAppDataRecord(project, blockId, req.body || {});
-        return res.status(201).json(submission);
-      }
-
-      const submission = buildSubmission(req.body || {}, blockId);
-
-      const hasValue = Object.values(submission.data).some((value) => typeof value === 'string' && value.length > 0);
-      if (!hasValue) {
-        return res.status(400).json({ error: 'At least one field is required' });
-      }
-
-      const nextSubmissions = [ ...((project.formSubmissions as any[]) || []), submission ];
-      const updated = await svc.update(userId, id, { formSubmissions: nextSubmissions });
-      const savedSubmission = ((updated.formSubmissions as any[]) || []).find((entry) => entry.id === submission.id) || submission;
-      await notifySubmission(updated, source.block, savedSubmission);
-      res.status(201).json(savedSubmission);
+      const submission = await createAppDataRecord(project, blockId, req.body || {});
+      if (source.type === 'contactForm') await notifySubmission(project, source.block, submission);
+      return res.status(201).json(submission);
     } catch (e) { handleSubmissionError(e, res, next); }
   });
 
@@ -304,24 +275,9 @@ export function makePublicProjectRoutes() {
       const source = findAppDataSource(project, blockId);
       if (!source) return res.status(404).json({ error: 'App data source not found' });
 
-      if (source.type !== 'contactForm') {
-        const submission = await createAppDataRecord(project, blockId, req.body || {});
-        return res.status(201).json(submission);
-      }
-
-      const submission = buildSubmission(req.body || {}, blockId);
-      const hasValue = Object.values(submission.data).some((value) => typeof value === 'string' && value.length > 0);
-      if (!hasValue) {
-        return res.status(400).json({ error: 'At least one field is required' });
-      }
-
-      const updated = await svc.repo.update({
-        ...(project as any),
-        formSubmissions: [ ...((project.formSubmissions as any[]) || []), submission ],
-      });
-      const savedSubmission = ((updated.formSubmissions as any[]) || []).find((entry) => entry.id === submission.id) || submission;
-      await notifySubmission(updated, source.block, savedSubmission);
-      res.status(201).json(savedSubmission);
+      const submission = await createAppDataRecord(project, blockId, req.body || {});
+      if (source.type === 'contactForm') await notifySubmission(project, source.block, submission);
+      return res.status(201).json(submission);
     } catch (e) { handleSubmissionError(e, res, next); }
   });
 
@@ -337,24 +293,9 @@ export function makePublicProjectRoutes() {
       const source = findAppDataSource(project, sourceId);
       if (!source) return res.status(404).json({ error: 'App data source not found' });
 
-      if (source.type !== 'contactForm') {
-        const record = await createAppDataRecord(project, sourceId, req.body || {});
-        return res.status(201).json(record);
-      }
-
-      const submission = buildSubmission(req.body || {}, sourceId);
-      const hasValue = Object.values(submission.data).some((value) => typeof value === 'string' && value.length > 0);
-      if (!hasValue) {
-        return res.status(400).json({ error: 'At least one field is required' });
-      }
-
-      const updated = await svc.repo.update({
-        ...(project as any),
-        formSubmissions: [ ...((project.formSubmissions as any[]) || []), submission ],
-      });
-      const savedSubmission = ((updated.formSubmissions as any[]) || []).find((entry) => entry.id === submission.id) || submission;
-      await notifySubmission(updated, source.block, savedSubmission);
-      res.status(201).json(savedSubmission);
+      const record = await createAppDataRecord(project, sourceId, req.body || {});
+      if (source.type === 'contactForm') await notifySubmission(project, source.block, record);
+      return res.status(201).json(record);
     } catch (e) {
       handleSubmissionError(e, res, next);
     }

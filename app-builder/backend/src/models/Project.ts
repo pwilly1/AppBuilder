@@ -1,5 +1,5 @@
 // © 2025 Preston Willis. All rights reserved.
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Document } from 'mongoose';
 
 // Lightweight types for stored pages/blocks. We store them as plain mixed objects
 // so the frontend can evolve block schemas without requiring a strict backend model.
@@ -10,24 +10,11 @@ export interface ProjectPage {
   blocks?: any[];
 }
 
-export interface ContactFormSubmission {
-  id: string;
-  blockId: string;
-  data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    message?: string;
-  };
-  submittedAt: Date;
-}
-
 export interface Project extends Document {
   ownerId: string;
   schemaVersion?: number;
   name: string;
   pages?: ProjectPage[];
-  formSubmissions?: ContactFormSubmission[];
   updatedAt: Date;
   createdAt: Date;
 }
@@ -38,7 +25,6 @@ const ProjectSchema = new Schema<Project>(
     schemaVersion: { type: Number, default: 2 },
     name:    { type: String, required: true, trim: true },
     pages:   { type: Array as any, default: [] },
-    formSubmissions: { type: Array as any, default: [] },
   },
   { timestamps: true, versionKey: false }
 );
