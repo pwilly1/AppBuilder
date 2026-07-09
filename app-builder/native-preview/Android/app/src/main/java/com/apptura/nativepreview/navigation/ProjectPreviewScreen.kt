@@ -59,7 +59,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
     } else {
         val page = pages[pageIndex.value]
         val containerIds = page.blocks
-            .filter { it.type == "container" }
+            .filter { it.type == "container" || it.type == "form" }
             .map { it.id }
             .toSet()
         val childrenByParentId = page.blocks
@@ -187,7 +187,7 @@ private fun GridBlockLayer(
             projectId = projectId,
             baseUrl = baseUrl,
             content = {
-                if (block.type == "container" && placement != null) {
+                if ((block.type == "container" || block.type == "form") && placement != null) {
                     val childMetrics = GridMetrics(
                         canvasWidth = rect.width,
                         columnCount = placement.colSpan.coerceAtLeast(1),

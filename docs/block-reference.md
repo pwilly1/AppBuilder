@@ -108,15 +108,17 @@ The grid remains the collision and placement boundary. Render width, height, and
 | `hero` | `headline`, `headlineSize` | 16 x 6 | Inline editable; supports content scaling |
 | `text` | `value`, `fontSize` | 8 x 4 | Inline editable; supports content scaling and row auto-growth |
 | `navButton` | `label`, `toPageId`, font/colors/padding/radius | 4 x 2 | Inline editable; supports page navigation and content scaling |
+| `submitButton` | `label`, `submitGroupId`, success message, font/colors/padding/radius | 5 x 2 | Inline editable; submits same-page grouped fields in web preview; visual only on Android |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
+| `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
 | `shape` | `shapeType`, fill/border/radius/opacity | 6 x 4 | Shape type is chosen before insertion |
 | `badge` | `text`, font/colors/border/radius/padding | 4 x 2 | Visual status/tag primitive |
 | `icon` | `iconName`, `fontSize`, colors/radius | 2 x 2 | Uses the project's supported icon-name set |
-| `checkbox` | `label`, `checked`, font and colors | 6 x 2 | Visual mockup control only |
-| `toggle` | `label`, `checked`, font and colors | 6 x 2 | Visual mockup control only |
+| `checkbox` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
+| `toggle` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
 | `progressBar` | `label`, `value`, visibility and colors | 8 x 2 | Visual status primitive |
-| `input` | label/value/placeholder/type/font/colors/radius | 8 x 3 | Visual mockup control only |
-| `textarea` | label/value/placeholder/rows/font/colors/radius | 8 x 4 | Visual mockup control only |
+| `input` | label/fieldKey/submitGroupId/value/placeholder/type/required/font/colors/radius | 8 x 3 | Functional text field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
+| `textarea` | label/fieldKey/submitGroupId/value/placeholder/rows/required/font/colors/radius | 8 x 4 | Functional text field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
 | `image` | `src`, `alt`, `fit`, focus, background/border/radius/opacity | 8 x 6 | Atomic image block; supports pasted URLs and backend-uploaded asset URLs |
 | `servicesList` | `title`, `items` | 16 x 6 | Existing business block; hidden from the preferred palette |
 | `contactForm` | labels, field visibility, destination email | 16 x 8 | Functional submission block |
@@ -126,11 +128,14 @@ The exact defaults and constraints must be read from the registry rather than du
 
 ## Container Hierarchy Contract
 
-- `Page.blocks` stays flat even when containers are present.
+- `Page.blocks` stays flat even when containers or forms are present.
 - A child block references its owner through `parentId`.
-- Containers cannot have `parentId` in the current implementation.
-- Nested containers are not supported.
-- Container children use relative `layout.grid` coordinates.
+- `container` and `form` are the current parent block types, and both remain top-level only.
+- Nested parent blocks are not supported.
+- Container and form children use relative `layout.grid` coordinates.
+- `container` currently accepts lightweight child blocks including `submitButton`, but not nested `container` or `form` blocks.
+- `form` only accepts `input`, `textarea`, `checkbox`, and `toggle` children.
+- `submitButton` is not a Form child. It stays top-level or inside a Container and submits same-page fields with the same normalized `submitGroupId`.
 - Unsupported or orphaned child relationships are repaired at load time.
 
 ## Rendering Surfaces

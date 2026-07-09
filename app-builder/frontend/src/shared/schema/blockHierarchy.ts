@@ -9,11 +9,13 @@ import {
 import type { Block, BlockType, GridPlacement, GridSpan } from './types'
 
 export const CONTAINER_BLOCK_TYPE: BlockType = 'container'
+export const FORM_BLOCK_TYPE: BlockType = 'form'
 
 export const CONTAINER_CHILD_BLOCK_TYPES = [
   'text',
   'hero',
   'navButton',
+  'submitButton',
   'shape',
   'badge',
   'icon',
@@ -25,7 +27,15 @@ export const CONTAINER_CHILD_BLOCK_TYPES = [
   'progressBar',
 ] as const satisfies readonly BlockType[]
 
+export const FORM_CHILD_BLOCK_TYPES = [
+  'input',
+  'textarea',
+  'checkbox',
+  'toggle',
+] as const satisfies readonly BlockType[]
+
 const CONTAINER_CHILD_TYPE_SET = new Set<BlockType>(CONTAINER_CHILD_BLOCK_TYPES)
+const FORM_CHILD_TYPE_SET = new Set<BlockType>(FORM_CHILD_BLOCK_TYPES)
 
 export type BlockHierarchyIndex = {
   byId: Map<string, Block>
@@ -54,15 +64,16 @@ export type HierarchyRepairResult = {
 }
 
 export function isContainerBlock(block: Block): boolean {
-  return block.type === CONTAINER_BLOCK_TYPE
+  return block.type === CONTAINER_BLOCK_TYPE || block.type === FORM_BLOCK_TYPE
 }
 
-export function canBlockTypeBeContainerChild(type: BlockType): boolean {
+export function canBlockTypeBeContainerChild(type: BlockType, parentType: BlockType = CONTAINER_BLOCK_TYPE): boolean {
+  if (parentType === FORM_BLOCK_TYPE) return FORM_CHILD_TYPE_SET.has(type)
   return CONTAINER_CHILD_TYPE_SET.has(type)
 }
 
-export function canBlockBeContainerChild(block: Block): boolean {
-  return canBlockTypeBeContainerChild(block.type)
+export function canBlockBeContainerChild(block: Block, parent?: Block): boolean {
+  return canBlockTypeBeContainerChild(block.type, parent?.type ?? CONTAINER_BLOCK_TYPE)
 }
 
 export function buildBlockHierarchyIndex(blocks: Block[]): BlockHierarchyIndex {
@@ -171,7 +182,7 @@ export function validateBlockHierarchy(blocks: Block[]): HierarchyIssue[] {
       continue
     }
 
-    if (!canBlockBeContainerChild(block)) {
+    if (!canBlockBeContainerChild(block, parent)) {
       issues.push({ code: 'unsupported-child-type', blockId: block.id, parentId: block.parentId })
       continue
     }

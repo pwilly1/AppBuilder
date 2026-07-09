@@ -185,9 +185,13 @@ Success: `204` with no response body.
 
 ## Form Submission Endpoints
 
-These endpoints only accept a `blockId` that identifies a `contactForm` block in the project.
+These endpoints support two submission models:
 
-Submission data can contain:
+- legacy `contactForm` blocks, which store the older fixed `name` / `email` / `phone` / `message` payload and can trigger email notifications
+- schema-backed `form` blocks, which store dynamic field data collected from child `input`, `textarea`, `checkbox`, and `toggle` blocks
+- schema-backed `submitButton` blocks, which store dynamic field data collected from same-page `input`, `textarea`, `checkbox`, and `toggle` blocks that share the same normalized `submitGroupId`
+
+Legacy `contactForm` submission data can contain:
 
 ```json
 {
@@ -198,11 +202,26 @@ Submission data can contain:
 }
 ```
 
-At least one non-empty field is required. Successful submissions may trigger an email notification when email settings are configured.
+Schema-backed `form` and `submitButton` submissions accept JSON keyed by each field's `fieldKey`. If `fieldKey` is blank, the backend derives a slug from the field label and also accepts the raw child `blockId` as a fallback key.
+
+Example dynamic payload:
+
+```json
+{
+  "full_name": "Example User",
+  "email": "user@example.com",
+  "project_summary": "Need a scheduling app.",
+  "agree_to_terms": true
+}
+```
+
+For `submitButton` sources, the backend gathers fields from the same page by matching each field's normalized `submitGroupId` against the button's normalized `submitGroupId`.
+
+At least one populated field is required. Required text fields must be non-empty, and required checkbox/toggle fields must be `true`. Successful legacy `contactForm` submissions may trigger an email notification when email settings are configured.
 
 ### `GET /projects/:id/forms/:blockId/submissions`
 
-Requires authentication and project ownership. Returns submissions for one contact-form block.
+Requires authentication and project ownership. Returns submissions for one `contactForm`, `form`, or `submitButton` block.
 
 ### `POST /projects/:id/forms/:blockId/submissions`
 
@@ -212,9 +231,33 @@ Success: `201` with the stored submission.
 
 ### `POST /public/projects/:id/forms/:blockId/submissions`
 
-Does not require authentication. It exists so a rendered public project can submit its contact form.
+Does not require authentication. It exists so a rendered public project can submit its `contactForm`, schema-backed `form`, or schema-backed `submitButton` source in preview/runtime surfaces.
 
 Success: `201` with the stored submission.
+
+## App Data Source Endpoints
+
+These routes expose the broader app-data source model used by the dashboard and frontend runtime. A source can currently be a legacy `contactForm`, a schema-backed `form`, or a schema-backed `submitButton`.
+
+### `GET /projects/:id/app-data/sources`
+
+Requires authentication and project ownership. Returns every app-data source in the project with its source id, block id, type, display name, page metadata, normalized field definitions, and record count.
+
+### `GET /projects/:id/app-data/sources/:sourceId/records`
+
+Requires authentication and project ownership. Returns stored records for one app-data source, newest first.
+
+### `GET /projects/:id/app-data/sources/:sourceId/records.csv`
+
+Requires authentication and project ownership. Returns the same source records as CSV and sets `Content-Disposition` to a generated `<project>-<source>-records.csv` filename.
+
+### `POST /public/projects/:id/app-data/sources/:sourceId/records`
+
+Does not require authentication. This is the canonical public runtime endpoint used by the current web preview for schema-backed app-data submission.
+
+For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and `submitButton` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppSubmission`.
+
+Success: `201` with the stored record.
 
 ## Project Data Shape
 

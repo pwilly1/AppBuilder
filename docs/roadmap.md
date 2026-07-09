@@ -93,6 +93,7 @@ Recommended order:
 | Completed | Badge |
 | Completed | Icon |
 | Completed | Progress Bar |
+| Completed | Form |
 | Completed | Input |
 | Completed | Textarea |
 | Completed | Checkbox |
@@ -149,8 +150,9 @@ These are important to the long-term product vision but should wait until the ed
 
 | Status | Task |
 | --- | --- |
+| Completed | Schema-backed form submissions tied to project schema. |
 | Later | App-level data collections. |
-| Later | Form submissions tied to project schema. |
+| Later | Richer app-level relational data collections. |
 | Later | Data-bound list/detail blocks. |
 | Later | Generated app user accounts. |
 | Later | Project-specific access rules. |

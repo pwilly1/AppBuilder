@@ -53,7 +53,7 @@ export function instantiateSectionTemplate(
     const overrideProps = options.blockProps?.[definition.key] ?? {}
     const base = createBlock(
       definition.type,
-      resolveTemplateProps({ ...(definition.props || {}), ...overrideProps }, options.pageIdByKey),
+      resolveTemplateProps({ ...(definition.props || {}), ...overrideProps }, options.pageIdByKey, idByKey),
     )
     const id = idByKey.get(definition.key) ?? crypto.randomUUID()
     const parentId = definition.parentKey ? idByKey.get(definition.parentKey) : undefined
@@ -109,10 +109,17 @@ export function instantiateTemplate(template: SectionTemplateDefinition, placeme
   return instantiateSectionTemplate(template, placement)
 }
 
-function resolveTemplateProps(props: Record<string, any>, pageIdByKey?: Map<string, string>) {
+function resolveTemplateProps(
+  props: Record<string, any>,
+  pageIdByKey?: Map<string, string>,
+  blockIdByKey?: Map<string, string>,
+) {
   const next = { ...props }
   const toPageKey = typeof next.toPageKey === 'string' ? next.toPageKey : null
   if (toPageKey && pageIdByKey?.has(toPageKey)) next.toPageId = pageIdByKey.get(toPageKey)
+  const submitGroupKey = typeof next.submitGroupKey === 'string' ? next.submitGroupKey : null
+  if (submitGroupKey && blockIdByKey?.has(submitGroupKey)) next.submitGroupId = blockIdByKey.get(submitGroupKey)
   delete next.toPageKey
+  delete next.submitGroupKey
   return next
 }

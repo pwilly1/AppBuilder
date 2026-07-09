@@ -69,7 +69,7 @@ export function DraggableBlock({
   allowDragOutsideBounds,
   children,
 }: DraggableProps) {
-  const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton'
+  const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton' || block.type === 'submitButton'
   const usesContainerResize =
     supportsInlineEdit ||
     block.type === 'shape' ||
@@ -81,7 +81,9 @@ export function DraggableBlock({
     block.type === 'input' ||
     block.type === 'textarea' ||
     block.type === 'image' ||
-    block.type === 'container'
+    block.type === 'submitButton' ||
+    block.type === 'container' ||
+    block.type === 'form'
   const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)

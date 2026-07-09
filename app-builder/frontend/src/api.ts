@@ -35,6 +35,26 @@ async function request(path: string, options: RequestInit = {}) {
   return res.json().catch(() => null);
 }
 
+async function textRequest(path: string, options: RequestInit = {}) {
+  const headers: Record<string, string> = {
+    ...(options.headers as Record<string, string> || {}),
+  };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(apiUrl(path), { ...options, headers, credentials: 'same-origin' });
+  if (!res.ok) {
+    if (res.status === 401) {
+      try { localStorage.removeItem('app_token'); } catch {}
+    }
+    const body = await res.json().catch(() => ({}));
+    const err: any = new Error(body.error || res.statusText);
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
+  return res.text();
+}
+
 async function multipartRequest(path: string, formData: FormData) {
   const headers: Record<string, string> = {};
   const token = getToken();
@@ -111,27 +131,67 @@ export function uploadProjectImage(projectId: string, file: File) {
 
 export type ProjectFormSubmission = {
   id: string;
+  sourceId?: string;
   blockId: string;
-  data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    message?: string;
-  };
+  formBlockId?: string;
+  pageId?: string;
+  data: Record<string, string | boolean | undefined>;
   submittedAt: string;
 };
 
-export function submitPublicProjectForm(
+export type ProjectAppDataField = {
+  blockId: string;
+  type: string;
+  key: string;
+  label: string;
+  required: boolean;
+};
+
+export type ProjectAppDataSource = {
+  id: string;
+  sourceId: string;
+  blockId: string;
+  type: 'submitButton' | 'form' | 'contactForm';
+  name: string;
+  pageId: string;
+  pageTitle: string;
+  fields: ProjectAppDataField[];
+  recordCount: number;
+};
+
+export type ProjectAppDataRecord = ProjectFormSubmission;
+
+export function submitPublicAppDataRecord(
   projectId: string,
-  blockId: string,
-  data: { name?: string; email?: string; phone?: string; message?: string }
+  sourceId: string,
+  data: Record<string, string | boolean | undefined>
 ) {
-  return request(`/public/projects/${projectId}/forms/${blockId}/submissions`, {
+  return request(`/public/projects/${projectId}/app-data/sources/${sourceId}/records`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
+export function submitPublicProjectForm(
+  projectId: string,
+  blockId: string,
+  data: Record<string, string | boolean | undefined>
+) {
+  return submitPublicAppDataRecord(projectId, blockId, data);
+}
+
+export function listProjectAppDataSources(projectId: string) {
+  return request(`/projects/${projectId}/app-data/sources`) as Promise<ProjectAppDataSource[]>;
+}
+
+export function listProjectAppDataRecords(projectId: string, sourceId: string) {
+  return request(`/projects/${projectId}/app-data/sources/${sourceId}/records`) as Promise<ProjectAppDataRecord[]>;
+}
+
+export function exportProjectAppDataCsv(projectId: string, sourceId: string) {
+  return textRequest(`/projects/${projectId}/app-data/sources/${sourceId}/records.csv`);
+}
+
 export function listProjectFormSubmissions(projectId: string, blockId: string) {
-  return request(`/projects/${projectId}/forms/${blockId}/submissions`) as Promise<ProjectFormSubmission[]>;
+  return listProjectAppDataRecords(projectId, blockId);
 }

@@ -53,7 +53,7 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 
 1. The user logs in and opens a project from the dashboard.
 2. The frontend loads the project through `GET /projects/:id`.
-3. `useProject` owns project state, selected page/block state, undo/redo, and save behavior.
+3. `useProject` remains the public editor hook, but it now delegates project state, page actions, block actions, history, and persistence to focused hooks under `hooks/project`.
 4. The editor renders the active page through `EditorLayout` and `PageRenderer`.
 5. Block changes update frontend state and are saved back through `PATCH /projects/:id`.
 6. MongoDB stores the project schema.
@@ -68,6 +68,17 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 6. The Image block stores that URL in `props.src`.
 
 This keeps large image bytes out of the MongoDB project document. Pasted remote image URLs are still stored directly in `props.src`. Local data URLs remain only as a development/unsaved-project fallback.
+
+### Submitting schema-backed forms
+
+1. A saved schema-backed submission source renders in web preview as either a top-level Form block with child fields or a Submit Button block paired with same-page grouped fields.
+2. Each participating field resolves a submission key from `props.fieldKey`, its label, or its block ID.
+3. Submit Button flows select fields by matching the field and button `submitGroupId` after normalization.
+4. Preview submission posts JSON to `POST /public/projects/:id/forms/:blockId/submissions`.
+5. The backend locates the owning Form or Submit Button source, validates required fields, and stores the sanitized payload in MongoDB through `AppSubmission`.
+6. The dashboard can load app-data sources through `GET /projects/:id/app-data/sources`, fetch source records through `GET /projects/:id/app-data/sources/:sourceId/records`, and export them through the matching CSV route.
+
+Legacy `contactForm` blocks still use the older fixed submission shape and optional email notifications. The new `form` and `submitButton` flows are the schema-backed paths for flexible app-user data capture.
 
 ### Rendering a project
 
@@ -216,9 +227,11 @@ The visible add-block panel currently exposes:
 - Hero
 - Text
 - Nav Button
+- Submit Button
 - Badge
 - Icon
 - Shape
+- Form
 - Progress Bar
 - Input
 - Textarea
@@ -234,7 +247,9 @@ Behavior notes:
 - Nav Button now stores both navigation props and simple visual style props in the shared schema so web and Android previews stay aligned.
 - Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
 - Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, and opacity controls across web and Android preview.
-- Input, Textarea, Checkbox, and Toggle are currently schema-backed visual primitives for mockup/design use, not connected form-processing blocks.
+- Form is a schema-backed submission surface with shared parent/child layout rules across web and Android preview.
+- Submit Button is a schema-backed submission trigger that gathers same-page fields through `submitGroupId`. Android preview currently renders it visually without live submission behavior.
+- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or when paired with a same-group Submit Button in web preview. Outside those paths, they still behave as editor-time mockup primitives.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
 ## Frontend Responsibilities
@@ -244,7 +259,12 @@ Key files:
 | File | Responsibility |
 | --- | --- |
 | `App.tsx` | Router, auth state, project hook wiring |
-| `hooks/useProject.ts` | Project state, loading, saving, undo/redo, page/block actions |
+| `hooks/useProject.ts` | Stable facade that composes the focused project hooks and preserves the editor-facing API |
+| `hooks/project/useProjectHistory.ts` | Project snapshots, undo/redo history, and change application |
+| `hooks/project/useProjectPages.ts` | Selected page state plus page create/rename/delete flows |
+| `hooks/project/useProjectBlocks.ts` | Block selection, mutations, placement, and reorder flows |
+| `hooks/project/useProjectPersistence.ts` | Project loading, saving, autosave, auth/session checks |
+| `hooks/project/projectUtils.ts` | Initial project creation, normalization, path helpers, and project-id persistence |
 | `layout/EditorLayout.tsx` | Editor shell: toolbar, left panel, canvas, inspector |
 | `editor/PageRenderer.tsx` | Canvas rendering and editor interactions |
 | `editor/DraggableBlock.tsx` | Per-block selection, movement, resizing behavior |
@@ -265,6 +285,7 @@ The backend provides:
 - public project routes under `/public`
 - MongoDB persistence through Mongoose
 - JWT session validation
+- schema-backed `form` and `submitButton` submission storage plus app-data source listing, record retrieval, and CSV export
 - optional email notification support for contact submissions
 - Azure-backed image asset storage for saved-project uploads
 
@@ -276,6 +297,8 @@ Important files:
 | `src/config/index.ts` | Environment variables |
 | `src/routes/AuthRoutes.ts` | Signup/login/session endpoints |
 | `src/routes/ProjectRoutes.ts` | Project CRUD and public project routes |
+| `src/models/AppSubmission.ts` | Stored schema-backed form submission records |
+| `src/services/AppSubmissionService.ts` | Schema-backed submission source lookup, field normalization, validation, and submission queries |
 | `src/services/AssetStorageService.ts` | Azure Blob Storage upload logic for project image assets |
 | `src/services/ProjectManager.ts` | Project business logic |
 | `src/services/AuthService.ts` | Authentication logic |

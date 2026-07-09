@@ -20,6 +20,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { DraggableBlock } from './DraggableBlock'
 import { BlockRenderer } from '../shared/BlockRenderer'
 import { BLOCK_DRAG_DATA_TYPE, getActiveDraggedBlock, getDraggedBlockFromDataTransfer } from './blockDrag'
+import { FormRuntimeProvider, resolveSubmitGroupId, type FormValue } from '../shared/blocks/formRuntime'
 import {
   buildBlockHierarchyIndex,
   canBlockBeContainerChild,
@@ -90,6 +91,7 @@ export function PageRenderer({
   const [gridPreview, setGridPreview] = useState<GridPreview | null>(null)
   const [newBlockPreview, setNewBlockPreview] = useState<GridPreview | null>(null)
   const [screenWidth, setScreenWidth] = useState(390)
+  const [fieldValues, setFieldValues] = useState<Record<string, Record<string, FormValue>>>({})
 
   useEffect(() => {
     setIsDragTargeting(false)
@@ -97,6 +99,7 @@ export function PageRenderer({
     setNewBlockPreview(null)
     setShowHGuide(false)
     setShowVGuide(false)
+    setFieldValues({})
   }, [page.id, page.blocks.length])
 
   useEffect(() => {
@@ -343,11 +346,12 @@ export function PageRenderer({
   }
 
   function getDropContainerTarget(point: { x: number; y: number }, block: Block) {
-    if (isContainerBlock(block) || !canBlockBeContainerChild(block)) return null
+    if (isContainerBlock(block)) return null
 
     const containers = topLevelBlocks.filter((candidate) => isContainerBlock(candidate))
     for (let index = containers.length - 1; index >= 0; index -= 1) {
       const container = containers[index]
+      if (!canBlockBeContainerChild(block, container)) continue
       const placement = container.layout?.grid
       if (!placement) continue
       const rect = getContainerRect(container)
@@ -396,7 +400,7 @@ export function PageRenderer({
       activeContainerPlacement &&
       !block.parentId &&
       block.id !== activeContainer.id &&
-      canBlockBeContainerChild(block)
+      canBlockBeContainerChild(block, activeContainer)
     const relativePlacement = canConsiderAttach ? pageToContainerPlacement(placement, activeContainerPlacement) : null
     const canAttachToActiveContainer = Boolean(
       canConsiderAttach &&
@@ -415,8 +419,24 @@ export function PageRenderer({
 
   const activeGridPreview = gridPreview ?? newBlockPreview
 
+  function setFieldValue(fieldKey: string, value: FormValue, submitGroupId?: string) {
+    const groupId = resolveSubmitGroupId(submitGroupId)
+    setFieldValues((current) => ({
+      ...current,
+      [groupId]: {
+        ...(current[groupId] || {}),
+        [fieldKey]: value,
+      },
+    }))
+  }
+
+  function getGroupValues(submitGroupId?: string) {
+    return fieldValues[resolveSubmitGroupId(submitGroupId)] || {}
+  }
+
   return (
-    <div className="editor-stage px-3 py-3">
+    <FormRuntimeProvider value={{ values: fieldValues, setValue: setFieldValue, getGroupValues, previewMode }}>
+      <div className="editor-stage px-3 py-3">
       <div className="mx-auto flex w-full justify-center">
         <div className="phone-frame shadow-sm" style={{ height: phoneScreenHeight }}>
           <div
@@ -521,7 +541,8 @@ export function PageRenderer({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </FormRuntimeProvider>
   )
 }
 
@@ -770,7 +791,7 @@ function ContainerChildrenLayer({
         </div>
       ) : null}
 
-      {!childrenBlocks.length ? (
+      {!childrenBlocks.length && container.type !== 'form' ? (
         <div className="pointer-events-none absolute inset-3 flex items-center justify-center rounded-2xl border border-dashed border-blue-300/70 bg-blue-50/45 text-center text-xs font-semibold text-blue-700">
           Drop blocks here or click a block in the sidebar
         </div>

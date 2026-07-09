@@ -11,6 +11,14 @@ import {
   AssetStorageService,
   isSupportedImageContentType,
 } from '../services/AssetStorageService.js';
+import {
+  appDataRecordsToCsv,
+  createAppDataRecord,
+  findAppDataSource,
+  getAppDataCsvFileName,
+  listAppDataRecords,
+  listAppDataSources,
+} from '../services/AppDataService.js';
 
 const svc = new ProjectManager(new MongoProjectRepository());
 const emailNotifications = new EmailNotificationService();
@@ -32,13 +40,6 @@ function buildSubmission(body: any, blockId: string) {
     },
     submittedAt: new Date(),
   };
-}
-
-function findContactFormBlock(project: any, blockId: string) {
-  const allBlocks = (project.pages || []).flatMap((page: any) => page.blocks || []);
-  const block = allBlocks.find((entry: any) => entry.id === blockId);
-  if (!block || block.type !== 'contactForm') return null;
-  return block;
 }
 
 function getDestinationEmail(block: any) {
@@ -67,6 +68,13 @@ function handleMulterError(error: any, _req: Request, res: Response, next: NextF
       return res.status(400).json({ error: 'Image must be 5 MB or smaller.' });
     }
     return res.status(400).json({ error: error.message });
+  }
+  return next(error);
+}
+
+function handleSubmissionError(error: any, res: Response, next: NextFunction) {
+  if (typeof error?.status === 'number') {
+    return res.status(error.status).json({ error: error.message || 'Submission failed' });
   }
   return next(error);
 }
@@ -150,9 +158,60 @@ export function makeProjectRoutes() {
       if (!id || !blockId) return res.status(400).json({ error: 'Missing route params' });
       const project = await loadOwnedProject(id, userId);
       if (!project) return res.status(404).json({ error: 'Not found' });
-      const submissions = ((project.formSubmissions as any[]) || []).filter((entry) => entry.blockId === blockId);
+
+      if (!findAppDataSource(project, blockId)) return res.status(404).json({ error: 'App data source not found' });
+
+      const submissions = await listAppDataRecords(project, userId, id, blockId);
       res.json(submissions);
     } catch (e) { next(e); }
+  });
+
+  router.get('/:id/app-data/sources', requireAuth, async (req, res, next) => {
+    try {
+      const userId = (req as any).userId as string;
+      const id = req.params.id as string | undefined;
+      if (!id) return res.status(400).json({ error: 'Missing id' });
+      const project = await loadOwnedProject(id, userId);
+      if (!project) return res.status(404).json({ error: 'Not found' });
+
+      const sources = await listAppDataSources(project, userId, id);
+      res.json(sources);
+    } catch (e) { next(e); }
+  });
+
+  router.get('/:id/app-data/sources/:sourceId/records.csv', requireAuth, async (req, res, next) => {
+    try {
+      const userId = (req as any).userId as string;
+      const id = req.params.id as string | undefined;
+      const sourceId = req.params.sourceId as string | undefined;
+      if (!id || !sourceId) return res.status(400).json({ error: 'Missing route params' });
+      const project = await loadOwnedProject(id, userId);
+      if (!project) return res.status(404).json({ error: 'Not found' });
+
+      const source = findAppDataSource(project, sourceId);
+      if (!source) return res.status(404).json({ error: 'App data source not found' });
+      const records = await listAppDataRecords(project, userId, id, sourceId);
+      const csv = appDataRecordsToCsv(source, records);
+      res.type('text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${getAppDataCsvFileName(project, source)}"`);
+      res.send(csv);
+    } catch (e) { next(e); }
+  });
+
+  router.get('/:id/app-data/sources/:sourceId/records', requireAuth, async (req, res, next) => {
+    try {
+      const userId = (req as any).userId as string;
+      const id = req.params.id as string | undefined;
+      const sourceId = req.params.sourceId as string | undefined;
+      if (!id || !sourceId) return res.status(400).json({ error: 'Missing route params' });
+      const project = await loadOwnedProject(id, userId);
+      if (!project) return res.status(404).json({ error: 'Not found' });
+
+      const records = await listAppDataRecords(project, userId, id, sourceId);
+      res.json(records);
+    } catch (e) {
+      handleSubmissionError(e, res, next);
+    }
   });
 
   router.post('/:id/forms/:blockId/submissions', requireAuth, async (req, res, next) => {
@@ -168,9 +227,12 @@ export function makeProjectRoutes() {
       const project = await loadOwnedProject(id, userId);
       if (!project) return res.status(404).json({ error: 'Not found' });
 
-      const block = findContactFormBlock(project, blockId);
-      if (!block) {
-        return res.status(404).json({ error: 'Contact form block not found' });
+      const source = findAppDataSource(project, blockId);
+      if (!source) return res.status(404).json({ error: 'App data source not found' });
+
+      if (source.type !== 'contactForm') {
+        const submission = await createAppDataRecord(project, blockId, req.body || {});
+        return res.status(201).json(submission);
       }
 
       const submission = buildSubmission(req.body || {}, blockId);
@@ -183,9 +245,9 @@ export function makeProjectRoutes() {
       const nextSubmissions = [ ...((project.formSubmissions as any[]) || []), submission ];
       const updated = await svc.update(userId, id, { formSubmissions: nextSubmissions });
       const savedSubmission = ((updated.formSubmissions as any[]) || []).find((entry) => entry.id === submission.id) || submission;
-      await notifySubmission(updated, block, savedSubmission);
+      await notifySubmission(updated, source.block, savedSubmission);
       res.status(201).json(savedSubmission);
-    } catch (e) { next(e); }
+    } catch (e) { handleSubmissionError(e, res, next); }
   });
 
   // Get a single project
@@ -239,8 +301,13 @@ export function makePublicProjectRoutes() {
       const project = await svc.repo.findById(id);
       if (!project) return res.status(404).json({ error: 'Not found' });
 
-      const block = findContactFormBlock(project, blockId);
-      if (!block) return res.status(404).json({ error: 'Contact form block not found' });
+      const source = findAppDataSource(project, blockId);
+      if (!source) return res.status(404).json({ error: 'App data source not found' });
+
+      if (source.type !== 'contactForm') {
+        const submission = await createAppDataRecord(project, blockId, req.body || {});
+        return res.status(201).json(submission);
+      }
 
       const submission = buildSubmission(req.body || {}, blockId);
       const hasValue = Object.values(submission.data).some((value) => typeof value === 'string' && value.length > 0);
@@ -253,9 +320,44 @@ export function makePublicProjectRoutes() {
         formSubmissions: [ ...((project.formSubmissions as any[]) || []), submission ],
       });
       const savedSubmission = ((updated.formSubmissions as any[]) || []).find((entry) => entry.id === submission.id) || submission;
-      await notifySubmission(updated, block, savedSubmission);
+      await notifySubmission(updated, source.block, savedSubmission);
       res.status(201).json(savedSubmission);
-    } catch (e) { next(e); }
+    } catch (e) { handleSubmissionError(e, res, next); }
+  });
+
+  router.post('/projects/:id/app-data/sources/:sourceId/records', async (req, res, next) => {
+    try {
+      const id = req.params.id as string | undefined;
+      const sourceId = req.params.sourceId as string | undefined;
+      if (!id || !sourceId) return res.status(400).json({ error: 'Missing route params' });
+
+      const project = await svc.repo.findById(id);
+      if (!project) return res.status(404).json({ error: 'Not found' });
+
+      const source = findAppDataSource(project, sourceId);
+      if (!source) return res.status(404).json({ error: 'App data source not found' });
+
+      if (source.type !== 'contactForm') {
+        const record = await createAppDataRecord(project, sourceId, req.body || {});
+        return res.status(201).json(record);
+      }
+
+      const submission = buildSubmission(req.body || {}, sourceId);
+      const hasValue = Object.values(submission.data).some((value) => typeof value === 'string' && value.length > 0);
+      if (!hasValue) {
+        return res.status(400).json({ error: 'At least one field is required' });
+      }
+
+      const updated = await svc.repo.update({
+        ...(project as any),
+        formSubmissions: [ ...((project.formSubmissions as any[]) || []), submission ],
+      });
+      const savedSubmission = ((updated.formSubmissions as any[]) || []).find((entry) => entry.id === submission.id) || submission;
+      await notifySubmission(updated, source.block, savedSubmission);
+      res.status(201).json(savedSubmission);
+    } catch (e) {
+      handleSubmissionError(e, res, next);
+    }
   });
 
   return router;

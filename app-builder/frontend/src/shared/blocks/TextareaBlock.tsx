@@ -1,5 +1,11 @@
+import { resolveFieldKey, resolveSubmitGroupId, useFormRuntime } from './formRuntime'
+
 export function TextareaBlock({
+  blockId,
   label = 'Message',
+  fieldKey = '',
+  submitGroupId = '',
+  required = false,
   placeholder = 'Write something...',
   value = '',
   rows = 3,
@@ -10,7 +16,11 @@ export function TextareaBlock({
   borderColor = '#cbd5e1',
   borderRadius = 12,
 }: {
+  blockId?: string
   label?: string
+  fieldKey?: string
+  submitGroupId?: string
+  required?: boolean
   placeholder?: string
   value?: string
   rows?: number
@@ -21,11 +31,17 @@ export function TextareaBlock({
   borderColor?: string
   borderRadius?: number
 }) {
-  const displayValue = value || placeholder
-  const isPlaceholder = !value
+  const formRuntime = useFormRuntime()
+  const resolvedFieldKey = resolveFieldKey(blockId, label, fieldKey)
+  const resolvedGroupId = resolveSubmitGroupId(submitGroupId)
+  const runtimeValue = formRuntime?.values[resolvedGroupId]?.[resolvedFieldKey]
+  const currentValue = typeof runtimeValue === 'string' ? runtimeValue : value
+  const displayValue = currentValue || placeholder
+  const isPlaceholder = !currentValue
   const safeFontSize = Math.max(8, Number(fontSize) || 14)
   const safeRadius = Math.max(0, Number(borderRadius) || 0)
   const safeRows = Math.max(1, Number(rows) || 1)
+  const isRuntimeField = Boolean(formRuntime?.previewMode)
 
   return (
     <div
@@ -39,7 +55,7 @@ export function TextareaBlock({
         boxSizing: 'border-box',
         overflow: 'hidden',
         padding: 8,
-        pointerEvents: 'none',
+        pointerEvents: isRuntimeField ? 'auto' : 'none',
       }}
     >
       {label ? (
@@ -57,25 +73,50 @@ export function TextareaBlock({
           {label}
         </div>
       ) : null}
-      <div
-        style={{
-          minHeight: 0,
-          flex: 1,
-          width: '100%',
-          boxSizing: 'border-box',
-          border: `1px solid ${borderColor || '#cbd5e1'}`,
-          borderRadius: safeRadius,
-          backgroundColor: backgroundColor || '#ffffff',
-          color: isPlaceholder ? placeholderColor || '#94a3b8' : textColor || '#0f172a',
-          fontSize: safeFontSize,
-          lineHeight: 1.4,
-          padding: '10px 12px',
-          overflow: 'hidden',
-          whiteSpace: 'pre-wrap',
-        }}
-      >
-        {displayValue.split('\n').slice(0, safeRows).join('\n')}
-      </div>
+      {isRuntimeField ? (
+        <textarea
+          value={currentValue}
+          placeholder={placeholder}
+          required={required}
+          rows={safeRows}
+          onChange={(event) => formRuntime?.setValue(resolvedFieldKey, event.currentTarget.value, resolvedGroupId)}
+          style={{
+            minHeight: 0,
+            flex: 1,
+            width: '100%',
+            boxSizing: 'border-box',
+            border: `1px solid ${borderColor || '#cbd5e1'}`,
+            borderRadius: safeRadius,
+            backgroundColor: backgroundColor || '#ffffff',
+            color: textColor || '#0f172a',
+            fontSize: safeFontSize,
+            lineHeight: 1.4,
+            padding: '10px 12px',
+            resize: 'none',
+            outline: 'none',
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            minHeight: 0,
+            flex: 1,
+            width: '100%',
+            boxSizing: 'border-box',
+            border: `1px solid ${borderColor || '#cbd5e1'}`,
+            borderRadius: safeRadius,
+            backgroundColor: backgroundColor || '#ffffff',
+            color: isPlaceholder ? placeholderColor || '#94a3b8' : textColor || '#0f172a',
+            fontSize: safeFontSize,
+            lineHeight: 1.4,
+            padding: '10px 12px',
+            overflow: 'hidden',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {displayValue.split('\n').slice(0, safeRows).join('\n')}
+        </div>
+      )}
     </div>
   )
 }

@@ -65,13 +65,19 @@ export function featureRow(prefix: string, rowStart: number, iconName: string, t
   ]
 }
 
-export function checkboxRow(key: string, rowStart: number, label: string, checked: boolean): TemplateBlockDefinition {
+export function checkboxRow(
+  key: string,
+  rowStart: number,
+  label: string,
+  checked: boolean,
+  submitGroupKey?: string,
+): TemplateBlockDefinition {
   return {
     key,
     parentKey: 'container',
     type: 'checkbox',
     grid: { colStart: 2, rowStart, colSpan: 10, rowSpan: 2 },
-    props: { label, checked },
+    props: { label, checked, ...(submitGroupKey ? { submitGroupKey } : {}) },
     render: { alignX: 'start', alignY: 'start' },
   }
 }

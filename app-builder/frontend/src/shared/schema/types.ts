@@ -3,9 +3,11 @@
 // © 2025 Preston Willis. All rights reserved.
 export type BlockType =
   | 'container'
+  | 'form'
   | 'hero'
   | 'text'
   | 'navButton'
+  | 'submitButton'
   | 'shape'
   | 'badge'
   | 'icon'

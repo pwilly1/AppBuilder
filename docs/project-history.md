@@ -82,6 +82,10 @@ Representative areas:
 - `frontend/src/components/PagesPanel.tsx`
 - `frontend/src/layout/EditorLayout.tsx`
 
+Later note:
+
+The original monolithic `useProject.ts` hook was later split into focused `hooks/project/*` modules for history, page actions, block actions, persistence, and shared utilities while keeping the exported `useProject` API stable for the editor.
+
 ## Phase 5: Native Preview Initiative
 
 Date range: December 2025 to February 2026
@@ -249,6 +253,10 @@ Representative areas:
 - `frontend/src/layout/EditorLayout.tsx`
 - `frontend/src/hooks/useProject.ts`
 
+Later note:
+
+Template insertion still enters the editor through `useProject.ts`, but the underlying state and persistence logic now live in focused `hooks/project/*` modules instead of one large hook file.
+
 ## Phase 12: Atomic Media Block
 
 Date range: June 2026
@@ -269,3 +277,47 @@ Representative areas:
 - `backend/src/services/AssetStorageService.ts`
 - `backend/src/routes/ProjectRoutes.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ImageBlockView.kt`
+
+## Phase 13: Project Hook Responsibility Split
+
+Date range: July 2026
+
+Recent work split the large frontend project-state hook into focused modules for history, page actions, block actions, persistence, and shared utilities, while keeping the exported `useProject` contract stable for the rest of the editor.
+
+Important outcome:
+
+```text
+The editor keeps the same behavior and API surface, but the project-state implementation is easier to navigate and change safely.
+```
+
+Representative areas:
+
+- `frontend/src/hooks/useProject.ts`
+- `frontend/src/hooks/project/useProjectHistory.ts`
+- `frontend/src/hooks/project/useProjectPages.ts`
+- `frontend/src/hooks/project/useProjectBlocks.ts`
+- `frontend/src/hooks/project/useProjectPersistence.ts`
+- `frontend/src/hooks/project/projectUtils.ts`
+
+## Phase 14: Schema-Backed Form Submission Flow
+
+Date range: July 2026
+
+Recent work introduced a new top-level `form` block, a schema-backed `submitButton` trigger, reusable field primitives (`input`, `textarea`, `checkbox`, `toggle`) with `fieldKey`-based submission mapping and optional `submitGroupId` grouping, backend `AppSubmission` persistence, public submission routes, and a dashboard submissions viewer for saved projects.
+
+Important outcome:
+
+```text
+The shared schema now supports a real flexible app-user submission flow without falling back to the older fixed contact-form block shape.
+```
+
+Representative areas:
+
+- `frontend/src/shared/blocks/FormBlock.tsx`
+- `frontend/src/shared/blocks/SubmitButton.tsx`
+- `frontend/src/shared/blocks/formRuntime.tsx`
+- `frontend/src/pages/Dashboard.tsx`
+- `frontend/src/shared/schema/blockHierarchy.ts`
+- `backend/src/models/AppSubmission.ts`
+- `backend/src/services/AppSubmissionService.ts`
+- `backend/src/routes/ProjectRoutes.ts`

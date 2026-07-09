@@ -1,5 +1,11 @@
-﻿export function ToggleBlock({
+import { resolveFieldKey, resolveSubmitGroupId, useFormRuntime } from './formRuntime'
+
+export function ToggleBlock({
+  blockId,
   label = 'Toggle',
+  fieldKey = '',
+  submitGroupId = '',
+  required = false,
   checked = true,
   fontSize = 14,
   textColor = '#0f172a',
@@ -7,7 +13,11 @@
   inactiveColor = '#cbd5e1',
   knobColor = '#ffffff',
 }: {
+  blockId?: string
   label?: string
+  fieldKey?: string
+  submitGroupId?: string
+  required?: boolean
   checked?: boolean
   fontSize?: number
   textColor?: string
@@ -15,14 +25,23 @@
   inactiveColor?: string
   knobColor?: string
 }) {
+  const formRuntime = useFormRuntime()
+  const resolvedFieldKey = resolveFieldKey(blockId, label, fieldKey)
+  const resolvedGroupId = resolveSubmitGroupId(submitGroupId)
+  const runtimeValue = formRuntime?.values[resolvedGroupId]?.[resolvedFieldKey]
+  const currentChecked = typeof runtimeValue === 'boolean' ? runtimeValue : checked
   const safeFontSize = Math.max(8, Number(fontSize) || 14)
   const trackWidth = Math.max(34, safeFontSize * 2.8)
   const trackHeight = Math.max(18, safeFontSize * 1.55)
   const knobSize = trackHeight - 4
+  const isRuntimeField = Boolean(formRuntime?.previewMode)
 
   return (
-    <div
+    <button
+      type="button"
       aria-label="Toggle block"
+      aria-pressed={currentChecked}
+      onClick={() => formRuntime?.setValue(resolvedFieldKey, !currentChecked, resolvedGroupId)}
       style={{
         display: 'flex',
         alignItems: 'flex-start',
@@ -31,10 +50,15 @@
         height: '100%',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        pointerEvents: 'none',
+        pointerEvents: isRuntimeField ? 'auto' : 'none',
+        padding: 0,
+        border: 0,
+        background: 'transparent',
+        textAlign: 'left',
         color: textColor || '#0f172a',
         fontSize: safeFontSize,
         lineHeight: 1.2,
+        cursor: isRuntimeField ? 'pointer' : 'default',
       }}
     >
       <span
@@ -53,14 +77,14 @@
             height: trackHeight,
             flex: '0 0 auto',
             borderRadius: 999,
-            backgroundColor: checked ? activeColor || '#2563eb' : inactiveColor || '#cbd5e1',
+            backgroundColor: currentChecked ? activeColor || '#2563eb' : inactiveColor || '#cbd5e1',
           }}
         >
           <span
             style={{
               position: 'absolute',
               top: 2,
-              left: checked ? trackWidth - knobSize - 2 : 2,
+              left: currentChecked ? trackWidth - knobSize - 2 : 2,
               width: knobSize,
               height: knobSize,
               borderRadius: 999,
@@ -69,8 +93,10 @@
             }}
           />
         </span>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label || 'Toggle'}</span>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {label || 'Toggle'}{required ? ' *' : ''}
+        </span>
       </span>
-    </div>
+    </button>
   )
 }

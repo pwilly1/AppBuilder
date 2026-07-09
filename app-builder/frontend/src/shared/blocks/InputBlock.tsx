@@ -1,5 +1,11 @@
+import { resolveFieldKey, resolveSubmitGroupId, useFormRuntime } from './formRuntime'
+
 export function InputBlock({
+  blockId,
   label = 'Label',
+  fieldKey = '',
+  submitGroupId = '',
+  required = false,
   placeholder = 'Placeholder',
   value = '',
   inputType = 'text',
@@ -10,7 +16,11 @@ export function InputBlock({
   borderColor = '#cbd5e1',
   borderRadius = 12,
 }: {
+  blockId?: string
   label?: string
+  fieldKey?: string
+  submitGroupId?: string
+  required?: boolean
   placeholder?: string
   value?: string
   inputType?: string
@@ -21,10 +31,16 @@ export function InputBlock({
   borderColor?: string
   borderRadius?: number
 }) {
-  const displayValue = value || placeholder
-  const isPlaceholder = !value
+  const formRuntime = useFormRuntime()
+  const resolvedFieldKey = resolveFieldKey(blockId, label, fieldKey)
+  const resolvedGroupId = resolveSubmitGroupId(submitGroupId)
+  const runtimeValue = formRuntime?.values[resolvedGroupId]?.[resolvedFieldKey]
+  const currentValue = typeof runtimeValue === 'string' ? runtimeValue : value
+  const displayValue = currentValue || placeholder
+  const isPlaceholder = !currentValue
   const safeFontSize = Math.max(8, Number(fontSize) || 14)
   const safeRadius = Math.max(0, Number(borderRadius) || 0)
+  const isRuntimeField = Boolean(formRuntime?.previewMode)
 
   return (
     <div
@@ -38,7 +54,7 @@ export function InputBlock({
         boxSizing: 'border-box',
         overflow: 'hidden',
         padding: 8,
-        pointerEvents: 'none',
+        pointerEvents: isRuntimeField ? 'auto' : 'none',
       }}
     >
       {label ? (
@@ -56,28 +72,52 @@ export function InputBlock({
           {label}
         </div>
       ) : null}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          minHeight: 0,
-          flex: 1,
-          width: '100%',
-          boxSizing: 'border-box',
-          border: `1px solid ${borderColor || '#cbd5e1'}`,
-          borderRadius: safeRadius,
-          backgroundColor: backgroundColor || '#ffffff',
-          color: isPlaceholder ? placeholderColor || '#94a3b8' : textColor || '#0f172a',
-          fontSize: safeFontSize,
-          lineHeight: 1.3,
-          padding: '0 12px',
-          overflow: 'hidden',
-          whiteSpace: 'nowrap',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {displayValue}
-      </div>
+      {isRuntimeField ? (
+        <input
+          type={inputType === 'phone' ? 'tel' : inputType || 'text'}
+          value={currentValue}
+          placeholder={placeholder}
+          required={required}
+          onChange={(event) => formRuntime?.setValue(resolvedFieldKey, event.currentTarget.value, resolvedGroupId)}
+          style={{
+            minHeight: 0,
+            flex: 1,
+            width: '100%',
+            boxSizing: 'border-box',
+            border: `1px solid ${borderColor || '#cbd5e1'}`,
+            borderRadius: safeRadius,
+            backgroundColor: backgroundColor || '#ffffff',
+            color: textColor || '#0f172a',
+            fontSize: safeFontSize,
+            lineHeight: 1.3,
+            padding: '0 12px',
+            outline: 'none',
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            minHeight: 0,
+            flex: 1,
+            width: '100%',
+            boxSizing: 'border-box',
+            border: `1px solid ${borderColor || '#cbd5e1'}`,
+            borderRadius: safeRadius,
+            backgroundColor: backgroundColor || '#ffffff',
+            color: isPlaceholder ? placeholderColor || '#94a3b8' : textColor || '#0f172a',
+            fontSize: safeFontSize,
+            lineHeight: 1.3,
+            padding: '0 12px',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {displayValue}
+        </div>
+      )}
     </div>
   )
 }

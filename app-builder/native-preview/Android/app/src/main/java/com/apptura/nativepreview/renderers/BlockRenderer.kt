@@ -14,9 +14,11 @@ fun BlockRenderer(
 ) {
     when (block.type) {
         "container" -> ContainerView(block, content = content)
+        "form" -> FormView(block, content = content)
         "hero" -> HeroView(block)
         "text" -> TextView(block)
         "navButton" -> NavButtonView(block, onNavigate = onNavigate)
+        "submitButton" -> SubmitButtonView(block)
         "shape" -> ShapeView(block)
         "badge" -> BadgeView(block)
         "icon" -> IconView(block)

@@ -14,7 +14,7 @@ Template  = editor-time recipe that inserts normal blocks
 Component = future linked/reusable instance system
 ```
 
-The first implementation should be deliberately narrow. Containers solve grouping and proportional layout. Templates solve faster creation. Components, nested layout trees, marketplace templates, and functional data behavior are deferred.
+The first implementation should be deliberately narrow. Containers solve grouping and proportional layout. Templates solve faster creation. Components, nested layout trees, marketplace templates, and broader app-data behavior are deferred.
 
 ## Product Model
 
@@ -575,7 +575,7 @@ Manual checks:
 - Automatic row/column flow layout
 - Container padding
 - Shared asset library management beyond the current per-block image asset upload path
-- Data binding or functional form submission for mockup controls
+- Data binding beyond the current Form block submission flow
 - User-created template publishing or marketplace distribution
 - Template updates applied to existing projects
 - Linked templates or reusable template instances

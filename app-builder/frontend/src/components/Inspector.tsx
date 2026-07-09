@@ -134,7 +134,7 @@ export default function Inspector({
 
     const clone = contentNode.cloneNode(true) as HTMLElement;
     const renderedRoot = clone.firstElementChild as HTMLElement | null;
-    const textNode = block.type === 'navButton'
+    const textNode = block.type === 'navButton' || block.type === 'submitButton'
       ? renderedRoot?.querySelector<HTMLElement>('button')
       : block.type === 'text'
         ? renderedRoot?.querySelector<HTMLElement>('p')
@@ -265,9 +265,10 @@ export default function Inspector({
   const rawScaleX = Number(placement.scaleX ?? 1);
   const rawScaleY = Number(placement.scaleY ?? 1);
   const hasCustomScale = Math.abs(rawScaleX - 1) > 0.001 || Math.abs(rawScaleY - 1) > 0.001;
-  const supportsContentScaling = block!.type === 'hero' || block!.type === 'text' || block!.type === 'navButton';
+  const supportsContentScaling = block!.type === 'hero' || block!.type === 'text' || block!.type === 'navButton' || block!.type === 'submitButton';
   const resizeBehavior = block!.layout?.resizeBehavior ?? 'boxOnly';
-  const isEditingThisContainer = block!.type === 'container' && activeContainerId === block!.id;
+  const isParentBlock = block!.type === 'container' || block!.type === 'form';
+  const isEditingThisContainer = isParentBlock && activeContainerId === block!.id;
 
   function setResizeBehavior(nextBehavior: 'boxOnly' | 'scaleContent') {
     const grid = block!.layout?.grid;
@@ -283,7 +284,7 @@ export default function Inspector({
         nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 16) || 16) * currentContentScale);
         nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
       }
-      if (block!.type === 'navButton') {
+      if (block!.type === 'navButton' || block!.type === 'submitButton') {
         nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 14) || 14) * currentContentScale);
         nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
         nextProps.buttonPaddingX = Math.round((Number(nextProps.buttonPaddingX ?? 14) || 14) * currentContentScale);
@@ -373,16 +374,20 @@ export default function Inspector({
           ) : null}
         </FormSection>
       ) : null}
-      {block.type === 'container' ? (
+      {isParentBlock ? (
         <FormSection
-          title="Container contents"
-          description="Click Edit contents, then click blocks in the left sidebar. New blocks will be placed inside this container until you exit."
+          title={`${block.type === 'form' ? 'Form' : 'Container'} contents`}
+          description={
+            block.type === 'form'
+              ? 'Click Edit contents, then add input, textarea, checkbox, or toggle blocks from the left sidebar.'
+              : 'Click Edit contents, then click blocks in the left sidebar. New blocks will be placed inside this container until you exit.'
+          }
         >
           <div className="grid gap-2">
             {isEditingThisContainer ? (
               <>
                 <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900">
-                  Container editing is active. Use the left sidebar to add child blocks here.
+                  {block.type === 'form' ? 'Form editing' : 'Container editing'} is active. Use the left sidebar to add child blocks here.
                 </div>
                 <button type="button" className="ghost-btn !justify-start !px-4 !py-3 text-left text-sm" onClick={onExitContainer}>
                   Exit container editing
@@ -407,8 +412,39 @@ export default function Inspector({
         </FormSection>
       ) : null}
       <form onSubmit={handleSubmit(submit)} className="grid gap-4">
-        {block.type === 'container' && (
-          <FormSection title="Container style" description="Containers are transparent by default. Add a surface only when it helps structure the screen.">
+        {isParentBlock && (
+          <FormSection
+            title={`${block.type === 'form' ? 'Form' : 'Container'} style`}
+            description={
+              block.type === 'form'
+                ? 'Style the form surface and submit area. Child fields keep their own styles.'
+                : 'Containers are transparent by default. Add a surface only when it helps structure the screen.'
+            }
+          >
+            {block.type === 'form' ? (
+              <>
+                <div className="grid gap-2">
+                  <FieldLabel>Title</FieldLabel>
+                  <TextInput {...register('title')} />
+                </div>
+                <div className="grid gap-2">
+                  <FieldLabel>Description</FieldLabel>
+                  <TextArea rows={3} {...register('description')} />
+                </div>
+                <div className="grid gap-2">
+                  <FieldLabel>Submit label</FieldLabel>
+                  <TextInput {...register('submitLabel')} />
+                </div>
+                <div className="grid gap-2">
+                  <FieldLabel>Success message</FieldLabel>
+                  <TextInput {...register('successMessage')} />
+                </div>
+                <div className="grid gap-2">
+                  <FieldLabel>Content padding (px)</FieldLabel>
+                  <TextInput type="number" min={0} className="max-w-[120px]" {...register('contentPadding')} />
+                </div>
+              </>
+            ) : null}
             <div className="grid gap-2">
               <FieldLabel>Background color</FieldLabel>
               <TextInput placeholder="transparent or #ffffff" {...registerLiveContainerStyle('backgroundColor')} />
@@ -477,6 +513,62 @@ export default function Inspector({
               <p className="text-xs text-slate-500">This button switches to the selected page in preview/runtime.</p>
             </FormSection>
             <FormSection title="Button style" description="Tune the visual button without creating a separate button type.">
+              <div className="grid gap-2">
+                <FieldLabel>Font size (px)</FieldLabel>
+                <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Background color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Text color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Corner radius (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Button padding X (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('buttonPaddingX')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Button padding Y (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('buttonPaddingY')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Outer padding (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('contentPadding')} />
+              </div>
+            </FormSection>
+          </>
+        )}
+
+        {block.type === 'submitButton' && (
+          <>
+            <FormSection title="Submit action" description="Submits fields on this page that use the same submit group.">
+              <div className="grid gap-2">
+                <FieldLabel>Label</FieldLabel>
+                <TextInput {...registerLiveText('label')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Data source name</FieldLabel>
+                <TextInput placeholder="Contact Requests" {...register('dataSourceName')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Submit group</FieldLabel>
+                <TextInput placeholder="default" {...register('submitGroupId')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Success message</FieldLabel>
+                <TextInput {...register('successMessage')} />
+              </div>
+              <p className="text-xs text-slate-500">
+                Any input, textarea, checkbox, or toggle with this group will be submitted together.
+              </p>
+            </FormSection>
+            <FormSection title="Button style" description="Tune the submit button appearance.">
               <div className="grid gap-2">
                 <FieldLabel>Font size (px)</FieldLabel>
                 <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
@@ -613,11 +705,23 @@ export default function Inspector({
         )}
 
         {block.type === 'checkbox' && (
-          <FormSection title="Checkbox" description="Visual-only checkbox for mockups and checklists.">
+          <FormSection title="Checkbox" description="Works as a boolean field when submitted by a Submit Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
+            <div className="grid gap-2">
+              <FieldLabel>Field key</FieldLabel>
+              <TextInput placeholder="auto from label" {...register('fieldKey')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Submit group</FieldLabel>
+              <TextInput placeholder="default" {...register('submitGroupId')} />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+              <ToggleInput type="checkbox" {...register('required')} />
+              Required in forms
+            </label>
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('checked')} />
               Checked
@@ -646,11 +750,23 @@ export default function Inspector({
         )}
 
         {block.type === 'toggle' && (
-          <FormSection title="Toggle" description="Visual-only on/off switch for mockups.">
+          <FormSection title="Toggle" description="Works as a boolean field when submitted by a Submit Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...registerLiveText('label')} />
             </div>
+            <div className="grid gap-2">
+              <FieldLabel>Field key</FieldLabel>
+              <TextInput placeholder="auto from label" {...register('fieldKey')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Submit group</FieldLabel>
+              <TextInput placeholder="default" {...register('submitGroupId')} />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+              <ToggleInput type="checkbox" {...register('required')} />
+              Required in forms
+            </label>
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('checked')} />
               On
@@ -712,11 +828,23 @@ export default function Inspector({
         )}
 
         {block.type === 'input' && (
-          <FormSection title="Input" description="Visual single-line field for app mockups. It is not connected to form submissions yet.">
+          <FormSection title="Input" description="Works as a single-line field when submitted by a Submit Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
+            <div className="grid gap-2">
+              <FieldLabel>Field key</FieldLabel>
+              <TextInput placeholder="auto from label" {...register('fieldKey')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Submit group</FieldLabel>
+              <TextInput placeholder="default" {...register('submitGroupId')} />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+              <ToggleInput type="checkbox" {...register('required')} />
+              Required in forms
+            </label>
             <div className="grid gap-2">
               <FieldLabel>Placeholder</FieldLabel>
               <TextInput {...register('placeholder')} />
@@ -763,11 +891,23 @@ export default function Inspector({
         )}
 
         {block.type === 'textarea' && (
-          <FormSection title="Textarea" description="Visual multi-line field for app mockups. It is not connected to form submissions yet.">
+          <FormSection title="Textarea" description="Works as a multi-line field when submitted by a Submit Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
+            <div className="grid gap-2">
+              <FieldLabel>Field key</FieldLabel>
+              <TextInput placeholder="auto from label" {...register('fieldKey')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Submit group</FieldLabel>
+              <TextInput placeholder="default" {...register('submitGroupId')} />
+            </div>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+              <ToggleInput type="checkbox" {...register('required')} />
+              Required in forms
+            </label>
             <div className="grid gap-2">
               <FieldLabel>Placeholder</FieldLabel>
               <TextInput {...register('placeholder')} />
@@ -1008,7 +1148,7 @@ export default function Inspector({
                 type="button"
                 className="ghost-btn !text-red-700"
                 onClick={() => {
-                  if (block.type !== 'container') {
+                  if (block.type !== 'container' && block.type !== 'form') {
                     const ok = confirm('Delete this block?');
                     if (!ok) return;
                   }

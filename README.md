@@ -18,11 +18,14 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Visual editor with pages, drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
-- Lightweight primitive blocks: Shape, Badge, Icon, Image, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container
+- Lightweight primitive blocks: Shape, Badge, Icon, Image, Progress Bar, Form, Submit Button, Input, Textarea, Checkbox, Toggle, and Container
 - Nav Button supports page navigation plus inspector-based visual styling
 - Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
-- Input, Textarea, Checkbox, and Toggle are currently visual mockup blocks, not live form-submission fields
+- Form blocks can collect live app-user submissions in web preview using nested Input, Textarea, Checkbox, and Toggle field blocks
+- Submit Button blocks can submit same-page Input, Textarea, Checkbox, and Toggle fields that share a `submitGroupId`
+- Input, Textarea, Checkbox, and Toggle can act as grouped live fields in web preview when nested inside a Form block or paired with a Submit Button; otherwise they remain editor-time mockup controls
 - Container blocks can group supported atomic child blocks including Image, expose container styling in the inspector, and render in both web and Android preview
+- Dashboard project cards include an App Data drawer for reviewing Contact Form, Form, and Submit Button sources, their saved records, and CSV exports
 - Web preview mode with page navigation
 - Android native preview runtime connected to backend project data
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending
@@ -79,7 +82,7 @@ props = block-specific content and styling
 The long-term goal is for the same saved schema to power web preview, Android preview, future export targets, and eventual AI-assisted generation.
 
 Today the editor canvas is intentionally constrained to a phone-style 16-column by 29-row workspace so placement stays predictable and closer to the Android reference surface.
-The current add-block palette is grouped into text/navigation, visual elements, form-mockup primitives, and layout blocks so new schema-backed blocks can land without introducing more one-off business sections.
+The current add-block palette is grouped into text/navigation, visual elements, forms/fields, and layout blocks so new schema-backed blocks can land without introducing more one-off business sections.
 
 ## License
 

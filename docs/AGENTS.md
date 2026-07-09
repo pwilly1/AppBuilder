@@ -73,6 +73,7 @@ props.scaleY
 - Do not claim planned strategic features are implemented unless the code supports them.
 - Update docs when architecture, deployment, schema, or roadmap changes.
 - Image file uploads should use the backend asset upload path when storage is configured; saved blocks store the returned URL in `props.src`. Data URLs are only a local/unsaved fallback.
+- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or when paired with a same-page `submitButton` through matching `submitGroupId`; otherwise document them as editor-time mockup controls.
 
 ## Current Block Inventory
 
@@ -81,11 +82,13 @@ Visible editor palette today:
 - Hero
 - Text
 - Nav Button
+- Submit Button
 - Badge
 - Icon
 - Shape
 - Image
 - Progress Bar
+- Form
 - Input
 - Textarea
 - Checkbox
@@ -115,7 +118,12 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | File | Purpose |
 | --- | --- |
 | `app-builder/frontend/src/App.tsx` | Routing, auth state, project hook wiring |
-| `app-builder/frontend/src/hooks/useProject.ts` | Main project state/actions/save/load logic |
+| `app-builder/frontend/src/hooks/useProject.ts` | Stable public project hook that composes the focused project hooks below |
+| `app-builder/frontend/src/hooks/project/useProjectHistory.ts` | Undo/redo snapshots and shared project change application |
+| `app-builder/frontend/src/hooks/project/useProjectPages.ts` | Selected-page state and page create/rename/delete flows |
+| `app-builder/frontend/src/hooks/project/useProjectBlocks.ts` | Block selection, mutation, placement, and reorder flows |
+| `app-builder/frontend/src/hooks/project/useProjectPersistence.ts` | Load/save/autosave behavior plus auth/session checks |
+| `app-builder/frontend/src/hooks/project/projectUtils.ts` | Initial-project setup, normalization, path helpers, and remembered project ids |
 | `app-builder/frontend/src/layout/EditorLayout.tsx` | Editor shell and toolbar |
 | `app-builder/frontend/src/editor/PageRenderer.tsx` | Canvas rendering and interactions |
 | `app-builder/frontend/src/editor/DraggableBlock.tsx` | Block movement/resizing behavior |
@@ -132,7 +140,9 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/backend/src/index.ts` | Express app setup, CORS, routes, Mongo connection |
 | `app-builder/backend/src/config/index.ts` | Env variable loading |
 | `app-builder/backend/src/routes/AuthRoutes.ts` | Auth endpoints |
-| `app-builder/backend/src/routes/ProjectRoutes.ts` | Project CRUD, form, and image-upload endpoints |
+| `app-builder/backend/src/routes/ProjectRoutes.ts` | Project CRUD, image-upload, and submission endpoints |
+| `app-builder/backend/src/models/AppSubmission.ts` | Schema-backed submission persistence model |
+| `app-builder/backend/src/services/AppSubmissionService.ts` | Schema-backed submission validation and query helpers |
 | `app-builder/backend/src/services/AssetStorageService.ts` | Azure Blob Storage upload helper for project images |
 | `app-builder/backend/src/services/AuthService.ts` | Auth behavior |
 | `app-builder/backend/src/services/ProjectManager.ts` | Project behavior |

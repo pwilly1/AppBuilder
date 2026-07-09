@@ -19,13 +19,17 @@ import { ServicesList } from './blocks/ServicesList';
 import { ContactForm } from './blocks/ContactForm';
 import { ImageGallery } from './blocks/ImageGallery';
 import { ContainerBlock } from './blocks/ContainerBlock';
+import { FormBlock } from './blocks/FormBlock';
+import { SubmitButton } from './blocks/SubmitButton';
 import { getBlockContentScale } from './schema/contentScale';
 
 const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   container: ContainerBlock,
+  form: FormBlock,
   hero: Hero,
   text: TextBlock,
   navButton: NavButton,
+  submitButton: SubmitButton,
   shape: ShapeBlock,
   badge: BadgeBlock,
   icon: IconBlock,

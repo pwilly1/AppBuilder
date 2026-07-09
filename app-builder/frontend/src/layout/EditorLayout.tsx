@@ -113,7 +113,7 @@ export default function EditorLayout(props: Props) {
 
   function handleAddBlock(block: Block) {
     setTemplateInsertError(null)
-    if (!activeContainer || isContainerBlock(block) || !canBlockBeContainerChild(block)) {
+    if (!activeContainer || isContainerBlock(block) || !canBlockBeContainerChild(block, activeContainer)) {
       addBlock(block)
       return
     }
@@ -178,7 +178,7 @@ export default function EditorLayout(props: Props) {
       const rootBlock = insertedBlocks.find((block) => !block.parentId) ?? insertedBlocks[0]
 
       applyBlockTransaction((blocks: Block[]) => [...blocks, ...insertedBlocks])
-      setActiveContainerId(rootBlock?.type === 'container' ? rootBlock.id : null)
+      setActiveContainerId(rootBlock && isContainerBlock(rootBlock) ? rootBlock.id : null)
       setSelectedBlock(rootBlock)
       return
     }
@@ -218,7 +218,7 @@ export default function EditorLayout(props: Props) {
       parent &&
       isContainerBlock(parent) &&
       !isContainerBlock(block) &&
-      canBlockBeContainerChild(block)
+      canBlockBeContainerChild(block, parent)
 
     if (parentId && !shouldAddToContainer) return
 
@@ -288,7 +288,7 @@ export default function EditorLayout(props: Props) {
       !currentBlock.parentId &&
       currentBlock.id !== activeContainer.id &&
       !isContainerBlock(currentBlock) &&
-      canBlockBeContainerChild(currentBlock) &&
+      canBlockBeContainerChild(currentBlock, activeContainer) &&
       newGrid
 
     if (isAttachToActiveContainer) {

@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   createProject,
   deleteProject,
+  exportProjectAppDataCsv,
   getProject,
-  listProjectFormSubmissions,
+  listProjectAppDataRecords,
+  listProjectAppDataSources,
   listProjects,
-  type ProjectFormSubmission,
+  type ProjectAppDataRecord,
+  type ProjectAppDataSource,
 } from '../api';
 import { BlockRenderer } from '../shared/BlockRenderer';
 import type { Block } from '../shared/schema/types';
@@ -21,13 +24,6 @@ type ProjectRecord = {
     title?: string;
     blocks?: Block[];
   }>;
-};
-
-type ContactFormRef = {
-  id: string;
-  title: string;
-  pageTitle: string;
-  destinationEmail?: string;
 };
 
 function TopNav({ search, setSearch }: { search: string; setSearch: (s: string) => void }) {
@@ -74,25 +70,21 @@ function Sidebar() {
   );
 }
 
-function collectContactForms(project: ProjectRecord | null): ContactFormRef[] {
-  if (!project?.pages?.length) return [];
-  return project.pages.flatMap((page) =>
-    (page.blocks || [])
-      .filter((block) => block.type === 'contactForm')
-      .map((block, index) => ({
-        id: block.id,
-        title: typeof block.props?.title === 'string' && block.props.title.trim() ? block.props.title : `Contact Form ${index + 1}`,
-        pageTitle: page.title || 'Untitled Page',
-        destinationEmail:
-          typeof block.props?.destinationEmail === 'string' && block.props.destinationEmail.trim()
-            ? block.props.destinationEmail.trim()
-            : undefined,
-      }))
-  );
+function formatSubmissionValue(value?: string | boolean) {
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return value && value.trim() ? value : '-';
 }
 
-function formatSubmissionValue(value?: string) {
-  return value && value.trim() ? value : '-';
+function formatSubmissionLabel(key: string) {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getSubmissionSummary(data: ProjectAppDataRecord['data']) {
+  if (typeof data.name === 'string' && data.name.trim()) return data.name;
+  const firstTextValue = Object.values(data).find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  return firstTextValue || 'Submission';
 }
 
 function SubmissionDrawer({
@@ -101,23 +93,28 @@ function SubmissionDrawer({
   projectError,
   selectedBlockId,
   submissions,
+  sources,
   loadingSubmissions,
   submissionsError,
+  exportingCsv,
   onClose,
   onSelectBlock,
+  onExportCsv,
 }: {
   project: ProjectRecord | null;
   loadingProject: boolean;
   projectError: string;
   selectedBlockId: string;
-  submissions: ProjectFormSubmission[];
+  submissions: ProjectAppDataRecord[];
+  sources: ProjectAppDataSource[];
   loadingSubmissions: boolean;
   submissionsError: string;
+  exportingCsv: boolean;
   onClose: () => void;
   onSelectBlock: (blockId: string) => void;
+  onExportCsv: () => void;
 }) {
-  const forms = collectContactForms(project);
-  const selectedForm = forms.find((form) => form.id === selectedBlockId) || forms[0];
+  const selectedSource = sources.find((source) => source.sourceId === selectedBlockId) || sources[0];
   const sortedSubmissions = [...submissions].sort(
     (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
   );
@@ -127,9 +124,9 @@ function SubmissionDrawer({
       <div className="mx-auto flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
           <div>
-            <h3 className="text-xl font-semibold text-slate-900">Submissions</h3>
+            <h3 className="text-xl font-semibold text-slate-900">App Data</h3>
             <p className="mt-1 text-sm text-slate-500">
-              {project ? `Project: ${project.name}` : 'Loading project details'}
+              {project ? `Hosted records for ${project.name}` : 'Loading project data'}
             </p>
           </div>
           <button className="rounded-md px-3 py-2 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900" onClick={onClose}>
@@ -139,29 +136,29 @@ function SubmissionDrawer({
 
         <div className="grid flex-1 gap-0 overflow-hidden md:grid-cols-[280px_1fr]">
           <aside className="border-b border-slate-200 bg-slate-50 p-5 md:border-b-0 md:border-r">
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Contact Forms</h4>
-            {loadingProject ? <p className="mt-4 text-sm text-slate-500">Loading forms...</p> : null}
+            <h4 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Data sources</h4>
+            {loadingProject ? <p className="mt-4 text-sm text-slate-500">Loading data sources...</p> : null}
             {!loadingProject && projectError ? <p className="mt-4 text-sm text-red-600">{projectError}</p> : null}
-            {!loadingProject && !projectError && forms.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">This project does not have any contact forms yet.</p>
+            {!loadingProject && !projectError && sources.length === 0 ? (
+              <p className="mt-4 text-sm text-slate-500">This project does not have any app data sources yet.</p>
             ) : null}
             <div className="mt-4 space-y-3">
-              {forms.map((form) => (
+              {sources.map((source) => (
                 <button
-                  key={form.id}
+                  key={source.sourceId}
                   className={`w-full rounded-xl border px-3 py-3 text-left transition ${
-                    form.id === selectedForm?.id
+                    source.sourceId === selectedSource?.sourceId
                       ? 'border-slate-900 bg-slate-900 text-white'
                       : 'border-slate-200 bg-white text-slate-900 hover:border-slate-300'
                   }`}
-                  onClick={() => onSelectBlock(form.id)}
+                  onClick={() => onSelectBlock(source.sourceId)}
                 >
-                  <div className="text-sm font-semibold">{form.title}</div>
-                  <div className={`mt-1 text-xs ${form.id === selectedForm?.id ? 'text-slate-300' : 'text-slate-500'}`}>
-                    {form.pageTitle}
+                  <div className="text-sm font-semibold">{source.name}</div>
+                  <div className={`mt-1 text-xs ${source.sourceId === selectedSource?.sourceId ? 'text-slate-300' : 'text-slate-500'}`}>
+                    {source.pageTitle}
                   </div>
-                  <div className={`mt-2 text-xs ${form.id === selectedForm?.id ? 'text-slate-300' : 'text-slate-500'}`}>
-                    {form.destinationEmail ? `Emails: ${form.destinationEmail}` : 'Email notifications not configured'}
+                  <div className={`mt-2 text-xs ${source.sourceId === selectedSource?.sourceId ? 'text-slate-300' : 'text-slate-500'}`}>
+                    {source.recordCount} records | {source.type === 'contactForm' ? 'Legacy contact form' : 'Hosted app data'}
                   </div>
                 </button>
               ))}
@@ -169,16 +166,26 @@ function SubmissionDrawer({
           </aside>
 
           <section className="flex min-h-0 flex-col p-6">
-            {selectedForm ? (
+            {selectedSource ? (
               <>
                 <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-4">
                   <div>
-                    <div className="text-lg font-semibold text-slate-900">{selectedForm.title}</div>
-                    <div className="mt-1 text-sm text-slate-500">{selectedForm.pageTitle}</div>
+                    <div className="text-lg font-semibold text-slate-900">{selectedSource.name}</div>
+                    <div className="mt-1 text-sm text-slate-500">{selectedSource.pageTitle}</div>
                   </div>
-                  <div className="text-right text-sm text-slate-500">
-                    <div>{sortedSubmissions.length} submissions</div>
-                    <div>{selectedForm.destinationEmail || 'No destination email set'}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right text-sm text-slate-500">
+                      <div>{sortedSubmissions.length} records</div>
+                      <div>{selectedSource.fields.length} fields</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="ghost-btn !px-4 !py-2 !text-xs !font-semibold"
+                      disabled={exportingCsv || sortedSubmissions.length === 0}
+                      onClick={onExportCsv}
+                    >
+                      {exportingCsv ? 'Exporting...' : 'Export CSV'}
+                    </button>
                   </div>
                 </div>
 
@@ -187,7 +194,7 @@ function SubmissionDrawer({
                   {!loadingSubmissions && submissionsError ? <p className="text-sm text-red-600">{submissionsError}</p> : null}
                   {!loadingSubmissions && !submissionsError && sortedSubmissions.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
-                      No submissions yet for this form.
+                      No records yet for this data source.
                     </div>
                   ) : null}
                   <div className="space-y-4">
@@ -196,7 +203,7 @@ function SubmissionDrawer({
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <h5 className="text-sm font-semibold text-slate-900">
-                              {formatSubmissionValue(submission.data.name)}
+                              {getSubmissionSummary(submission.data)}
                             </h5>
                             <p className="mt-1 text-xs text-slate-500">
                               {new Date(submission.submittedAt).toLocaleString()}
@@ -204,20 +211,12 @@ function SubmissionDrawer({
                           </div>
                         </div>
                         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Email</dt>
-                            <dd className="mt-1 text-sm text-slate-900">{formatSubmissionValue(submission.data.email)}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Phone</dt>
-                            <dd className="mt-1 text-sm text-slate-900">{formatSubmissionValue(submission.data.phone)}</dd>
-                          </div>
-                          <div className="sm:col-span-2">
-                            <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Message</dt>
-                            <dd className="mt-1 whitespace-pre-wrap text-sm text-slate-900">
-                              {formatSubmissionValue(submission.data.message)}
-                            </dd>
-                          </div>
+                          {Object.entries(submission.data).map(([key, value]) => (
+                            <div key={key} className={typeof value === 'string' && value.length > 80 ? 'sm:col-span-2' : ''}>
+                              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{formatSubmissionLabel(key)}</dt>
+                              <dd className="mt-1 whitespace-pre-wrap text-sm text-slate-900">{formatSubmissionValue(value)}</dd>
+                            </div>
+                          ))}
                         </dl>
                       </article>
                     ))}
@@ -226,7 +225,7 @@ function SubmissionDrawer({
               </>
             ) : (
               <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-500">
-                Select a project with a contact form to review submissions.
+                Select a project with app data sources to review records.
               </div>
             )}
           </section>
@@ -302,9 +301,11 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
   const [submissionProjectId, setSubmissionProjectId] = useState<string | null>(null);
   const [submissionProject, setSubmissionProject] = useState<ProjectRecord | null>(null);
   const [selectedSubmissionBlockId, setSelectedSubmissionBlockId] = useState('');
-  const [submissionList, setSubmissionList] = useState<ProjectFormSubmission[]>([]);
+  const [appDataSources, setAppDataSources] = useState<ProjectAppDataSource[]>([]);
+  const [submissionList, setSubmissionList] = useState<ProjectAppDataRecord[]>([]);
   const [loadingSubmissionProject, setLoadingSubmissionProject] = useState(false);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const [submissionProjectError, setSubmissionProjectError] = useState('');
   const [submissionListError, setSubmissionListError] = useState('');
 
@@ -329,6 +330,7 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
     if (!submissionProjectId) {
       setSubmissionProject(null);
       setSelectedSubmissionBlockId('');
+      setAppDataSources([]);
       setSubmissionList([]);
       setSubmissionProjectError('');
       setSubmissionListError('');
@@ -341,19 +343,23 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
       setLoadingSubmissionProject(true);
       setSubmissionProjectError('');
       try {
-        const res: any = await getProject(projectId);
+        const [res, sources]: [any, ProjectAppDataSource[]] = await Promise.all([
+          getProject(projectId),
+          listProjectAppDataSources(projectId),
+        ]);
         if (cancelled) return;
         const normalized: ProjectRecord = { ...res, id: res.id ?? res._id };
-        const forms = collectContactForms(normalized);
         setSubmissionProject(normalized);
+        setAppDataSources(sources || []);
         setSelectedSubmissionBlockId((current) => {
-          if (current && forms.some((form) => form.id === current)) return current;
-          return forms[0]?.id || '';
+          if (current && sources.some((source) => source.sourceId === current)) return current;
+          return sources[0]?.sourceId || '';
         });
       } catch (error: any) {
         if (cancelled) return;
         setSubmissionProject(null);
         setSelectedSubmissionBlockId('');
+        setAppDataSources([]);
         setSubmissionProjectError(error?.message || 'Failed to load project submissions.');
       } finally {
         if (!cancelled) setLoadingSubmissionProject(false);
@@ -380,7 +386,7 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
       setLoadingSubmissions(true);
       setSubmissionListError('');
       try {
-        const res = await listProjectFormSubmissions(projectId, blockId);
+        const res = await listProjectAppDataRecords(projectId, blockId);
         if (!cancelled) setSubmissionList(res || []);
       } catch (error: any) {
         if (!cancelled) {
@@ -429,6 +435,39 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
       }
     } catch (error) {
       console.error(error);
+    }
+  }
+
+  function slugifyFilePart(value: string) {
+    return (
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'app-data'
+    );
+  }
+
+  async function exportSelectedCsv() {
+    if (!submissionProject?.id || !selectedSubmissionBlockId) return;
+
+    const selectedSource = appDataSources.find((source) => source.sourceId === selectedSubmissionBlockId);
+    setExportingCsv(true);
+    setSubmissionListError('');
+    try {
+      const csv = await exportProjectAppDataCsv(submissionProject.id, selectedSubmissionBlockId);
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${slugifyFilePart(submissionProject.name)}-${slugifyFilePart(selectedSource?.name || 'app-data')}-records.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      setSubmissionListError(error?.message || 'Failed to export CSV.');
+    } finally {
+      setExportingCsv(false);
     }
   }
 
@@ -524,10 +563,13 @@ export default function Dashboard({ onOpen }: { onOpen: (project: ProjectRecord)
           projectError={submissionProjectError}
           selectedBlockId={selectedSubmissionBlockId}
           submissions={submissionList}
+          sources={appDataSources}
           loadingSubmissions={loadingSubmissions}
           submissionsError={submissionListError}
+          exportingCsv={exportingCsv}
           onClose={() => setSubmissionProjectId(null)}
           onSelectBlock={setSelectedSubmissionBlockId}
+          onExportCsv={exportSelectedCsv}
         />
       ) : null}
     </div>

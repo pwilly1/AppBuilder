@@ -49,10 +49,12 @@ The current visible block palette is:
 - Hero
 - Text
 - Nav Button
+- Submit Button
 - Badge
 - Icon
 - Shape
 - Progress Bar
+- Form
 - Input
 - Textarea
 - Image
@@ -60,12 +62,14 @@ The current visible block palette is:
 - Toggle
 - Container
 
-Hero, Text, Nav Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
+Hero, Text, Nav Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Submit Button, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
 Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling. Nav Button supports page navigation plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
-Input, Textarea, Checkbox, and Toggle are visual mockup controls for app-design flows. They render in web and Android preview, but they are not wired into submission handling or generated app data yet.
+Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dashboard can review stored records for each saved Form source.
+Submit Button is a second schema-backed submission path. In web preview it submits same-page Input, Textarea, Checkbox, and Toggle fields that share the same normalized `submitGroupId`.
+Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or when paired with a same-group Submit Button. In the editor they still behave as mockup controls, and Android preview currently renders the Form and Submit Button visuals without live submission behavior.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
 
 ### Grid Layout
@@ -90,6 +94,7 @@ Current layout capabilities:
 
 - Projects are saved to MongoDB through the backend.
 - Project CRUD is available through authenticated API routes.
+- Saved projects can review Contact Form, Form, and Submit Button app-data sources from the dashboard, inspect stored records, and export source data as CSV.
 
 ### Deployment
 
@@ -116,6 +121,7 @@ Implemented primitives:
 - Badge
 - Icon
 - Progress Bar
+- Form
 - Input
 - Textarea
 - Image
@@ -125,7 +131,7 @@ Implemented primitives:
 
 Still planned:
 
-- Card/container
+- Card
 
 ### Sections And Containers
 
@@ -243,6 +249,6 @@ Later AI features:
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
 - Container editing is intentionally limited to one level; nested containers are not supported.
-- App data storage for generated apps is not implemented.
+- Schema-backed Form submissions are stored for review, but broader generated-app data models and bindings are not implemented.
 - Export and app-store pipeline features are not implemented.
 - GenAI generation is planned, not currently implemented.

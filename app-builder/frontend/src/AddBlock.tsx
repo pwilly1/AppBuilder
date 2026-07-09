@@ -237,6 +237,7 @@ export function AddBlock({
           <BlockEntry title="Hero" note="Intro headline" create={() => createBlock('hero', { headline: 'New Hero' })} onAdd={onAdd} />
           <BlockEntry title="Text" note="Paragraphs or short body copy" create={() => createBlock('text', { value: 'New text' })} onAdd={onAdd} />
           <BlockEntry title="Nav Button" note="Link to another page in the app" create={() => createBlock('navButton', { label: 'Go', toPageId: '' })} onAdd={onAdd} />
+          <BlockEntry title="Submit Button" note="Submit fields with the same group" create={() => createBlock('submitButton')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
 
@@ -250,12 +251,12 @@ export function AddBlock({
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Form Mockups">
+      <CollapsibleSection title="Forms & Fields">
         <div className="grid gap-2">
-          <BlockEntry title="Input" note="Visual single-line field" create={() => createBlock('input')} onAdd={onAdd} />
-          <BlockEntry title="Textarea" note="Visual multi-line field" create={() => createBlock('textarea')} onAdd={onAdd} />
-          <BlockEntry title="Checkbox" note="Visual checked/unchecked option" create={() => createBlock('checkbox')} onAdd={onAdd} />
-          <BlockEntry title="Toggle" note="Visual on/off switch" create={() => createBlock('toggle')} onAdd={onAdd} />
+          <BlockEntry title="Input" note="Single-line field" create={() => createBlock('input')} onAdd={onAdd} />
+          <BlockEntry title="Textarea" note="Multi-line field" create={() => createBlock('textarea')} onAdd={onAdd} />
+          <BlockEntry title="Checkbox" note="Checked/unchecked option" create={() => createBlock('checkbox')} onAdd={onAdd} />
+          <BlockEntry title="Toggle" note="On/off switch" create={() => createBlock('toggle')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
 
