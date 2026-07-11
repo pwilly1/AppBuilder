@@ -1,133 +1,86 @@
-// © 2025 Preston Willis. All rights reserved.
-import { MongoUserRepository } from '../repositories/UserRepository.js';
+import type { IUserRepository } from '../repositories/UserRepository.js';
+import type { ProjectPage } from '../models/Project.js';
+import type {
+  CreateProjectInput,
+  ProjectRecord,
+  ProjectRepository,
+} from '../repositories/ProjectRepository.js';
+
+export class ProjectNotFoundError extends Error {
+  constructor() {
+    super('Project not found');
+  }
+}
+
+export class ProjectPermissionError extends Error {}
 
 export class ProjectManager {
-  repo: any;
+  constructor(
+    private readonly projects: ProjectRepository,
+    private readonly users: IUserRepository,
+  ) {}
 
-  constructor(repo: any) {
-    this.repo = repo;
+  listOwned(ownerId: string): Promise<ProjectRecord[]> {
+    if (!ownerId) throw new ProjectPermissionError('Missing project owner');
+    return this.projects.listByOwner(ownerId);
   }
 
-  async create(projectName: string, options: Record<string, any> = {}): Promise<any> {
+  findById(projectId: string): Promise<ProjectRecord | null> {
+    if (!projectId) return Promise.resolve(null);
+    return this.projects.findById(projectId);
+  }
+
+  async findOwned(projectId: string, ownerId: string): Promise<ProjectRecord | null> {
+    const project = await this.findById(projectId);
+    if (!project || project.ownerId !== ownerId) return null;
+    return project;
+  }
+
+  async create(projectName: string, options: Record<string, unknown> = {}): Promise<ProjectRecord> {
     if (!projectName) throw new Error('projectName is required');
-    const payload = { name: projectName, ...options };
-    // defensive: prevent guest users from creating projects
-    if ((payload as any).ownerId) {
-      try {
-        const userRepo = new MongoUserRepository();
-        const u = await userRepo.findById((payload as any).ownerId);
-        if (u && (u as any).isGuest) throw new Error('Guests cannot create projects');
-      } catch (err) {
-        // if lookup fails, continue and let repository layer surface errors
-      }
-    }
-    if (typeof this.repo.create === 'function') {
-      return await this.repo.create(payload);
-    }
-    // fallback: return payload with a generated id
-    return { id: Date.now().toString(), ...payload };
+    const ownerId = typeof options.ownerId === 'string' ? options.ownerId : '';
+    if (!ownerId) throw new ProjectPermissionError('Project owner is required');
+    await this.assertRegisteredUser(ownerId, 'Guests cannot create projects');
+
+    const payload: CreateProjectInput = {
+      ownerId,
+      name: projectName,
+      ...(typeof options.schemaVersion === 'number' ? { schemaVersion: options.schemaVersion } : {}),
+      ...(Array.isArray(options.pages) ? { pages: options.pages as ProjectPage[] } : {}),
+    };
+    return this.projects.create(payload);
   }
 
-  // Support both delete and remove repository method names
-  async delete(projectId: string): Promise<void> {
-    if (!projectId) throw new Error('projectId is required');
-    if (typeof this.repo.delete === 'function') {
-      await this.repo.delete(projectId);
-      return;
-    }
-    if (typeof this.repo.remove === 'function') {
-      await this.repo.remove(projectId);
-      return;
-    }
-    throw new Error('Repository does not implement delete/remove');
-  }
-
-  async remove(projectId: string): Promise<void> {
-    return this.delete(projectId);
-  }
-
-  /**
-   * update(userId, projectId, updates) OR update(projectId, updates)
-   */
-  async update(...args: any[]): Promise<any> {
-    let userId: string | undefined;
-    let projectId: string;
-    let updates: Record<string, any>;
-
-    if (args.length === 3) {
-      [userId, projectId, updates] = args;
-    } else if (args.length === 2) {
-      [projectId, updates] = args;
-    } else {
-      throw new Error('Invalid arguments to update');
-    }
-
+  async update(ownerId: string, projectId: string, updates: Record<string, unknown>): Promise<ProjectRecord> {
     if (!projectId) throw new Error('projectId is required');
     if (!updates || typeof updates !== 'object') throw new Error('updates are required');
+    await this.assertRegisteredUser(ownerId, 'Guests cannot update projects');
 
-    // optional ownership check
-    if (userId && typeof this.repo.findById === 'function') {
-      // defensive: block guest user from updating
-      try {
-        const userRepo = new MongoUserRepository();
-        const u = await userRepo.findById(userId);
-        if (u && (u as any).isGuest) throw new Error('Guests cannot update projects');
-      } catch (err) {
-        // ignore lookup errors, let normal flow handle authorization
-      }
-      const existing = await this.repo.findById(projectId);
-      if (!existing) throw new Error('Project not found');
-      if (existing.ownerId && existing.ownerId !== userId) {
-        throw new Error('Not authorized to update this project');
-      }
-    }
+    const existing = await this.findOwned(projectId, ownerId);
+    if (!existing) throw new ProjectNotFoundError();
 
-    // If repository exposes an `update` method that expects a Project object,
-    // fetch the existing project and merge updates so required fields (ownerId, etc.) are preserved.
-    if (typeof this.repo.update === 'function') {
-      if (typeof this.repo.findById === 'function') {
-        const existing = await this.repo.findById(projectId);
-        if (!existing) throw new Error('Project not found');
-        const merged = { ...existing, ...(updates || {}) } as any;
-        return await this.repo.update(merged);
-      }
-      // Fallback: construct a minimal object
-      const projectObj = { id: projectId, ...(updates || {}) } as any;
-      return await this.repo.update(projectObj);
-    }
-
-    // If repository has a patch(id, updates) signature, call that
-    if (typeof this.repo.patch === 'function') {
-      return await this.repo.patch(projectId, updates);
-    }
-
-    // naive in-memory-like fallback
-    if (typeof this.repo.findById === 'function') {
-      const existing = await this.repo.findById(projectId);
-      if (!existing) throw new Error('Project not found');
-      const merged = { ...existing, ...updates };
-      if (typeof this.repo.save === 'function') {
-        await this.repo.save(merged);
-      }
-      return merged;
-    }
-
-    throw new Error('Repository does not implement update/patch');
+    const merged: ProjectRecord = {
+      ...existing,
+      id: existing.id,
+      ownerId: existing.ownerId,
+      name: typeof updates.name === 'string' ? updates.name : existing.name,
+      ...(typeof updates.schemaVersion === 'number' ? { schemaVersion: updates.schemaVersion } : {}),
+      ...(Array.isArray(updates.pages) ? { pages: updates.pages as ProjectPage[] } : {}),
+    };
+    return this.projects.update(merged);
   }
 
-  async deploy(projectId: string): Promise<any> {
-    if (!projectId) throw new Error('projectId is required');
-    if (typeof this.repo.deploy === 'function') {
-      return await this.repo.deploy(projectId);
-    }
-    // default deploy behaviour: mark deployed and return status
-    let project = undefined;
-    if (typeof this.repo.findById === 'function') {
-      project = await this.repo.findById(projectId);
-      if (!project) throw new Error('Project not found');
-      project.deployed = true;
-      if (typeof this.repo.save === 'function') await this.repo.save(project);
-    }
-    return { id: projectId, status: 'deployed', project };
+  async deleteOwned(ownerId: string, projectId: string): Promise<void> {
+    await this.assertRegisteredUser(ownerId, 'Guests cannot delete projects');
+    const existing = await this.findOwned(projectId, ownerId);
+    if (!existing) throw new ProjectNotFoundError();
+    await this.projects.delete(projectId);
+  }
+
+  private async assertRegisteredUser(userId: string, guestMessage: string): Promise<void> {
+    if (!userId) throw new ProjectPermissionError('Missing user');
+    const user = await this.users.findById(userId);
+    if (!user) throw new ProjectPermissionError('User not found');
+    if (user.isGuest) throw new ProjectPermissionError(guestMessage);
   }
 }

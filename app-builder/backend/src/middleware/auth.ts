@@ -1,29 +1,30 @@
-// © 2025 Preston Willis. All rights reserved.
-import type { Request, Response, NextFunction } from 'express';
-import { SessionManager } from '../services/SessionManager.js';
-import { MongoUserRepository } from '../repositories/UserRepository.js';
+import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { IUserRepository } from '../repositories/UserRepository.js';
+import { JwtService } from '../services/JwtService.js';
+import type { AuthenticatedRequest } from '../controllers/controllerUtils.js';
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-  if (!token) return res.status(401).json({ error: 'Missing Authorization token' });
-  try {
-    const payload: any = SessionManager.getInstance().verify(token);
-    // payload may contain userId or sub depending on how it's signed
-    const userId = payload.userId ?? payload.sub;
-    (req as any).userId = userId;
-
-    // attach full user object for downstream handlers (so routes can check isGuest without extra DB calls)
-    try {
-      const userRepo = new MongoUserRepository();
-      const user = await userRepo.findById(userId);
-      (req as any).user = user || null;
-    } catch (err) {
-      (req as any).user = null;
+export function createRequireAuth(tokens: JwtService, users: IUserRepository): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+    if (!token) {
+      res.status(401).json({ error: 'Missing Authorization token' });
+      return;
     }
 
-    return next();
-  } catch (err: any) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
+    try {
+      const payload = tokens.verifyToken(token);
+      const user = await users.findById(payload.userId);
+      if (!user) {
+        res.status(401).json({ error: 'User not found' });
+        return;
+      }
+      const authenticated = req as AuthenticatedRequest;
+      authenticated.userId = payload.userId;
+      authenticated.user = user;
+      next();
+    } catch {
+      res.status(401).json({ error: 'Invalid or expired token' });
+    }
+  };
 }

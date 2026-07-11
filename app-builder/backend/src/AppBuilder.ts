@@ -1,46 +1,20 @@
 import { ProjectManager } from './services/ProjectManager.js';
 
 export class AppBuilder {
-  projMan: ProjectManager;
+  constructor(private readonly projects: ProjectManager) {}
 
-  constructor(projMan: ProjectManager) {
-    this.projMan = projMan;
-  }
-
-  async createNewApp(projectName: string, options?: Record<string, any>): Promise<any> {
+  async createNewApp(ownerId: string, projectName: string, options: Record<string, unknown> = {}) {
     if (!projectName) throw new Error('projectName is required');
-    if (typeof (this.projMan as any).create === 'function') {
-      return (this.projMan as any).create(projectName, options);
-    }
-    throw new Error('ProjectManager.create is not implemented');
+    return this.projects.create(projectName, { ...options, ownerId });
   }
 
-  async deleteApp(projectId: string): Promise<void> {
+  async deleteApp(ownerId: string, projectId: string): Promise<void> {
     if (!projectId) throw new Error('projectId is required');
-    if (typeof (this.projMan as any).delete === 'function') {
-      await (this.projMan as any).delete(projectId);
-      return;
-    }
-    if (typeof (this.projMan as any).remove === 'function') {
-      await (this.projMan as any).remove(projectId);
-      return;
-    }
-    throw new Error('No delete/remove method found on ProjectManager');
+    await this.projects.deleteOwned(ownerId, projectId);
   }
 
-  async editApp(projectId: string, updates: Record<string, any>): Promise<any> {
+  async editApp(ownerId: string, projectId: string, updates: Record<string, unknown>) {
     if (!projectId) throw new Error('projectId is required');
-    if (typeof (this.projMan as any).update === 'function') {
-      return (this.projMan as any).update(projectId, updates);
-    }
-    throw new Error('ProjectManager.update is not implemented');
-  }
-
-  async deployApp(projectId: string): Promise<any> {
-    if (!projectId) throw new Error('projectId is required');
-    if (typeof (this.projMan as any).deploy === 'function') {
-      return (this.projMan as any).deploy(projectId);
-    }
-    throw new Error('ProjectManager.deploy is not implemented');
+    return this.projects.update(ownerId, projectId, updates);
   }
 }

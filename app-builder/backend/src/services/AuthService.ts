@@ -1,15 +1,15 @@
 // © 2025 Preston Willis. All rights reserved.
 import bcrypt from 'bcryptjs';
 import type { IUserRepository } from '../repositories/UserRepository.js';
-import { SessionManager } from './SessionManager.js';
+import { JwtService } from './JwtService.js';
 
 export class AuthService {
       private users: IUserRepository;
-      private sessions: SessionManager;
+      private tokens: JwtService;
 
-  constructor(users: IUserRepository, sessions: SessionManager) {
+  constructor(users: IUserRepository, tokens: JwtService) {
     this.users = users;
-    this.sessions = sessions;
+    this.tokens = tokens;
   }
   
   public async signup(username: string, email: string, password: string) {
@@ -19,7 +19,7 @@ export class AuthService {
     const hash = await bcrypt.hash(password, 10);
     // create a normal (non-guest) user
     const user = await this.users.create({ username, email, passwordHash: hash, isGuest: false } as any);
-    return this.sessions.createSession((user as any).id ?? (user as any)._id?.toString?.());
+    return this.tokens.createToken(String(user.id));
   }
   // Will fix this later
   public async guest(){
@@ -33,7 +33,7 @@ export class AuthService {
     const user = await this.users.create({ username, email, passwordHash: hash, isGuest: true } as any);
     // user may be a mongoose document; normalize id
     const userId = (user as any).id ?? (user as any)._id?.toString?.();
-    return this.sessions.createSession(userId);
+    return this.tokens.createToken(String(userId));
   }
 
   public async login(username: string, password: string) {
@@ -43,6 +43,6 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new Error('Invalid credentials');
 
-    return this.sessions.createSession(user.id);
+    return this.tokens.createToken(String(user.id));
   }
 }

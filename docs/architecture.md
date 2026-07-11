@@ -33,12 +33,12 @@ app-builder/frontend/src
 
 app-builder/backend/src
   config/          Environment variable loading
-  controllers/     Auth controller
+  controllers/     HTTP adapters for auth, projects, assets, and app data
   middleware/      Request authentication helpers
   models/          Mongoose models
   repositories/    Data access abstractions
-  routes/          Express routes
-  services/        Auth, project, email/session services
+  routes/          Thin Express route declarations and middleware binding
+  services/        Auth, project, app-data, asset, email, and JWT behavior
 
 app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
   layout/          Android grid math
@@ -295,14 +295,20 @@ Important files:
 | --- | --- |
 | `src/index.ts` | Express app setup, CORS, routes, MongoDB connection |
 | `src/config/index.ts` | Environment variables |
-| `src/routes/AuthRoutes.ts` | Signup/login/session endpoints |
-| `src/routes/ProjectRoutes.ts` | Project CRUD and public project routes |
+| `src/routes/AuthRoutes.ts` | Signup/login/token endpoints |
+| `src/routes/ProjectRoutes.ts` | Authenticated project CRUD routes |
+| `src/routes/AssetRoutes.ts` | Authenticated project image-upload route |
+| `src/routes/AppDataRoutes.ts` | Authenticated and public hosted app-data routes |
+| `src/controllers/ProjectController.ts` | Project HTTP request/response handling |
+| `src/controllers/AssetController.ts` | Image-upload HTTP request/response handling |
+| `src/controllers/AppDataController.ts` | App-data HTTP request/response handling |
 | `src/models/AppSubmission.ts` | Stored schema-backed form submission records |
-| `src/services/AppSubmissionService.ts` | Schema-backed submission source lookup, field normalization, validation, and submission queries |
+| `src/services/AppDataService.ts` | App-data source lookup, validation, persistence, queries, and CSV formatting |
+| `src/services/AppSubmissionService.ts` | Compatibility aliases for older form-submission terminology |
 | `src/services/AssetStorageService.ts` | Azure Blob Storage upload logic for project image assets |
-| `src/services/ProjectManager.ts` | Project business logic |
+| `src/services/ProjectManager.ts` | Typed project ownership and mutation rules |
 | `src/services/AuthService.ts` | Authentication logic |
-| `src/services/SessionManager.ts` | JWT/session behavior |
+| `src/services/JwtService.ts` | JWT creation and validated payload decoding |
 
 ## Android Preview Responsibilities
 

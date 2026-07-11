@@ -1,9 +1,8 @@
 // © 2025 Preston Willis. All rights reserved.
-import { Router } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { AuthController } from '../controllers/authController.js'; 
-import { requireAuth } from '../middleware/auth.js';
 
-export function makeAuthRoutes(ctrl: AuthController) {
+export function makeAuthRoutes(ctrl: AuthController, requireAuth: RequestHandler) {
   const router = Router();
 
   // POST /auth/signup

@@ -140,13 +140,19 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/backend/src/index.ts` | Express app setup, CORS, routes, Mongo connection |
 | `app-builder/backend/src/config/index.ts` | Env variable loading |
 | `app-builder/backend/src/routes/AuthRoutes.ts` | Auth endpoints |
-| `app-builder/backend/src/routes/ProjectRoutes.ts` | Project CRUD, image-upload, and submission endpoints |
+| `app-builder/backend/src/routes/ProjectRoutes.ts` | Authenticated project CRUD routes |
+| `app-builder/backend/src/routes/AssetRoutes.ts` | Project image-upload route |
+| `app-builder/backend/src/routes/AppDataRoutes.ts` | Authenticated and public hosted app-data routes |
+| `app-builder/backend/src/controllers/ProjectController.ts` | Project HTTP adapter |
+| `app-builder/backend/src/controllers/AssetController.ts` | Asset-upload HTTP adapter |
+| `app-builder/backend/src/controllers/AppDataController.ts` | Hosted app-data HTTP adapter |
 | `app-builder/backend/src/models/AppSubmission.ts` | Schema-backed submission persistence model |
-| `app-builder/backend/src/services/AppSubmissionService.ts` | Schema-backed submission validation and query helpers |
+| `app-builder/backend/src/services/AppDataService.ts` | Schema-backed app-data validation, persistence, queries, and CSV helpers |
+| `app-builder/backend/src/services/AppSubmissionService.ts` | Legacy form-submission compatibility aliases |
 | `app-builder/backend/src/services/AssetStorageService.ts` | Azure Blob Storage upload helper for project images |
 | `app-builder/backend/src/services/AuthService.ts` | Auth behavior |
-| `app-builder/backend/src/services/ProjectManager.ts` | Project behavior |
-| `app-builder/backend/src/services/SessionManager.ts` | Session/JWT helper |
+| `app-builder/backend/src/services/ProjectManager.ts` | Typed project ownership and mutation behavior |
+| `app-builder/backend/src/services/JwtService.ts` | JWT creation and validation helper |
 
 ## Key Android Files
 
