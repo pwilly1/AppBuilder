@@ -69,7 +69,7 @@ Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven sty
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
 Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dashboard can review stored records for each saved Form source.
 Submit Button is a second schema-backed submission path. In web preview it submits same-page Input, Textarea, Checkbox, and Toggle fields that share the same normalized `submitGroupId`.
-Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or when paired with a same-group Submit Button. In the editor they still behave as mockup controls, and Android preview currently renders the Form and Submit Button visuals without live submission behavior.
+Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or when paired with a same-group Submit Button. In web and Android preview, these controls collect runtime values and Submit Button posts its grouped fields to the hosted app-data API. In the editor they still behave as mockup controls.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
 
 ### Grid Layout

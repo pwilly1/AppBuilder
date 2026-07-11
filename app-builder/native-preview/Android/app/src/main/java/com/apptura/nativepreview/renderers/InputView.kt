@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +17,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -23,11 +26,18 @@ import com.apptura.nativepreview.models.Block
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
-fun InputView(block: Block) {
+fun InputView(block: Block, formRuntime: FormRuntimeState? = null) {
     val label = (block.props["label"] as? JsonPrimitive)?.content ?: "Label"
     val placeholder = (block.props["placeholder"] as? JsonPrimitive)?.content ?: "Placeholder"
-    val value = (block.props["value"] as? JsonPrimitive)?.content ?: ""
+    val initialValue = (block.props["value"] as? JsonPrimitive)?.content ?: ""
     val inputType = (block.props["inputType"] as? JsonPrimitive)?.content ?: "text"
+    val fieldKey = resolveFieldKey(
+        block.id,
+        label,
+        (block.props["fieldKey"] as? JsonPrimitive)?.content,
+    )
+    val submitGroupId = resolveSubmitGroupId((block.props["submitGroupId"] as? JsonPrimitive)?.content)
+    val value = formRuntime?.getString(fieldKey, submitGroupId) ?: initialValue
     val fontSize = ((block.props["fontSize"] as? JsonPrimitive)?.content?.toFloatOrNull() ?: 14f).coerceAtLeast(8f)
     val backgroundColor = parseInputColor((block.props["backgroundColor"] as? JsonPrimitive)?.content, Color.White)
     val textColor = parseInputColor((block.props["textColor"] as? JsonPrimitive)?.content, Color(0xFF0F172A))
@@ -65,15 +75,45 @@ fun InputView(block: Block) {
                 .padding(horizontal = 12.dp),
             contentAlignment = Alignment.CenterStart
         ) {
-            Text(
-                text = if (inputType == "password" && value.isNotBlank()) "********" else displayValue,
-                fontSize = previewSp(fontSize),
-                lineHeight = previewSp(fontSize * 1.3f),
-                color = displayColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-            )
+            if (formRuntime == null) {
+                Text(
+                    text = if (inputType == "password" && value.isNotBlank()) "********" else displayValue,
+                    fontSize = previewSp(fontSize),
+                    lineHeight = previewSp(fontSize * 1.3f),
+                    color = displayColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                )
+            } else {
+                BasicTextField(
+                    value = value,
+                    onValueChange = { formRuntime.setString(fieldKey, it, submitGroupId) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    visualTransformation = if (inputType == "password") PasswordVisualTransformation() else VisualTransformation.None,
+                    textStyle = TextStyle(
+                        fontSize = previewSp(fontSize),
+                        lineHeight = previewSp(fontSize * 1.3f),
+                        color = textColor,
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    ),
+                    decorationBox = { innerTextField ->
+                        if (value.isBlank()) {
+                            Text(
+                                text = placeholder,
+                                fontSize = previewSp(fontSize),
+                                lineHeight = previewSp(fontSize * 1.3f),
+                                color = placeholderColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            )
+                        }
+                        innerTextField()
+                    },
+                )
+            }
         }
     }
 }

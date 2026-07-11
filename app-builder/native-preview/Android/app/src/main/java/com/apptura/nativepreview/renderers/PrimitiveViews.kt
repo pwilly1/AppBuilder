@@ -2,6 +2,7 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,9 +101,12 @@ fun IconView(block: Block) {
 }
 
 @Composable
-fun CheckboxView(block: Block) {
+fun CheckboxView(block: Block, formRuntime: FormRuntimeState? = null) {
     val label = propString(block, "label", "Checkbox")
-    val checked = propBoolean(block, "checked", true)
+    val initialChecked = propBoolean(block, "checked", true)
+    val fieldKey = resolveFieldKey(block.id, label, propStringOrNull(block, "fieldKey"))
+    val submitGroupId = resolveSubmitGroupId(propStringOrNull(block, "submitGroupId"))
+    val checked = formRuntime?.getBoolean(fieldKey, submitGroupId) ?: initialChecked
     val fontSize = propFloat(block, "fontSize", 14f).coerceAtLeast(8f)
     val textColor = parsePrimitiveColor(propStringOrNull(block, "textColor"), Color(0xFF0F172A))
     val boxColor = parsePrimitiveColor(propStringOrNull(block, "boxColor"), Color(0xFF2563EB))
@@ -111,7 +115,11 @@ fun CheckboxView(block: Block) {
     val boxSize = (fontSize + 3f).coerceAtLeast(14f)
 
     Row(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(enabled = formRuntime != null) {
+                formRuntime?.setBoolean(fieldKey, !checked, submitGroupId)
+            },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -147,9 +155,12 @@ fun CheckboxView(block: Block) {
 }
 
 @Composable
-fun ToggleView(block: Block) {
+fun ToggleView(block: Block, formRuntime: FormRuntimeState? = null) {
     val label = propString(block, "label", "Toggle")
-    val checked = propBoolean(block, "checked", true)
+    val initialChecked = propBoolean(block, "checked", true)
+    val fieldKey = resolveFieldKey(block.id, label, propStringOrNull(block, "fieldKey"))
+    val submitGroupId = resolveSubmitGroupId(propStringOrNull(block, "submitGroupId"))
+    val checked = formRuntime?.getBoolean(fieldKey, submitGroupId) ?: initialChecked
     val fontSize = propFloat(block, "fontSize", 14f).coerceAtLeast(8f)
     val textColor = parsePrimitiveColor(propStringOrNull(block, "textColor"), Color(0xFF0F172A))
     val activeColor = parsePrimitiveColor(propStringOrNull(block, "activeColor"), Color(0xFF2563EB))
@@ -159,7 +170,14 @@ fun ToggleView(block: Block) {
     val trackHeight = (fontSize * 1.55f).coerceAtLeast(18f)
     val knobSize = (trackHeight - 4f).coerceAtLeast(8f)
 
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.TopStart) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(enabled = formRuntime != null) {
+                formRuntime?.setBoolean(fieldKey, !checked, submitGroupId)
+            },
+        contentAlignment = Alignment.TopStart,
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)

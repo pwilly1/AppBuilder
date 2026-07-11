@@ -43,6 +43,7 @@ import com.apptura.nativepreview.layout.resolveBlockRenderRect
 import com.apptura.nativepreview.models.Block
 import com.apptura.nativepreview.models.Project
 import com.apptura.nativepreview.renderers.BlockRenderer
+import com.apptura.nativepreview.renderers.FormRuntimeState
 
 @Composable
 fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit = {}) {
@@ -58,6 +59,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
         }
     } else {
         val page = pages[pageIndex.value]
+        val formRuntime = remember(project.id, page.id) { FormRuntimeState() }
         val containerIds = page.blocks
             .filter { it.type == "container" || it.type == "form" }
             .map { it.id }
@@ -119,6 +121,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                                 metrics = metrics,
                                 projectId = project.id,
                                 baseUrl = baseUrl,
+                                formRuntime = formRuntime,
                                 onNavigate = { targetPageId ->
                                     val idx = pages.indexOfFirst { it.id == targetPageId }
                                     if (idx >= 0) pageIndex.value = idx
@@ -134,10 +137,16 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                                 .width(canvasWidth)
                         ) {
                             legacyBlocks.forEach { block ->
-                                BlockRenderer(block, projectId = project.id, baseUrl = baseUrl) { targetPageId ->
+                                BlockRenderer(
+                                    block = block,
+                                    projectId = project.id,
+                                    baseUrl = baseUrl,
+                                    formRuntime = formRuntime,
+                                    onNavigate = { targetPageId ->
                                     val idx = pages.indexOfFirst { it.id == targetPageId }
                                     if (idx >= 0) pageIndex.value = idx
-                                }
+                                    },
+                                )
                             }
                         }
                     }
@@ -169,6 +178,7 @@ private fun GridBlockLayer(
     metrics: GridMetrics,
     projectId: String?,
     baseUrl: String,
+    formRuntime: FormRuntimeState,
     onNavigate: (String) -> Unit,
 ) {
     val rect = resolveBlockRenderRect(block, metrics) ?: return
@@ -186,6 +196,7 @@ private fun GridBlockLayer(
             block = block,
             projectId = projectId,
             baseUrl = baseUrl,
+            formRuntime = formRuntime,
             content = {
                 if ((block.type == "container" || block.type == "form") && placement != null) {
                     val childMetrics = GridMetrics(
@@ -204,6 +215,7 @@ private fun GridBlockLayer(
                             metrics = childMetrics,
                             projectId = projectId,
                             baseUrl = baseUrl,
+                            formRuntime = formRuntime,
                             onNavigate = onNavigate,
                         )
                     }

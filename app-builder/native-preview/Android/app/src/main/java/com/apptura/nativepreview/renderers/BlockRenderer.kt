@@ -9,6 +9,7 @@ fun BlockRenderer(
     block: Block,
     projectId: String? = null,
     baseUrl: String? = null,
+    formRuntime: FormRuntimeState? = null,
     content: @Composable () -> Unit = {},
     onNavigate: ((String) -> Unit)? = null
 ) {
@@ -18,15 +19,15 @@ fun BlockRenderer(
         "hero" -> HeroView(block)
         "text" -> TextView(block)
         "navButton" -> NavButtonView(block, onNavigate = onNavigate)
-        "submitButton" -> SubmitButtonView(block)
+        "submitButton" -> SubmitButtonView(block, projectId, baseUrl, formRuntime)
         "shape" -> ShapeView(block)
         "badge" -> BadgeView(block)
         "icon" -> IconView(block)
-        "checkbox" -> CheckboxView(block)
-        "toggle" -> ToggleView(block)
+        "checkbox" -> CheckboxView(block, formRuntime)
+        "toggle" -> ToggleView(block, formRuntime)
         "progressBar" -> ProgressBarView(block)
-        "input" -> InputView(block)
-        "textarea" -> TextareaView(block)
+        "input" -> InputView(block, formRuntime)
+        "textarea" -> TextareaView(block, formRuntime)
         "image" -> ImageBlockView(block)
         "servicesList" -> ServicesListView(block)
         "contactForm" -> ContactFormView(block, projectId = projectId, baseUrl = baseUrl)

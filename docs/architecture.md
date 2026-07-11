@@ -248,8 +248,8 @@ Behavior notes:
 - Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
 - Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, and opacity controls across web and Android preview.
 - Form is a schema-backed submission surface with shared parent/child layout rules across web and Android preview.
-- Submit Button is a schema-backed submission trigger that gathers same-page fields through `submitGroupId`. Android preview currently renders it visually without live submission behavior.
-- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or when paired with a same-group Submit Button in web preview. Outside those paths, they still behave as editor-time mockup primitives.
+- Submit Button is a schema-backed submission trigger that gathers same-page fields through `submitGroupId` in both web and Android preview, then posts them to the public hosted app-data endpoint.
+- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or when paired with a same-group Submit Button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
 ## Frontend Responsibilities

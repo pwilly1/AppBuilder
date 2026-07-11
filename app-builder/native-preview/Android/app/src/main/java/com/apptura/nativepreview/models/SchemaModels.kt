@@ -9,6 +9,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -172,6 +173,19 @@ object ProjectLoader {
                     }
                 )
             }
+        )
+    }
+
+    suspend fun submitPublicAppDataRecord(
+        baseUrl: String,
+        projectId: String,
+        sourceId: String,
+        values: Map<String, JsonPrimitive>
+    ) {
+        httpPostJson(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/sources/$sourceId/records",
+            JsonObject(values).toString(),
+            token = null
         )
     }
 

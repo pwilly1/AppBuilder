@@ -108,7 +108,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 | `hero` | `headline`, `headlineSize` | 16 x 6 | Inline editable; supports content scaling |
 | `text` | `value`, `fontSize` | 8 x 4 | Inline editable; supports content scaling and row auto-growth |
 | `navButton` | `label`, `toPageId`, font/colors/padding/radius | 4 x 2 | Inline editable; supports page navigation and content scaling |
-| `submitButton` | `label`, `submitGroupId`, success message, font/colors/padding/radius | 5 x 2 | Inline editable; submits same-page grouped fields in web preview; visual only on Android |
+| `submitButton` | `label`, `submitGroupId`, success message, font/colors/padding/radius | 5 x 2 | Inline editable; submits same-page grouped fields in web and Android preview |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
 | `shape` | `shapeType`, fill/border/radius/opacity | 6 x 4 | Shape type is chosen before insertion |

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,10 +23,17 @@ import com.apptura.nativepreview.models.Block
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
-fun TextareaView(block: Block) {
+fun TextareaView(block: Block, formRuntime: FormRuntimeState? = null) {
     val label = (block.props["label"] as? JsonPrimitive)?.content ?: "Message"
     val placeholder = (block.props["placeholder"] as? JsonPrimitive)?.content ?: "Write something..."
-    val value = (block.props["value"] as? JsonPrimitive)?.content ?: ""
+    val initialValue = (block.props["value"] as? JsonPrimitive)?.content ?: ""
+    val fieldKey = resolveFieldKey(
+        block.id,
+        label,
+        (block.props["fieldKey"] as? JsonPrimitive)?.content,
+    )
+    val submitGroupId = resolveSubmitGroupId((block.props["submitGroupId"] as? JsonPrimitive)?.content)
+    val value = formRuntime?.getString(fieldKey, submitGroupId) ?: initialValue
     val rows = ((block.props["rows"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 3).coerceAtLeast(1)
     val fontSize = ((block.props["fontSize"] as? JsonPrimitive)?.content?.toFloatOrNull() ?: 14f).coerceAtLeast(8f)
     val backgroundColor = parseTextareaColor((block.props["backgroundColor"] as? JsonPrimitive)?.content, Color.White)
@@ -63,15 +71,43 @@ fun TextareaView(block: Block) {
                 .border(1.dp, borderColor, RoundedCornerShape(borderRadius.dp))
                 .padding(horizontal = 12.dp, vertical = 10.dp)
         ) {
-            Text(
-                text = displayValue,
-                fontSize = previewSp(fontSize),
-                lineHeight = previewSp(fontSize * 1.4f),
-                color = displayColor,
-                maxLines = rows,
-                overflow = TextOverflow.Clip,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
-            )
+            if (formRuntime == null) {
+                Text(
+                    text = displayValue,
+                    fontSize = previewSp(fontSize),
+                    lineHeight = previewSp(fontSize * 1.4f),
+                    color = displayColor,
+                    maxLines = rows,
+                    overflow = TextOverflow.Clip,
+                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                )
+            } else {
+                BasicTextField(
+                    value = value,
+                    onValueChange = { formRuntime.setString(fieldKey, it, submitGroupId) },
+                    modifier = Modifier.fillMaxSize(),
+                    textStyle = TextStyle(
+                        fontSize = previewSp(fontSize),
+                        lineHeight = previewSp(fontSize * 1.4f),
+                        color = textColor,
+                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    ),
+                    decorationBox = { innerTextField ->
+                        if (value.isBlank()) {
+                            Text(
+                                text = placeholder,
+                                fontSize = previewSp(fontSize),
+                                lineHeight = previewSp(fontSize * 1.4f),
+                                color = placeholderColor,
+                                maxLines = rows,
+                                overflow = TextOverflow.Clip,
+                                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            )
+                        }
+                        innerTextField()
+                    },
+                )
+            }
         }
     }
 }
