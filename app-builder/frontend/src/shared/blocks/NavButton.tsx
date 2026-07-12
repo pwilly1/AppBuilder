@@ -1,7 +1,12 @@
+import type { BlockAction } from '../schema/types'
+import { isActionConfigured } from '../actions/blockActions'
+import { executeWebBlockAction } from '../actions/webActionExecutor'
+
 export function NavButton({
   label,
-  toPageId,
+  action,
   onNavigate,
+  previewMode,
   fontSize,
   contentPadding = 12,
   buttonPaddingX = 14,
@@ -12,8 +17,9 @@ export function NavButton({
   contentScale = 1,
 }: {
   label?: string
-  toPageId?: string
+  action?: BlockAction | null
   onNavigate?: (pageId: string) => void
+  previewMode?: boolean
   fontSize?: number
   contentPadding?: number
   buttonPaddingX?: number
@@ -24,7 +30,7 @@ export function NavButton({
   contentScale?: number
 }) {
   const text = label || 'Go'
-  const disabled = !toPageId
+  const configured = isActionConfigured(action)
 
   return (
     <div
@@ -39,22 +45,22 @@ export function NavButton({
     >
       <button
         type="button"
-        disabled={disabled}
+        disabled={!configured}
         onClick={() => {
-          if (!toPageId) return
-          onNavigate?.(toPageId)
+          if (!previewMode || !action || !configured) return
+          void executeWebBlockAction(action, { onNavigate })
         }}
         style={{
           border: 'none',
           borderRadius: borderRadius * contentScale,
           padding: `${buttonPaddingY * contentScale}px ${buttonPaddingX * contentScale}px`,
-          backgroundColor: disabled ? '#e5e7eb' : backgroundColor || '#0f172a',
-          color: disabled ? '#475569' : textColor || '#ffffff',
+          backgroundColor: configured ? backgroundColor || '#0f172a' : '#e5e7eb',
+          color: configured ? textColor || '#ffffff' : '#475569',
           fontSize: (fontSize ?? 14) * contentScale,
           fontWeight: 600,
           lineHeight: 1.2,
           whiteSpace: 'nowrap',
-          cursor: disabled ? 'default' : 'pointer',
+          cursor: previewMode && configured ? 'pointer' : 'default',
         }}
       >
         {text}

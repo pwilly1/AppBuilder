@@ -116,9 +116,19 @@ function resolveTemplateProps(
 ) {
   const next = { ...props }
   const toPageKey = typeof next.toPageKey === 'string' ? next.toPageKey : null
-  if (toPageKey && pageIdByKey?.has(toPageKey)) next.toPageId = pageIdByKey.get(toPageKey)
+  if (toPageKey && pageIdByKey?.has(toPageKey)) {
+    next.toPageId = pageIdByKey.get(toPageKey)
+    next.action = { type: 'navigate', targetPageId: next.toPageId }
+  } else if (typeof next.toPageId === 'string') {
+    next.action = { type: 'navigate', targetPageId: next.toPageId }
+  }
   const submitGroupKey = typeof next.submitGroupKey === 'string' ? next.submitGroupKey : null
-  if (submitGroupKey && blockIdByKey?.has(submitGroupKey)) next.submitGroupId = blockIdByKey.get(submitGroupKey)
+  if (submitGroupKey && blockIdByKey?.has(submitGroupKey)) {
+    next.submitGroupId = blockIdByKey.get(submitGroupKey)
+    next.action = { type: 'submitData', submitGroupId: next.submitGroupId }
+  } else if (typeof next.submitGroupId === 'string') {
+    next.action = { type: 'submitData', submitGroupId: next.submitGroupId }
+  }
   delete next.toPageKey
   delete next.submitGroupKey
   return next

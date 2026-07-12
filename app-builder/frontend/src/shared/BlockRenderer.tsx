@@ -22,6 +22,7 @@ import { ContainerBlock } from './blocks/ContainerBlock';
 import { FormBlock } from './blocks/FormBlock';
 import { SubmitButton } from './blocks/SubmitButton';
 import { getBlockContentScale } from './schema/contentScale';
+import { resolveBlockAction } from './actions/blockActions';
 
 const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   container: ContainerBlock,
@@ -59,5 +60,6 @@ export function BlockRenderer({
 }) {
   const Cmp = registry[block.type];
   const contentScale = getBlockContentScale(block);
-  return Cmp ? <Cmp {...block.props} blockId={block.id} projectId={projectId} previewMode={previewMode} contentScale={contentScale} onNavigate={onNavigate}>{children}</Cmp> : null;
+  const action = resolveBlockAction(block);
+  return Cmp ? <Cmp {...block.props} action={action} blockId={block.id} projectId={projectId} previewMode={previewMode} contentScale={contentScale} onNavigate={onNavigate}>{children}</Cmp> : null;
 }

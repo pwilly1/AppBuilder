@@ -33,7 +33,8 @@ fun SubmitButtonView(
     formRuntime: FormRuntimeState? = null,
 ) {
     val label = (block.props["label"] as? JsonPrimitive)?.content ?: "Submit"
-    val submitGroupId = resolveSubmitGroupId((block.props["submitGroupId"] as? JsonPrimitive)?.content)
+    val submitAction = resolveBlockAction(block) as? BlockAction.SubmitData
+    val submitGroupId = resolveSubmitGroupId(submitAction?.submitGroupId)
     val successMessage = (block.props["successMessage"] as? JsonPrimitive)?.content ?: "Submission received."
     val fontSize = (block.props["fontSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 14.0
     val contentPadding = (block.props["contentPadding"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 12.0
@@ -44,7 +45,7 @@ fun SubmitButtonView(
     val textColor = parseSubmitButtonColor((block.props["textColor"] as? JsonPrimitive)?.content, Color.White)
     val contentScale = getBlockContentScale(block)
     val scaledFontSize = fontSize.toFloat() * contentScale
-    val canSubmit = !projectId.isNullOrBlank() && !baseUrl.isNullOrBlank() && formRuntime != null
+    val canSubmit = submitAction != null && !projectId.isNullOrBlank() && !baseUrl.isNullOrBlank() && formRuntime != null
     val scope = rememberCoroutineScope()
     var status by remember(block.id) { mutableStateOf(SubmitStatus.IDLE) }
     var errorMessage by remember(block.id) { mutableStateOf("") }

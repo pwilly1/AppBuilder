@@ -25,6 +25,7 @@ This roadmap tracks completed foundations, current priorities, and future work.
 | Completed | Grid-based layout model | Canonical placement uses `layout.grid`; render metadata uses `render`. |
 | Completed | Web preview | Preview mode renders project pages without editor controls. |
 | Completed | Android preview foundation | Kotlin/Compose app can load backend projects and render schema data. |
+| Completed | Shared action foundation | Nav Button, Submit Button, Icon, and Image consume schema-backed Navigate, Submit Data, and Open URL actions across web and Android. |
 | Completed | Azure deployment | Frontend and backend are deployed with GitHub Actions. |
 
 ## Current Priorities
@@ -150,7 +151,8 @@ These are important to the long-term product vision but should wait until the ed
 
 | Status | Task |
 | --- | --- |
-| Completed | Schema-backed form submissions tied to project schema. |
+| Completed | Schema-backed form and grouped submit-button records tied to project schema. |
+| Completed | Apptura-hosted app-data source listing, record viewing, CSV export, and web/Android submission. |
 | Later | App-level data collections. |
 | Later | Richer app-level relational data collections. |
 | Later | Data-bound list/detail blocks. |

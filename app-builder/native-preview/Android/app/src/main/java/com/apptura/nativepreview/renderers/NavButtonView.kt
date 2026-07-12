@@ -9,6 +9,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.PlatformTextStyle
@@ -20,7 +21,7 @@ import kotlinx.serialization.json.JsonPrimitive
 @Composable
 fun NavButtonView(block: Block, onNavigate: ((String) -> Unit)?) {
     val label = (block.props["label"] as? JsonPrimitive)?.content ?: "Go"
-    val toPageId = (block.props["toPageId"] as? JsonPrimitive)?.content
+    val action = resolveBlockAction(block)
     val fontSize = (block.props["fontSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 14.0
     val contentPadding = (block.props["contentPadding"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 12.0
     val buttonPaddingX = (block.props["buttonPaddingX"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 14.0
@@ -28,7 +29,8 @@ fun NavButtonView(block: Block, onNavigate: ((String) -> Unit)?) {
     val borderRadius = (block.props["borderRadius"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 10.0
     val backgroundColor = parseNavButtonColor((block.props["backgroundColor"] as? JsonPrimitive)?.content, Color(0xFF0F172A))
     val textColor = parseNavButtonColor((block.props["textColor"] as? JsonPrimitive)?.content, Color.White)
-    val enabled = !toPageId.isNullOrBlank()
+    val enabled = isTapActionConfigured(action)
+    val context = LocalContext.current
     val contentScale = getBlockContentScale(block)
     val scaledFontSize = fontSize.toFloat() * contentScale
 
@@ -39,8 +41,7 @@ fun NavButtonView(block: Block, onNavigate: ((String) -> Unit)?) {
     ) {
         Button(
             onClick = {
-                val target = toPageId?.trim().orEmpty()
-                if (target.isNotEmpty()) onNavigate?.invoke(target)
+                if (action != null) executeBlockTapAction(context, action, onNavigate)
             },
             enabled = enabled,
             contentPadding = PaddingValues(

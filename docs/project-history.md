@@ -321,3 +321,47 @@ Representative areas:
 - `backend/src/models/AppSubmission.ts`
 - `backend/src/services/AppSubmissionService.ts`
 - `backend/src/routes/ProjectRoutes.ts`
+
+## Phase 15: Hosted App Data And Native Submission
+
+Date range: July 2026
+
+The submission foundation evolved into Apptura-hosted app data. Submit Button sources now have user-facing data-source names, public record endpoints, dashboard record viewing, CSV export, backward-compatible form aliases, and matching web/Android field collection and submission behavior.
+
+Representative areas:
+
+- `frontend/src/shared/blocks/SubmitButton.tsx`
+- `frontend/src/pages/Dashboard.tsx`
+- `backend/src/services/AppDataService.ts`
+- `backend/src/models/AppSubmission.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/FormRuntime.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/SubmitButtonView.kt`
+
+## Phase 16: Backend Service Boundaries
+
+Date range: July 2026
+
+Project persistence was moved behind a private typed repository boundary. Project, asset, and app-data HTTP handling were split into focused controllers and route modules, guest mutation checks were repaired, ownership became immutable during project updates, and the session singleton was replaced by an injected typed JWT service.
+
+Representative areas:
+
+- `backend/src/controllers/ProjectController.ts`
+- `backend/src/controllers/AssetController.ts`
+- `backend/src/controllers/AppDataController.ts`
+- `backend/src/services/ProjectManager.ts`
+- `backend/src/services/JwtService.ts`
+- `backend/src/repositories/ProjectRepository.ts`
+
+## Phase 17: Shared Block Actions
+
+Date range: July 2026
+
+Interactive blocks gained one shared schema-backed action contract. Navigate, Submit Data, and Open URL actions now resolve consistently across web and Android, while legacy `toPageId` and `submitGroupId` projects continue working through runtime fallbacks. Nav Button, Icon, and Image expose action controls; Submit Button uses the same contract for hosted app-data submission.
+
+Representative areas:
+
+- `frontend/src/shared/actions/blockActions.ts`
+- `frontend/src/shared/actions/webActionExecutor.ts`
+- `frontend/src/components/Inspector.tsx`
+- `backend/src/services/AppDataService.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/BlockActions.kt`

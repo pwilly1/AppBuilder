@@ -64,12 +64,15 @@ fun BadgeView(block: Block) {
 }
 
 @Composable
-fun IconView(block: Block) {
+fun IconView(block: Block, onNavigate: ((String) -> Unit)? = null) {
     val iconName = propString(block, "iconName", "star")
     val fontSize = propFloat(block, "fontSize", 28f).coerceAtLeast(8f)
     val color = parsePrimitiveColor(propStringOrNull(block, "color"), Color(0xFF2563EB))
     val backgroundColor = parsePrimitiveColor(propStringOrNull(block, "backgroundColor"), Color.White)
     val borderRadius = propFloat(block, "borderRadius", 999f).coerceAtLeast(0f)
+    val action = resolveBlockAction(block)
+    val interactive = isTapActionConfigured(action)
+    val context = androidx.compose.ui.platform.LocalContext.current
     val icon = when (iconName) {
         "check" -> "✓"
         "home" -> "⌂"
@@ -86,7 +89,10 @@ fun IconView(block: Block) {
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(borderRadius.dp))
-            .background(backgroundColor),
+            .background(backgroundColor)
+            .clickable(enabled = interactive) {
+                if (action != null) executeBlockTapAction(context, action, onNavigate)
+            },
         contentAlignment = Alignment.Center
     ) {
         Text(

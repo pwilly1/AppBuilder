@@ -42,6 +42,11 @@ export type LayoutAlign = 'start' | 'center' | 'end';
 export type LayoutSpacing = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type RenderAlign = 'start' | 'center' | 'end';
 
+export type BlockAction =
+  | { type: 'navigate'; targetPageId: string }
+  | { type: 'submitData'; submitGroupId: string }
+  | { type: 'openUrl'; url: string };
+
 export type GridSpan = {
   cols: number;
   rows: number;

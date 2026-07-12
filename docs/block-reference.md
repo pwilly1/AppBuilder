@@ -107,24 +107,26 @@ The grid remains the collision and placement boundary. Render width, height, and
 | --- | --- | --- | --- |
 | `hero` | `headline`, `headlineSize` | 16 x 6 | Inline editable; supports content scaling |
 | `text` | `value`, `fontSize` | 8 x 4 | Inline editable; supports content scaling and row auto-growth |
-| `navButton` | `label`, `toPageId`, font/colors/padding/radius | 4 x 2 | Inline editable; supports page navigation and content scaling |
-| `submitButton` | `label`, `submitGroupId`, success message, font/colors/padding/radius | 5 x 2 | Inline editable; submits same-page grouped fields in web and Android preview |
+| `navButton` | `label`, `action`, legacy `toPageId`, font/colors/padding/radius | 4 x 2 | Inline editable; supports page navigation, safe external URLs, and content scaling |
+| `submitButton` | `label`, submission `action`, `submitGroupId`, success message, font/colors/padding/radius | 5 x 2 | Inline editable; submits same-page grouped fields in web and Android preview |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
 | `shape` | `shapeType`, fill/border/radius/opacity | 6 x 4 | Shape type is chosen before insertion |
 | `badge` | `text`, font/colors/border/radius/padding | 4 x 2 | Visual status/tag primitive |
-| `icon` | `iconName`, `fontSize`, colors/radius | 2 x 2 | Uses the project's supported icon-name set |
+| `icon` | `iconName`, `fontSize`, colors/radius, optional `action` | 2 x 2 | Uses the supported icon-name set; can navigate or open a safe URL |
 | `checkbox` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
 | `toggle` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
 | `progressBar` | `label`, `value`, visibility and colors | 8 x 2 | Visual status primitive |
 | `input` | label/fieldKey/submitGroupId/value/placeholder/type/required/font/colors/radius | 8 x 3 | Functional text field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
 | `textarea` | label/fieldKey/submitGroupId/value/placeholder/rows/required/font/colors/radius | 8 x 4 | Functional text field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
-| `image` | `src`, `alt`, `fit`, focus, background/border/radius/opacity | 8 x 6 | Atomic image block; supports pasted URLs and backend-uploaded asset URLs |
+| `image` | `src`, `alt`, `fit`, focus, background/border/radius/opacity, optional `action` | 8 x 6 | Atomic image block; supports pasted/uploaded assets plus navigation or safe URL taps |
 | `servicesList` | `title`, `items` | 16 x 6 | Existing business block; hidden from the preferred palette |
 | `contactForm` | labels, field visibility, destination email | 16 x 8 | Functional submission block |
 | `imageGallery` | `title`, `columns`, `images` | 16 x 6 | Existing business block; hidden from the preferred palette |
 
 The exact defaults and constraints must be read from the registry rather than duplicated in feature logic.
+
+Actions use a discriminated schema object in `props.action`. Current action types are `navigate`, `submitData`, and `openUrl`. Only HTTP and HTTPS links are executable. Runtime resolvers preserve old Nav Button and Submit Button behavior when `props.action` is absent.
 
 ## Container Hierarchy Contract
 

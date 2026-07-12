@@ -4,6 +4,7 @@ import type { Block } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
 import { uploadProjectImage } from '../api';
+import { normalizeBlockAction, resolveBlockAction } from '../shared/actions/blockActions';
 
 type PageLite = { id: string; title?: string; path?: string };
 
@@ -20,6 +21,15 @@ type InspectorProps = {
   onExitContainer?: () => void;
   onDetachBlock?: (b: Block) => void;
 };
+
+function getInspectorDefaultProps(block?: Block | null) {
+  if (!block) return {};
+  const action = resolveBlockAction(block);
+  return {
+    ...(block.props as Record<string, any>),
+    ...(action ? { action } : {}),
+  };
+}
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{children}</label>;
@@ -78,19 +88,20 @@ export default function Inspector({
   onExitContainer,
   onDetachBlock,
 }: InspectorProps) {
-  const { register, control, handleSubmit, reset, getValues, setValue } = useForm<Record<string, any>>({ defaultValues: block?.props || {} });
+  const { register, control, handleSubmit, reset, getValues, setValue, watch } = useForm<Record<string, any>>({ defaultValues: getInspectorDefaultProps(block) });
   const servicesArray = useFieldArray({ control, name: 'items' });
   const galleryArray = useFieldArray({ control, name: 'images' });
   const previewedPropsRef = React.useRef<Record<string, any> | null>(null);
   const [imageUploadError, setImageUploadError] = React.useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+  const actionType = watch('action.type') as string | undefined;
 
   React.useEffect(() => {
     if (previewedPropsRef.current === block?.props) {
       previewedPropsRef.current = null;
       return;
     }
-    reset(block?.props || {});
+    reset(getInspectorDefaultProps(block));
     setImageUploadError(null);
   }, [block, reset]);
 
@@ -122,8 +133,56 @@ export default function Inspector({
     if (props.positionX !== undefined) props.positionX = Number(props.positionX);
     if (props.positionY !== undefined) props.positionY = Number(props.positionY);
     if (props.value !== undefined && block.type === 'progressBar') props.value = Number(props.value);
+    if (block.type === 'navButton' || block.type === 'icon' || block.type === 'image') {
+      const action = normalizeBlockAction(props.action);
+      if (action) props.action = action;
+      else delete props.action;
+      if (block.type === 'navButton') {
+        props.toPageId = action?.type === 'navigate' ? action.targetPageId : '';
+      }
+    }
+    if (block.type === 'submitButton') {
+      const submitGroupId = typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
+        ? props.submitGroupId.trim()
+        : 'default';
+      props.submitGroupId = submitGroupId;
+      props.action = { type: 'submitData', submitGroupId };
+    }
     onSave?.({ ...block, props });
   };
+
+  function renderActionControls() {
+    return (
+      <FormSection title="Action" description="Choose what happens when a user taps this block in preview or the Android runtime.">
+        <div className="grid gap-2">
+          <FieldLabel>Action type</FieldLabel>
+          <select className="inspector-input" {...register('action.type')}>
+            <option value="">No action</option>
+            <option value="navigate">Navigate to page</option>
+            <option value="openUrl">Open URL</option>
+          </select>
+        </div>
+        {actionType === 'navigate' ? (
+          <div className="grid gap-2">
+            <FieldLabel>Target page</FieldLabel>
+            <select className="inspector-input" {...register('action.targetPageId')}>
+              <option value="">Select a page...</option>
+              {(pages || []).map((page) => (
+                <option key={page.id} value={page.id}>{page.title || page.id}</option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        {actionType === 'openUrl' ? (
+          <div className="grid gap-2">
+            <FieldLabel>URL</FieldLabel>
+            <TextInput type="url" placeholder="https://example.com" {...register('action.url')} />
+            <p className="text-xs text-slate-500">Only HTTP and HTTPS links are supported.</p>
+          </div>
+        ) : null}
+      </FormSection>
+    );
+  }
 
   function candidateTextFits(nextText: string) {
     if (!block || typeof document === 'undefined') return true;
@@ -496,22 +555,13 @@ export default function Inspector({
 
         {block.type === 'navButton' && (
           <>
-            <FormSection title="Navigation" description="Choose the label and where this button should take the user.">
+            <FormSection title="Button" description="Set the label shown inside this action button.">
               <div className="grid gap-2">
                 <FieldLabel>Label</FieldLabel>
                 <TextInput {...registerLiveText('label')} />
               </div>
-              <div className="grid gap-2">
-                <FieldLabel>Target page</FieldLabel>
-                <select className="inspector-input" {...register('toPageId')}>
-                  <option value="">Select a page...</option>
-                  {(pages || []).map((page) => (
-                    <option key={page.id} value={page.id}>{page.title || page.id}</option>
-                  ))}
-                </select>
-              </div>
-              <p className="text-xs text-slate-500">This button switches to the selected page in preview/runtime.</p>
             </FormSection>
+            {renderActionControls()}
             <FormSection title="Button style" description="Tune the visual button without creating a separate button type.">
               <div className="grid gap-2">
                 <FieldLabel>Font size (px)</FieldLabel>
@@ -670,38 +720,41 @@ export default function Inspector({
         )}
 
         {block.type === 'icon' && (
-          <FormSection title="Icon" description="Pick a simple native-safe symbol.">
-            <div className="grid gap-2">
-              <FieldLabel>Icon</FieldLabel>
-              <select className="inspector-input" {...register('iconName')}>
-                <option value="star">Star</option>
-                <option value="check">Check</option>
-                <option value="home">Home</option>
-                <option value="search">Search</option>
-                <option value="user">User</option>
-                <option value="heart">Heart</option>
-                <option value="bell">Bell</option>
-                <option value="plus">Plus</option>
-                <option value="arrow">Arrow</option>
-              </select>
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Size (px)</FieldLabel>
-              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Icon color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('color')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Background color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Corner radius (px)</FieldLabel>
-              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
-            </div>
-          </FormSection>
+          <>
+            <FormSection title="Icon" description="Pick a simple native-safe symbol.">
+              <div className="grid gap-2">
+                <FieldLabel>Icon</FieldLabel>
+                <select className="inspector-input" {...register('iconName')}>
+                  <option value="star">Star</option>
+                  <option value="check">Check</option>
+                  <option value="home">Home</option>
+                  <option value="search">Search</option>
+                  <option value="user">User</option>
+                  <option value="heart">Heart</option>
+                  <option value="bell">Bell</option>
+                  <option value="plus">Plus</option>
+                  <option value="arrow">Arrow</option>
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Size (px)</FieldLabel>
+                <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Icon color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('color')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Background color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Corner radius (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+              </div>
+            </FormSection>
+            {renderActionControls()}
+          </>
         )}
 
         {block.type === 'checkbox' && (
@@ -1017,6 +1070,7 @@ export default function Inspector({
                 <TextInput type="number" min={0} max={1} step={0.05} className="max-w-[120px]" {...register('opacity')} />
               </div>
             </FormSection>
+            {renderActionControls()}
           </>
         )}
 

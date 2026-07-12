@@ -74,6 +74,7 @@ props.scaleY
 - Update docs when architecture, deployment, schema, or roadmap changes.
 - Image file uploads should use the backend asset upload path when storage is configured; saved blocks store the returned URL in `props.src`. Data URLs are only a local/unsaved fallback.
 - Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or when paired with a same-page `submitButton` through matching `submitGroupId`; otherwise document them as editor-time mockup controls.
+- Shared interactive behavior now flows through `props.action`; Nav Button, Icon, and Image can navigate/open URLs, while Submit Button keeps submission behavior through the same action contract plus legacy fallbacks.
 
 ## Current Block Inventory
 
@@ -132,6 +133,8 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/frontend/src/shared/schema/gridLayout.ts` | Grid math and collision logic |
 | `app-builder/frontend/src/shared/schema/registry.ts` | Block defaults and constraints |
 | `app-builder/frontend/src/shared/schema/contentScale.ts` | Shared content scale helper |
+| `app-builder/frontend/src/shared/actions/blockActions.ts` | Shared block-action normalization and legacy fallback resolution |
+| `app-builder/frontend/src/shared/actions/webActionExecutor.ts` | Web preview action execution for navigation, submit, and URL actions |
 
 ## Key Backend Files
 
@@ -163,6 +166,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/layout/GridLayout.kt` | Android grid math |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt` | Android page preview |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/*View.kt` | Compose block renderers |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/BlockActions.kt` | Android shared block-action resolution and execution |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RenderScale.kt` | Android content scaling helper |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RenderTypography.kt` | Android typography helper |
 

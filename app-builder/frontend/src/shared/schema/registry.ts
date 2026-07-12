@@ -102,6 +102,7 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultProps: {
       label: 'Go',
       toPageId: '',
+      action: { type: 'navigate', targetPageId: '' },
       fontSize: 14,
       contentPadding: 12,
       buttonPaddingX: 14,
@@ -126,6 +127,7 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       label: 'Submit',
       dataSourceName: 'App Data',
       submitGroupId: 'default',
+      action: { type: 'submitData', submitGroupId: 'default' },
       successMessage: 'Submission received.',
       fontSize: 14,
       contentPadding: 12,
@@ -420,6 +422,21 @@ export function isSupportedBlockType(value: unknown): value is BlockType {
 export function createBlock<T extends BlockType = BlockType>(type: T, overrides: Record<string, any> = {}): Block {
   const def = BlockRegistry[type]
   const props = { ...(def?.defaultProps || {}), ...(overrides || {}) }
+  const hasExplicitAction = Object.prototype.hasOwnProperty.call(overrides, 'action')
+  if (!hasExplicitAction && type === 'navButton') {
+    props.action = {
+      type: 'navigate',
+      targetPageId: typeof props.toPageId === 'string' ? props.toPageId : '',
+    }
+  }
+  if (!hasExplicitAction && type === 'submitButton') {
+    props.action = {
+      type: 'submitData',
+      submitGroupId: typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
+        ? props.submitGroupId.trim()
+        : 'default',
+    }
+  }
   return {
     id: crypto.randomUUID(),
     type,

@@ -40,7 +40,7 @@ Projects support multiple pages:
 - select page
 - rename page
 - delete page
-- navigate between pages with nav button blocks in preview mode
+- configure shared tap actions for page navigation, hosted app-data submission, and safe external URLs
 
 ### Core Blocks
 
@@ -64,8 +64,9 @@ The current visible block palette is:
 
 Hero, Text, Nav Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Submit Button, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
-Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling. Nav Button supports page navigation plus inspector-based styling for colors, padding, and corner radius.
+Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling. Nav Button supports page navigation or safe external URLs plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
+Icon and Image can optionally execute Navigate or Open URL actions in web and Android preview.
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
 Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dashboard can review stored records for each saved Form source.
 Submit Button is a second schema-backed submission path. In web preview it submits same-page Input, Textarea, Checkbox, and Toggle fields that share the same normalized `submitGroupId`.

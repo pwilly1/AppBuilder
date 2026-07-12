@@ -1,4 +1,9 @@
-﻿const iconMap: Record<string, string> = {
+import type { KeyboardEvent } from 'react'
+import { isActionConfigured } from '../actions/blockActions'
+import { executeWebBlockAction } from '../actions/webActionExecutor'
+import type { BlockAction } from '../schema/types'
+
+const iconMap: Record<string, string> = {
   star: '★',
   check: '✓',
   home: '⌂',
@@ -16,16 +21,37 @@ export function IconBlock({
   color = '#2563eb',
   backgroundColor = '#ffffff',
   borderRadius = 999,
+  action,
+  previewMode,
+  onNavigate,
 }: {
   iconName?: string
   fontSize?: number
   color?: string
-      backgroundColor?: string
+  backgroundColor?: string
   borderRadius?: number
+  action?: BlockAction | null
+  previewMode?: boolean
+  onNavigate?: (pageId: string) => void
 }) {
+  const interactive = Boolean(previewMode && isActionConfigured(action))
+  const runAction = () => {
+    if (!interactive || !action) return
+    void executeWebBlockAction(action, { onNavigate })
+  }
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    runAction()
+  }
+
   return (
     <div
       aria-label={`${iconName || 'star'} icon block`}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={runAction}
+      onKeyDown={onKeyDown}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -34,7 +60,8 @@ export function IconBlock({
         height: '100%',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        pointerEvents: 'none',
+        pointerEvents: interactive ? 'auto' : 'none',
+        cursor: interactive ? 'pointer' : 'default',
         borderRadius: Math.max(0, Number(borderRadius) || 0),
         backgroundColor: backgroundColor || '#ffffff',
         color: color || '#2563eb',

@@ -5,6 +5,7 @@ import android.util.Base64
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -28,7 +30,7 @@ import com.apptura.nativepreview.models.Block
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
-fun ImageBlockView(block: Block) {
+fun ImageBlockView(block: Block, onNavigate: ((String) -> Unit)? = null) {
     val src = imagePropString(block, "src", "")
     val alt = imagePropString(block, "alt", "Image")
     val fit = imagePropString(block, "fit", "cover")
@@ -40,6 +42,9 @@ fun ImageBlockView(block: Block) {
     val shape = RoundedCornerShape(borderRadius.dp)
     val contentScale = imageContentScale(fit)
     val bitmap = remember(src) { decodeDataImage(src) }
+    val action = resolveBlockAction(block)
+    val interactive = isTapActionConfigured(action)
+    val context = LocalContext.current
 
     Box(
         modifier = Modifier
@@ -47,6 +52,9 @@ fun ImageBlockView(block: Block) {
             .alpha(opacity)
             .clip(shape)
             .background(backgroundColor)
+            .clickable(enabled = interactive) {
+                if (action != null) executeBlockTapAction(context, action, onNavigate)
+            }
             .then(
                 if (borderWidth > 0f) {
                     Modifier.border(borderWidth.dp, borderColor, shape)

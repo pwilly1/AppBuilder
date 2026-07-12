@@ -248,7 +248,7 @@ function collectFormChildFields(project: ProjectLike, formBlockId: string): AppD
 function collectGroupedFields(pageBlocks: BlockLike[], submitBlock: BlockLike): AppDataFieldDefinition[] {
   const fields: AppDataFieldDefinition[] = [];
   const usedKeys = new Map<string, number>();
-  const submitGroupId = resolveSubmitGroupId(readStringProp(submitBlock, 'submitGroupId'));
+  const submitGroupId = resolveSubmitActionGroupId(submitBlock);
 
   for (const block of pageBlocks) {
     if (!FIELD_TYPES.has(block.type)) continue;
@@ -375,6 +375,14 @@ function resolveSubmitGroupId(value?: string) {
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '');
   return slug || 'default';
+}
+
+function resolveSubmitActionGroupId(block: BlockLike) {
+  const action = block.props?.action;
+  if (isRecord(action) && action.type === 'submitData' && typeof action.submitGroupId === 'string') {
+    return resolveSubmitGroupId(action.submitGroupId);
+  }
+  return resolveSubmitGroupId(readStringProp(block, 'submitGroupId'));
 }
 
 function formatCsvValue(value: AppSubmissionValue | undefined) {

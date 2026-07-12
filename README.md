@@ -19,7 +19,8 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
 - Lightweight primitive blocks: Shape, Badge, Icon, Image, Progress Bar, Form, Submit Button, Input, Textarea, Checkbox, Toggle, and Container
-- Nav Button supports page navigation plus inspector-based visual styling
+- Nav Button supports page navigation or safe external URLs through the shared block-action contract
+- Icon and Image can optionally run shared Navigate or Open URL actions in web and Android preview
 - Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
 - Form blocks can collect live app-user submissions in web preview using nested Input, Textarea, Checkbox, and Toggle field blocks
 - Submit Button blocks can submit same-page Input, Textarea, Checkbox, and Toggle fields that share a `submitGroupId`

@@ -1,3 +1,8 @@
+import type { KeyboardEvent } from 'react'
+import { isActionConfigured } from '../actions/blockActions'
+import { executeWebBlockAction } from '../actions/webActionExecutor'
+import type { BlockAction } from '../schema/types'
+
 export function ImageBlock({
   src = '',
   alt = 'Image',
@@ -9,6 +14,9 @@ export function ImageBlock({
   borderWidth = 0,
   borderRadius = 16,
   opacity = 1,
+  action,
+  previewMode,
+  onNavigate,
 }: {
   src?: string
   alt?: string
@@ -20,6 +28,9 @@ export function ImageBlock({
   borderWidth?: number
   borderRadius?: number
   opacity?: number
+  action?: BlockAction | null
+  previewMode?: boolean
+  onNavigate?: (pageId: string) => void
 }) {
   const safeFit = fit === 'contain' || fit === 'fill' ? fit : 'cover'
   const safePositionX = Math.max(0, Math.min(100, Number(positionX) || 50))
@@ -28,10 +39,24 @@ export function ImageBlock({
   const safeBorderRadius = Math.max(0, Number(borderRadius) || 0)
   const safeOpacity = Math.max(0, Math.min(1, Number(opacity) || 0))
   const hasSource = typeof src === 'string' && src.trim().length > 0
+  const interactive = Boolean(previewMode && isActionConfigured(action))
+  const runAction = () => {
+    if (!interactive || !action) return
+    void executeWebBlockAction(action, { onNavigate })
+  }
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    runAction()
+  }
 
   return (
     <div
       aria-label={alt || 'Image block'}
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={runAction}
+      onKeyDown={onKeyDown}
       style={{
         width: '100%',
         height: '100%',
@@ -41,7 +66,8 @@ export function ImageBlock({
         borderRadius: safeBorderRadius,
         backgroundColor: backgroundColor || '#e2e8f0',
         opacity: safeOpacity,
-        pointerEvents: 'none',
+        pointerEvents: interactive ? 'auto' : 'none',
+        cursor: interactive ? 'pointer' : 'default',
       }}
     >
       {hasSource ? (

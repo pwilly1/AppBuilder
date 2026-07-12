@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { submitPublicAppDataRecord } from '../../api'
-import { resolveSubmitGroupId, useFormRuntime } from './formRuntime'
+import type { BlockAction } from '../schema/types'
+import { executeWebBlockAction } from '../actions/webActionExecutor'
+import { useFormRuntime } from './formRuntime'
 
 export function SubmitButton({
   blockId,
   projectId,
   previewMode,
+  action,
   label = 'Submit',
   submitGroupId = 'default',
   successMessage = 'Submission received.',
@@ -21,6 +23,7 @@ export function SubmitButton({
   blockId?: string
   projectId?: string
   previewMode?: boolean
+  action?: BlockAction | null
   label?: string
   submitGroupId?: string
   successMessage?: string
@@ -36,7 +39,10 @@ export function SubmitButton({
   const formRuntime = useFormRuntime()
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
-  const canSubmit = Boolean(previewMode && projectId && blockId)
+  const submitAction = action?.type === 'submitData'
+    ? action
+    : { type: 'submitData' as const, submitGroupId }
+  const canSubmit = Boolean(previewMode && projectId && blockId && submitAction.submitGroupId)
   const safeScale = Math.max(0.1, Number(contentScale) || 1)
   const safeFontSize = Math.max(8, Number(fontSize) || 14) * safeScale
 
@@ -45,8 +51,11 @@ export function SubmitButton({
     setStatus('submitting')
     setErrorMessage('')
     try {
-      const groupValues = formRuntime?.getGroupValues(resolveSubmitGroupId(submitGroupId)) || {}
-      await submitPublicAppDataRecord(projectId, blockId, groupValues)
+      await executeWebBlockAction(submitAction, {
+        projectId,
+        sourceBlockId: blockId,
+        formRuntime,
+      })
       setStatus('success')
     } catch (error: any) {
       setStatus('error')
