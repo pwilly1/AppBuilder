@@ -237,7 +237,7 @@ export function AddBlock({
           <BlockEntry title="Hero" note="Intro headline" create={() => createBlock('hero', { headline: 'New Hero' })} onAdd={onAdd} />
           <BlockEntry title="Text" note="Paragraphs or short body copy" create={() => createBlock('text', { value: 'New text' })} onAdd={onAdd} />
           <BlockEntry title="Nav Button" note="Link to another page in the app" create={() => createBlock('navButton', { label: 'Go', toPageId: '' })} onAdd={onAdd} />
-          <BlockEntry title="Submit Button" note="Submit fields with the same group" create={() => createBlock('submitButton')} onAdd={onAdd} />
+          <BlockEntry title="Submit Button" note="Save connected fields" create={() => createBlock('submitButton')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
 
@@ -257,6 +257,7 @@ export function AddBlock({
           <BlockEntry title="Textarea" note="Multi-line field" create={() => createBlock('textarea')} onAdd={onAdd} />
           <BlockEntry title="Checkbox" note="Checked/unchecked option" create={() => createBlock('checkbox')} onAdd={onAdd} />
           <BlockEntry title="Toggle" note="On/off switch" create={() => createBlock('toggle')} onAdd={onAdd} />
+          <BlockEntry title="Data List" note="Display records from a collection" create={() => createBlock('dataList')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
 

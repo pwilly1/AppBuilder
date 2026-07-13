@@ -4,6 +4,7 @@ import { PageRenderer } from '../editor/PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'
+import DataCollectionsPanel from '../components/DataCollectionsPanel'
 import type { Block, Page, Project } from '../shared/schema/types'
 import type { TemplateDefinition } from '../shared/schema/templates'
 import { instantiateSectionTemplate, instantiateTemplatePage, isSectionTemplate } from '../shared/schema/templates'
@@ -25,6 +26,7 @@ import {
 import type { BlockGridConstraints, GridPlacement } from '../shared/schema/types'
 
 type Props = {
+  project: Project
   projectId?: string
   page: any
   pages?: Array<{ id: string; title?: string; path?: string; blocks?: any[] }>
@@ -56,6 +58,7 @@ type Props = {
 export default function EditorLayout(props: Props) {
   const {
     projectId,
+    project,
     page,
     pages = [],
     selectedPageId,
@@ -580,6 +583,11 @@ export default function EditorLayout(props: Props) {
               onDelete={(id) => deletePage?.(id)}
             />
 
+            <DataCollectionsPanel
+              collections={project?.dataCollections || []}
+              onChange={(dataCollections) => applyProjectTransaction?.((current: Project) => ({ ...current, dataCollections }))}
+            />
+
             <div>
               <div className="editor-rail-section-heading">
                 <div>
@@ -662,6 +670,8 @@ export default function EditorLayout(props: Props) {
               block={selectedBlock}
               projectId={projectId}
               pages={pages}
+              pageBlocks={page?.blocks || []}
+              dataCollections={project?.dataCollections || []}
               activeContainerId={activeContainerId}
               onEditContainer={(block: any) => enterContainer(block)}
               onExitContainer={exitContainer}

@@ -29,6 +29,7 @@ fun BlockRenderer(
         "input" -> InputView(block, formRuntime)
         "textarea" -> TextareaView(block, formRuntime)
         "image" -> ImageBlockView(block, onNavigate)
+        "dataList" -> DataListView(block, projectId, baseUrl)
         "servicesList" -> ServicesListView(block)
         "contactForm" -> ContactFormView(block, projectId = projectId, baseUrl = baseUrl)
         "imageGallery" -> ImageGalleryView(block)

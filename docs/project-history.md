@@ -365,3 +365,18 @@ Representative areas:
 - `frontend/src/components/Inspector.tsx`
 - `backend/src/services/AppDataService.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/BlockActions.kt`
+
+## Phase 18: Project Data Collections
+
+Date range: July 2026
+
+Projects gained stable schema-backed data collections with typed field definitions and explicit public-read control. Submit Buttons can write grouped field values into a selected collection, while the new Data List block reads collection records across web and Android preview. Existing Form and source-block submission behavior remains compatible when no collection is selected. Focused backend contract tests now protect legacy action fallback and collection-source resolution.
+
+Representative areas:
+
+- `frontend/src/components/DataCollectionsPanel.tsx`
+- `frontend/src/shared/blocks/DataListBlock.tsx`
+- `frontend/src/shared/schema/types.ts`
+- `backend/src/services/AppDataService.ts`
+- `backend/test/appDataContracts.test.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/DataListView.kt`

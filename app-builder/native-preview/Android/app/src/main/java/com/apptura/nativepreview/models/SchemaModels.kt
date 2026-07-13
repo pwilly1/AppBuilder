@@ -87,6 +87,14 @@ data class PublicFormSubmissionRequest(
     val message: String? = null
 )
 
+@Serializable
+data class AppDataRecord(
+    val id: String,
+    val sourceId: String? = null,
+    val data: JsonObject = buildJsonObject { },
+    val submittedAt: String? = null,
+)
+
 object ProjectLoader {
     private const val GRID_DENSITY_SCHEMA_VERSION = 2
 
@@ -187,6 +195,18 @@ object ProjectLoader {
             JsonObject(values).toString(),
             token = null
         )
+    }
+
+    suspend fun listPublicCollectionRecords(
+        baseUrl: String,
+        projectId: String,
+        collectionId: String,
+    ): List<AppDataRecord> {
+        val body = httpGet(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records",
+            token = null,
+        )
+        return json.decodeFromString(body)
     }
 
     private suspend fun httpGet(url: String, token: String?): String {

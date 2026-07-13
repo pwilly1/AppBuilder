@@ -1,5 +1,5 @@
 import type { IUserRepository } from '../repositories/UserRepository.js';
-import type { ProjectPage } from '../models/Project.js';
+import type { ProjectDataCollection, ProjectPage } from '../models/Project.js';
 import type {
   CreateProjectInput,
   ProjectRecord,
@@ -47,6 +47,9 @@ export class ProjectManager {
       name: projectName,
       ...(typeof options.schemaVersion === 'number' ? { schemaVersion: options.schemaVersion } : {}),
       ...(Array.isArray(options.pages) ? { pages: options.pages as ProjectPage[] } : {}),
+      ...(Array.isArray(options.dataCollections)
+        ? { dataCollections: options.dataCollections as ProjectDataCollection[] }
+        : {}),
     };
     return this.projects.create(payload);
   }
@@ -66,6 +69,9 @@ export class ProjectManager {
       name: typeof updates.name === 'string' ? updates.name : existing.name,
       ...(typeof updates.schemaVersion === 'number' ? { schemaVersion: updates.schemaVersion } : {}),
       ...(Array.isArray(updates.pages) ? { pages: updates.pages as ProjectPage[] } : {}),
+      ...(Array.isArray(updates.dataCollections)
+        ? { dataCollections: updates.dataCollections as ProjectDataCollection[] }
+        : {}),
     };
     return this.projects.update(merged);
   }

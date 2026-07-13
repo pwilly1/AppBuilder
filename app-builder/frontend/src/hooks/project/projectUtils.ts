@@ -8,6 +8,7 @@ export function createInitialProject(): Project {
     schemaVersion: CURRENT_SCHEMA_VERSION,
     id: 'proj1',
     name: 'My App',
+    dataCollections: [],
     pages: [
       { id: 'home', title: 'Home', path: '/home', blocks: [] },
     ],
@@ -59,5 +60,6 @@ export function normalizeProject(full: any): Project {
     const id = crypto.randomUUID();
     next.pages = [{ id, title: 'Home', path: '/home', blocks: [] }];
   }
+  if (!Array.isArray(next.dataCollections)) next.dataCollections = [];
   return migrateProjectToGridLayout(next);
 }

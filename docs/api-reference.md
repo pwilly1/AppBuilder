@@ -237,7 +237,7 @@ Success: `201` with the stored submission.
 
 ## App Data Source Endpoints
 
-These routes expose the broader app-data source model used by the dashboard and frontend runtime. A source can currently be a legacy `contactForm`, a schema-backed `form`, or a schema-backed `submitButton`.
+These routes expose the broader app-data source model used by the dashboard and frontend runtime. A source can be a project collection, legacy `contactForm`, schema-backed `form`, or schema-backed `submitButton`. Submit Buttons targeting collections are represented by the stable collection source instead of creating a duplicate source entry.
 
 ### `GET /projects/:id/app-data/sources`
 
@@ -258,6 +258,10 @@ Does not require authentication. This is the canonical public runtime endpoint u
 For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and `submitButton` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppSubmission`.
 
 Success: `201` with the stored record.
+
+### `GET /public/projects/:id/app-data/collections/:collectionId/records`
+
+Does not require authentication. Returns up to 100 collection records, newest first, only when that collection has `publicRead` enabled. This is the read endpoint used by Data List blocks in web and Android runtime. Returns `403` when public reads are disabled.
 
 ## Project Data Shape
 

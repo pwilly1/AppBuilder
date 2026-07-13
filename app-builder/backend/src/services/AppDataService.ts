@@ -10,6 +10,20 @@ type ProjectLike = {
     title?: string;
     blocks?: BlockLike[];
   }>;
+  dataCollections?: CollectionLike[];
+};
+
+type CollectionLike = {
+  id: string;
+  name?: string;
+  publicRead?: boolean;
+  fields?: Array<{
+    id?: string;
+    key?: string;
+    label?: string;
+    type?: string;
+    required?: boolean;
+  }>;
 };
 
 type BlockLike = {
@@ -23,18 +37,19 @@ type AppDataSourceMatch = {
   id: string;
   sourceId: string;
   blockId: string;
-  type: 'submitButton' | 'form' | 'contactForm';
+  type: 'collection' | 'submitButton' | 'form' | 'contactForm';
   name: string;
   pageId: string;
   pageTitle: string;
-  block: BlockLike;
+  block?: BlockLike;
   pageBlocks: BlockLike[];
   fields: AppDataFieldDefinition[];
+  publicRead: boolean;
 };
 
 export type AppDataFieldDefinition = {
   blockId: string;
-  type: 'input' | 'textarea' | 'checkbox' | 'toggle' | 'text' | 'email' | 'phone';
+  type: 'input' | 'textarea' | 'checkbox' | 'toggle' | 'text' | 'number' | 'email' | 'phone' | 'date' | 'boolean';
   key: string;
   label: string;
   required: boolean;
@@ -65,6 +80,9 @@ export type SerializedAppDataRecord = {
 const FIELD_TYPES = new Set(['input', 'textarea', 'checkbox', 'toggle']);
 
 export function findAppDataSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
+  const collection = (project.dataCollections || []).find((entry) => entry.id === sourceId);
+  if (collection) return createCollectionSource(collection);
+
   for (const page of project.pages || []) {
     const pageBlocks = page.blocks || [];
     const block = pageBlocks.find((entry) => entry.id === sourceId);
@@ -82,6 +100,7 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
         block,
         pageBlocks,
         fields: collectGroupedFields(pageBlocks, block),
+        publicRead: false,
       };
     }
 
@@ -97,6 +116,7 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
         block,
         pageBlocks,
         fields: collectFormChildFields(project, block.id),
+        publicRead: false,
       };
     }
 
@@ -112,6 +132,7 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
         block,
         pageBlocks,
         fields: collectContactFormFields(block),
+        publicRead: false,
       };
     }
   }
@@ -120,11 +141,12 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
 }
 
 export function collectAppDataSourceMatches(project: ProjectLike): AppDataSourceMatch[] {
-  const sources: AppDataSourceMatch[] = [];
+  const sources: AppDataSourceMatch[] = (project.dataCollections || []).map(createCollectionSource);
 
   for (const page of project.pages || []) {
     for (const block of page.blocks || []) {
       if (block.type !== 'submitButton' && block.type !== 'form' && block.type !== 'contactForm') continue;
+      if (block.type === 'submitButton' && resolveSubmitCollectionId(block)) continue;
       const source = findAppDataSource(project, block.id);
       if (source) sources.push(source);
     }
@@ -152,9 +174,19 @@ export async function listAppDataSources(project: ProjectLike, ownerId: string, 
 }
 
 export async function createAppDataRecord(project: ProjectLike, sourceId: string, body: unknown) {
-  const source = findAppDataSource(project, sourceId);
-  if (!source) {
+  const requestedSource = findAppDataSource(project, sourceId);
+  if (!requestedSource) {
     const error: any = new Error('App data source not found');
+    error.status = 404;
+    throw error;
+  }
+
+  const collectionId = requestedSource.block?.type === 'submitButton'
+    ? resolveSubmitCollectionId(requestedSource.block)
+    : '';
+  const source = resolveAppDataWriteSource(project, sourceId);
+  if (!source || (collectionId && source.type !== 'collection')) {
+    const error: any = new Error('Target collection not found');
     error.status = 404;
     throw error;
   }
@@ -179,14 +211,38 @@ export async function createAppDataRecord(project: ProjectLike, sourceId: string
     ownerId,
     projectId: String(project.id || project._id),
     formBlockId: source.sourceId,
-    pageId: source.pageId,
+    pageId: requestedSource.pageId || source.pageId || 'collection',
     data,
   });
 
   return serializeAppDataRecord(submission);
 }
 
-export async function listAppDataRecords(project: ProjectLike, ownerId: string, projectId: string, sourceId: string) {
+export function resolveAppDataWriteSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
+  const requestedSource = findAppDataSource(project, sourceId);
+  if (!requestedSource) return null;
+  if (requestedSource.block?.type !== 'submitButton') return requestedSource;
+  const collectionId = resolveSubmitCollectionId(requestedSource.block);
+  return collectionId ? findAppDataSource(project, collectionId) : requestedSource;
+}
+
+export function isPublicReadableCollection(project: ProjectLike, collectionId: string) {
+  const source = findAppDataSource(project, collectionId);
+  return source?.type === 'collection' && source.publicRead;
+}
+
+export function isPublicSubmissionSource(project: ProjectLike, sourceId: string) {
+  const source = findAppDataSource(project, sourceId);
+  return Boolean(source && source.type !== 'collection');
+}
+
+export async function listAppDataRecords(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  sourceId: string,
+  options: { limit?: number } = {},
+) {
   const source = findAppDataSource(project, sourceId);
   if (!source) {
     const error: any = new Error('App data source not found');
@@ -194,9 +250,10 @@ export async function listAppDataRecords(project: ProjectLike, ownerId: string, 
     throw error;
   }
 
-  const submissions = await AppSubmissionModel.find({ ownerId, projectId, formBlockId: sourceId })
-    .sort({ submittedAt: -1 })
-    .lean();
+  let query = AppSubmissionModel.find({ ownerId, projectId, formBlockId: sourceId })
+    .sort({ submittedAt: -1 });
+  if (options.limit) query = query.limit(Math.max(1, options.limit));
+  const submissions = await query.lean();
 
   return submissions.map((submission) => serializeAppDataRecord(submission));
 }
@@ -268,6 +325,29 @@ function collectContactFormFields(block: BlockLike): AppDataFieldDefinition[] {
   return fields;
 }
 
+function createCollectionSource(collection: CollectionLike): AppDataSourceMatch {
+  return {
+    id: collection.id,
+    sourceId: collection.id,
+    blockId: collection.id,
+    type: 'collection',
+    name: collection.name?.trim() || 'Collection',
+    pageId: '',
+    pageTitle: 'Project data',
+    pageBlocks: [],
+    fields: (collection.fields || [])
+      .filter((field) => typeof field.key === 'string' && field.key.trim())
+      .map((field, index) => ({
+        blockId: field.id?.trim() || `${collection.id}-field-${index + 1}`,
+        type: normalizeCollectionFieldType(field.type),
+        key: field.key!.trim(),
+        label: field.label?.trim() || formatLabel(field.key!.trim()),
+        required: Boolean(field.required),
+      })),
+    publicRead: Boolean(collection.publicRead),
+  };
+}
+
 function createFieldDefinition(block: BlockLike, usedKeys: Map<string, number>): AppDataFieldDefinition {
   const baseKey = resolveFieldKey(block);
   const count = usedKeys.get(baseKey) ?? 0;
@@ -290,7 +370,7 @@ function sanitizeRecordData(fields: AppDataFieldDefinition[], body: unknown): Re
   for (const field of fields) {
     const raw = source[field.key] ?? source[field.blockId];
 
-    if (field.type === 'checkbox' || field.type === 'toggle') {
+    if (field.type === 'checkbox' || field.type === 'toggle' || field.type === 'boolean') {
       const value = coerceBoolean(raw);
       if (field.required && value !== true) {
         const error: any = new Error(`${field.label} is required`);
@@ -383,6 +463,19 @@ function resolveSubmitActionGroupId(block: BlockLike) {
     return resolveSubmitGroupId(action.submitGroupId);
   }
   return resolveSubmitGroupId(readStringProp(block, 'submitGroupId'));
+}
+
+function resolveSubmitCollectionId(block: BlockLike) {
+  const action = block.props?.action;
+  if (isRecord(action) && action.type === 'submitData' && typeof action.collectionId === 'string') {
+    return action.collectionId.trim();
+  }
+  return readStringProp(block, 'collectionId');
+}
+
+function normalizeCollectionFieldType(value: unknown): AppDataFieldDefinition['type'] {
+  if (value === 'number' || value === 'boolean' || value === 'email' || value === 'date') return value;
+  return 'text';
 }
 
 function formatCsvValue(value: AppSubmissionValue | undefined) {

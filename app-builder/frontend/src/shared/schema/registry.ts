@@ -346,6 +346,29 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       opacity: 1,
     },
   },
+  dataList: {
+    displayName: 'Data List',
+    layoutClass: 'list',
+    defaultLayout: { width: 'full', align: 'start', spacingTop: 'sm', spacingBottom: 'sm' },
+    gridConstraints: {
+      defaultSpan: { cols: 12, rows: 8 },
+      minSpan: { cols: 4, rows: 3 },
+      maxSpan: { cols: 16, rows: 29 },
+      allowAutoGrowRows: true,
+      allowInnerMove: true,
+    },
+    defaultRender: { alignX: 'center', alignY: 'center' },
+    defaultProps: {
+      collectionId: '',
+      title: 'Records',
+      emptyMessage: 'No records yet.',
+      displayFieldKeys: '',
+      backgroundColor: '#ffffff',
+      textColor: '#0f172a',
+      borderColor: '#dbe3ef',
+      borderRadius: 14,
+    },
+  },
   servicesList: {
     displayName: 'Services List',
     layoutClass: 'list',
@@ -421,8 +444,16 @@ export function isSupportedBlockType(value: unknown): value is BlockType {
 
 export function createBlock<T extends BlockType = BlockType>(type: T, overrides: Record<string, any> = {}): Block {
   const def = BlockRegistry[type]
+  const blockId = crypto.randomUUID()
   const props = { ...(def?.defaultProps || {}), ...(overrides || {}) }
   const hasExplicitAction = Object.prototype.hasOwnProperty.call(overrides, 'action')
+  if (
+    type === 'submitButton'
+    && !hasExplicitAction
+    && !Object.prototype.hasOwnProperty.call(overrides, 'submitGroupId')
+  ) {
+    props.submitGroupId = `submit_${blockId.replace(/-/g, '').slice(0, 10)}`
+  }
   if (!hasExplicitAction && type === 'navButton') {
     props.action = {
       type: 'navigate',
@@ -435,10 +466,13 @@ export function createBlock<T extends BlockType = BlockType>(type: T, overrides:
       submitGroupId: typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
         ? props.submitGroupId.trim()
         : 'default',
+      ...(typeof props.collectionId === 'string' && props.collectionId.trim()
+        ? { collectionId: props.collectionId.trim() }
+        : {}),
     }
   }
   return {
-    id: crypto.randomUUID(),
+    id: blockId,
     type,
     props,
     layout: {

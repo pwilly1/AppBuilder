@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import type { Block } from '../shared/schema/types';
+import type { AppDataCollection, Block } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
 import { uploadProjectImage } from '../api';
@@ -12,6 +12,8 @@ type InspectorProps = {
   block?: Block | null;
   projectId?: string;
   pages?: PageLite[];
+  pageBlocks?: Block[];
+  dataCollections?: AppDataCollection[];
   activeContainerId?: string | null;
   onSave?: (b: Block) => void;
   onPreview?: (b: Block) => void;
@@ -79,6 +81,8 @@ export default function Inspector({
   block,
   projectId,
   pages,
+  pageBlocks = [],
+  dataCollections = [],
   activeContainerId,
   onSave,
   onPreview,
@@ -95,6 +99,36 @@ export default function Inspector({
   const [imageUploadError, setImageUploadError] = React.useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
   const actionType = watch('action.type') as string | undefined;
+  const watchedSubmitGroupId = watch('submitGroupId') as string | undefined;
+  const submitTargets = React.useMemo(() => {
+    const targets = new Map<string, {
+      blockId: string;
+      label: string;
+      groupId: string;
+      collection: AppDataCollection | null;
+    }>();
+
+    for (const candidate of pageBlocks) {
+      if (candidate.type !== 'submitButton') continue;
+      const action = resolveBlockAction(candidate);
+      if (action?.type !== 'submitData') continue;
+      const groupId = normalizeSubmitGroupId(action.submitGroupId);
+      if (targets.has(groupId)) continue;
+      targets.set(groupId, {
+        blockId: candidate.id,
+        label: String(candidate.props.label || 'Submit'),
+        groupId,
+        collection: dataCollections.find((collection) => collection.id === action.collectionId) ?? null,
+      });
+    }
+
+    return Array.from(targets.values());
+  }, [dataCollections, pageBlocks]);
+  const selectedSubmitTarget = watchedSubmitGroupId === ''
+    ? null
+    : submitTargets.find(
+      (target) => target.groupId === normalizeSubmitGroupId(watchedSubmitGroupId),
+    ) ?? null;
 
   React.useEffect(() => {
     if (previewedPropsRef.current === block?.props) {
@@ -146,7 +180,13 @@ export default function Inspector({
         ? props.submitGroupId.trim()
         : 'default';
       props.submitGroupId = submitGroupId;
-      props.action = { type: 'submitData', submitGroupId };
+      const collectionId = typeof props.collectionId === 'string' ? props.collectionId.trim() : '';
+      props.collectionId = collectionId;
+      props.action = {
+        type: 'submitData',
+        submitGroupId,
+        ...(collectionId ? { collectionId } : {}),
+      };
     }
     onSave?.({ ...block, props });
   };
@@ -181,6 +221,78 @@ export default function Inspector({
           </div>
         ) : null}
       </FormSection>
+    );
+  }
+
+  function renderSubmissionBindingControls() {
+    const currentGroupId = normalizeSubmitGroupId(watchedSubmitGroupId);
+    const hasUnmatchedLegacyGroup = Boolean(
+      watchedSubmitGroupId && !submitTargets.some((target) => target.groupId === currentGroupId),
+    );
+    const compatibleFields = selectedSubmitTarget?.collection?.fields.filter((field) => {
+      if (block?.type === 'checkbox' || block?.type === 'toggle') return field.type === 'boolean';
+      return field.type !== 'boolean';
+    }) ?? [];
+
+    return (
+      <>
+        <div className="grid gap-2">
+          <FieldLabel>Submit with</FieldLabel>
+          <select className="inspector-input" {...register('submitGroupId')}>
+            <option value="">Choose a Submit Button...</option>
+            {submitTargets.map((target) => (
+              <option key={target.blockId} value={target.groupId}>
+                {target.label}{target.collection ? ` -> ${target.collection.name}` : ''}
+              </option>
+            ))}
+            {hasUnmatchedLegacyGroup ? (
+              <option value={currentGroupId}>Existing group: {currentGroupId}</option>
+            ) : null}
+          </select>
+          {submitTargets.length === 0 ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+              Add a Submit Button to this page, then return here to connect this field.
+            </p>
+          ) : !selectedSubmitTarget ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+              This field is not connected yet. Choose a Submit Button above.
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500">This field will be included when {selectedSubmitTarget.label} is pressed.</p>
+          )}
+        </div>
+
+        {selectedSubmitTarget?.collection ? (
+          <div className="grid gap-2">
+            <FieldLabel>Save to field</FieldLabel>
+            <select className="inspector-input" {...register('fieldKey')}>
+              <option value="">Choose a field in {selectedSubmitTarget.collection.name}...</option>
+              {compatibleFields.map((field) => (
+                <option key={field.id} value={field.key}>{field.label} ({friendlyFieldType(field.type)})</option>
+              ))}
+            </select>
+            {compatibleFields.length === 0 ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                {block?.type === 'checkbox' || block?.type === 'toggle'
+                  ? 'Add a Yes / No field to this collection first.'
+                  : 'Add a text, email, number, or date field to this collection first.'}
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500">The submitted value will be stored in {selectedSubmitTarget.collection.name}.</p>
+            )}
+          </div>
+        ) : (
+          <div className="grid gap-2">
+            <FieldLabel>Field name</FieldLabel>
+            <TextInput placeholder="Automatically uses the label" {...register('fieldKey')} />
+            <p className="text-xs text-slate-500">
+              {selectedSubmitTarget
+                ? 'This button uses its own data source, so a custom field name is optional.'
+                : 'This value is preserved for forms and existing custom submission groups.'}
+            </p>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -606,9 +718,23 @@ export default function Inspector({
                 <FieldLabel>Data source name</FieldLabel>
                 <TextInput placeholder="Contact Requests" {...register('dataSourceName')} />
               </div>
+              <details className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+                <summary className="cursor-pointer text-xs font-semibold text-slate-600">Advanced connection settings</summary>
+                <div className="mt-3 grid gap-2">
+                  <FieldLabel>Connection ID</FieldLabel>
+                  <TextInput placeholder="Automatically generated" {...register('submitGroupId')} />
+                  <p className="text-xs text-slate-500">Field blocks connect to this button by name. Only edit this ID for legacy configurations.</p>
+                </div>
+              </details>
               <div className="grid gap-2">
-                <FieldLabel>Submit group</FieldLabel>
-                <TextInput placeholder="default" {...register('submitGroupId')} />
+                <FieldLabel>Store records in</FieldLabel>
+                <select className="inspector-input" {...register('collectionId')}>
+                  <option value="">This button's own data source</option>
+                  {dataCollections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>{collection.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-500">Choose a collection to make records reusable by Data List blocks.</p>
               </div>
               <div className="grid gap-2">
                 <FieldLabel>Success message</FieldLabel>
@@ -646,6 +772,53 @@ export default function Inspector({
               <div className="grid gap-2">
                 <FieldLabel>Outer padding (px)</FieldLabel>
                 <TextInput type="number" min={0} className="max-w-[120px]" {...register('contentPadding')} />
+              </div>
+            </FormSection>
+          </>
+        )}
+
+        {block.type === 'dataList' && (
+          <>
+            <FormSection title="Data source" description="Display records from a project collection in web and Android preview.">
+              <div className="grid gap-2">
+                <FieldLabel>Collection</FieldLabel>
+                <select className="inspector-input" {...register('collectionId')}>
+                  <option value="">Select a collection...</option>
+                  {dataCollections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>{collection.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>List title</FieldLabel>
+                <TextInput {...register('title')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Fields to display</FieldLabel>
+                <TextInput placeholder="name, email" {...register('displayFieldKeys')} />
+                <p className="text-xs text-slate-500">Comma-separated field keys. Leave blank to show every stored field.</p>
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Empty message</FieldLabel>
+                <TextInput {...register('emptyMessage')} />
+              </div>
+            </FormSection>
+            <FormSection title="List style">
+              <div className="grid gap-2">
+                <FieldLabel>Background color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Text color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Border color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Corner radius (px)</FieldLabel>
+                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
               </div>
             </FormSection>
           </>
@@ -763,14 +936,7 @@ export default function Inspector({
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
-            <div className="grid gap-2">
-              <FieldLabel>Field key</FieldLabel>
-              <TextInput placeholder="auto from label" {...register('fieldKey')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Submit group</FieldLabel>
-              <TextInput placeholder="default" {...register('submitGroupId')} />
-            </div>
+            {renderSubmissionBindingControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -808,14 +974,7 @@ export default function Inspector({
               <FieldLabel>Label</FieldLabel>
               <TextInput {...registerLiveText('label')} />
             </div>
-            <div className="grid gap-2">
-              <FieldLabel>Field key</FieldLabel>
-              <TextInput placeholder="auto from label" {...register('fieldKey')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Submit group</FieldLabel>
-              <TextInput placeholder="default" {...register('submitGroupId')} />
-            </div>
+            {renderSubmissionBindingControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -886,14 +1045,7 @@ export default function Inspector({
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
-            <div className="grid gap-2">
-              <FieldLabel>Field key</FieldLabel>
-              <TextInput placeholder="auto from label" {...register('fieldKey')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Submit group</FieldLabel>
-              <TextInput placeholder="default" {...register('submitGroupId')} />
-            </div>
+            {renderSubmissionBindingControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -949,14 +1101,7 @@ export default function Inspector({
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
-            <div className="grid gap-2">
-              <FieldLabel>Field key</FieldLabel>
-              <TextInput placeholder="auto from label" {...register('fieldKey')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Submit group</FieldLabel>
-              <TextInput placeholder="default" {...register('submitGroupId')} />
-            </div>
+            {renderSubmissionBindingControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -1216,6 +1361,19 @@ export default function Inspector({
       </form>
     </div>
   );
+}
+
+function normalizeSubmitGroupId(value: unknown) {
+  const raw = typeof value === 'string' && value.trim() ? value.trim() : 'default';
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'default';
+}
+
+function friendlyFieldType(type: AppDataCollection['fields'][number]['type']) {
+  if (type === 'boolean') return 'Yes / No';
+  return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 

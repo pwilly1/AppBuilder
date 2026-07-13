@@ -17,6 +17,7 @@ export type BlockType =
   | 'input'
   | 'textarea'
   | 'image'
+  | 'dataList'
   | 'servicesList'
   | 'contactForm'
   | 'imageGallery';
@@ -44,8 +45,25 @@ export type RenderAlign = 'start' | 'center' | 'end';
 
 export type BlockAction =
   | { type: 'navigate'; targetPageId: string }
-  | { type: 'submitData'; submitGroupId: string }
+  | { type: 'submitData'; submitGroupId: string; collectionId?: string }
   | { type: 'openUrl'; url: string };
+
+export type AppDataFieldType = 'text' | 'number' | 'boolean' | 'email' | 'date';
+
+export type AppDataCollectionField = {
+  id: string;
+  key: string;
+  label: string;
+  type: AppDataFieldType;
+  required?: boolean;
+};
+
+export type AppDataCollection = {
+  id: string;
+  name: string;
+  publicRead: boolean;
+  fields: AppDataCollectionField[];
+};
 
 export type GridSpan = {
   cols: number;
@@ -129,4 +147,5 @@ export type Project = {
   id: string;
   name: string;
   pages: Page[];
+  dataCollections?: AppDataCollection[];
 };

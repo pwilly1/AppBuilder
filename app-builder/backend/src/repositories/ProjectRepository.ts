@@ -1,4 +1,4 @@
-import type { ProjectPage } from '../models/Project.js';
+import type { ProjectDataCollection, ProjectPage } from '../models/Project.js';
 
 export interface ProjectRecord {
   id: string;
@@ -6,6 +6,7 @@ export interface ProjectRecord {
   name: string;
   schemaVersion?: number;
   pages?: ProjectPage[];
+  dataCollections?: ProjectDataCollection[];
   createdAt?: Date;
   updatedAt?: Date;
 }

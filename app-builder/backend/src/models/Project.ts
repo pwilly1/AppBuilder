@@ -10,11 +10,27 @@ export interface ProjectPage {
   blocks?: any[];
 }
 
+export interface ProjectDataCollectionField {
+  id: string;
+  key: string;
+  label: string;
+  type: 'text' | 'number' | 'boolean' | 'email' | 'date';
+  required?: boolean;
+}
+
+export interface ProjectDataCollection {
+  id: string;
+  name: string;
+  publicRead: boolean;
+  fields: ProjectDataCollectionField[];
+}
+
 export interface Project extends Document {
   ownerId: string;
   schemaVersion?: number;
   name: string;
   pages?: ProjectPage[];
+  dataCollections?: ProjectDataCollection[];
   updatedAt: Date;
   createdAt: Date;
 }
@@ -25,6 +41,7 @@ const ProjectSchema = new Schema<Project>(
     schemaVersion: { type: Number, default: 2 },
     name:    { type: String, required: true, trim: true },
     pages:   { type: Array as any, default: [] },
+    dataCollections: { type: Array as any, default: [] },
   },
   { timestamps: true, versionKey: false }
 );

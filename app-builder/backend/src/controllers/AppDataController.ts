@@ -4,6 +4,8 @@ import {
   createAppDataRecord,
   findAppDataSource,
   getAppDataCsvFileName,
+  isPublicReadableCollection,
+  isPublicSubmissionSource,
   listAppDataRecords,
   listAppDataSources,
 } from '../services/AppDataService.js';
@@ -91,6 +93,26 @@ export class AppDataController {
     await this.submitPublic(getRouteParam(req, 'id'), getRouteParam(req, 'sourceId'), req, res, next);
   };
 
+  listPublicCollectionRecords = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const collectionId = getRouteParam(req, 'collectionId');
+    if (!id || !collectionId) return this.missingParams(res);
+    try {
+      const project = await this.projects.findById(id);
+      if (!project) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+      }
+      if (!isPublicReadableCollection(project, collectionId)) {
+        res.status(403).json({ error: 'This collection is not publicly readable' });
+        return;
+      }
+      res.json(await listAppDataRecords(project, project.ownerId, id, collectionId, { limit: 100 }));
+    } catch (error) {
+      this.handleAppDataError(error, res, next);
+    }
+  };
+
   private async submitPublic(
     id: string | undefined,
     sourceId: string | undefined,
@@ -104,6 +126,10 @@ export class AppDataController {
       const project = await this.projects.findById(id);
       if (!project) {
         res.status(404).json({ error: 'Not found' });
+        return;
+      }
+      if (!isPublicSubmissionSource(project, sourceId)) {
+        res.status(404).json({ error: 'App data source not found' });
         return;
       }
       await this.createAndRespond(project, sourceId, req.body, res);
@@ -144,7 +170,7 @@ export class AppDataController {
       return;
     }
     const record = await createAppDataRecord(project, sourceId, body || {});
-    if (source.type === 'contactForm') {
+    if (source.type === 'contactForm' && source.block) {
       try {
         const formTitle = typeof source.block.props?.title === 'string' ? source.block.props.title : undefined;
         const destinationEmail = this.getDestinationEmail(source.block);

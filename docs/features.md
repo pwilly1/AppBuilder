@@ -61,6 +61,7 @@ The current visible block palette is:
 - Checkbox
 - Toggle
 - Container
+- Data List
 
 Hero, Text, Nav Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Submit Button, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
@@ -72,6 +73,7 @@ Form is a schema-backed submission surface. In web preview it posts dynamic chil
 Submit Button is a second schema-backed submission path. In web preview it submits same-page Input, Textarea, Checkbox, and Toggle fields that share the same normalized `submitGroupId`.
 Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or when paired with a same-group Submit Button. In web and Android preview, these controls collect runtime values and Submit Button posts its grouped fields to the hosted app-data API. In the editor they still behave as mockup controls.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
+Project-level data collections define stable record sources and typed fields. Submit Buttons can write grouped field values into a selected collection, and Data List can display that collection in web and Android preview when public reads are enabled.
 
 ### Grid Layout
 
@@ -250,6 +252,6 @@ Later AI features:
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
 - Container editing is intentionally limited to one level; nested containers are not supported.
-- Schema-backed Form submissions are stored for review, but broader generated-app data models and bindings are not implemented.
+- Project collections and read-only collection lists are implemented, but record detail, update/delete actions, relationships, filtering, and generated-app user ownership are not.
 - Export and app-store pipeline features are not implemented.
 - GenAI generation is planned, not currently implemented.

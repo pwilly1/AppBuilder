@@ -100,6 +100,7 @@ type Project = {
   id: string
   name: string
   pages: Page[]
+  dataCollections?: AppDataCollection[]
 }
 
 type Page = {
@@ -109,6 +110,8 @@ type Page = {
   blocks: Block[]
 }
 ```
+
+Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Submit Buttons can target a collection while still gathering same-page fields through `submitGroupId`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Data List blocks read those records through the public collection endpoint only when `publicRead` is enabled.
 
 A block has:
 
@@ -248,7 +251,8 @@ Behavior notes:
 - Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
 - Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, opacity, and optional tap actions across web and Android preview.
 - Form is a schema-backed submission surface with shared parent/child layout rules across web and Android preview.
-- Submit Button is a schema-backed submission trigger that gathers same-page fields through `submitGroupId` in both web and Android preview, then posts them to the public hosted app-data endpoint.
+- Submit Button is a schema-backed submission trigger that gathers same-page fields through `submitGroupId` in both web and Android preview, then posts them to its own source or a configured project collection.
+- Data List is a schema-backed read primitive that displays records from a publicly readable project collection across web and Android preview.
 - Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or when paired with a same-group Submit Button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 

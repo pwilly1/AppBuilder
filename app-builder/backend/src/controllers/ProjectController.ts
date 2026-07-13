@@ -22,7 +22,12 @@ export class ProjectController {
     try {
       const body = isRecord(req.body) ? req.body : {};
       const name = typeof body.name === 'string' ? body.name : 'Untitled Project';
-      const project = await this.projects.create(name, { ownerId: getUserId(req) });
+      const project = await this.projects.create(name, {
+        ownerId: getUserId(req),
+        ...(typeof body.schemaVersion === 'number' ? { schemaVersion: body.schemaVersion } : {}),
+        ...(Array.isArray(body.pages) ? { pages: body.pages } : {}),
+        ...(Array.isArray(body.dataCollections) ? { dataCollections: body.dataCollections } : {}),
+      });
       res.status(201).json(project);
     } catch (error) {
       handleControllerError(error, res, next);

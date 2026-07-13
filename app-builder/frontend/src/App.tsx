@@ -287,6 +287,7 @@ function EditorScreen(props: any) {
 
   return (
     <EditorLayout
+      project={project}
       projectId={project?.id}
       page={page}
       pages={pages}

@@ -8,7 +8,12 @@ export function normalizeBlockAction(value: unknown): BlockAction | null {
     return { type: 'navigate', targetPageId: readString(action.targetPageId) }
   }
   if (action.type === 'submitData') {
-    return { type: 'submitData', submitGroupId: readString(action.submitGroupId) || 'default' }
+    const collectionId = readString(action.collectionId)
+    return {
+      type: 'submitData',
+      submitGroupId: readString(action.submitGroupId) || 'default',
+      ...(collectionId ? { collectionId } : {}),
+    }
   }
   if (action.type === 'openUrl') {
     return { type: 'openUrl', url: readString(action.url) }
@@ -25,7 +30,12 @@ export function resolveBlockAction(block: Block): BlockAction | null {
     return { type: 'navigate', targetPageId: readString(props.toPageId) }
   }
   if (block.type === 'submitButton') {
-    return { type: 'submitData', submitGroupId: readString(props.submitGroupId) || 'default' }
+    const collectionId = readString(props.collectionId)
+    return {
+      type: 'submitData',
+      submitGroupId: readString(props.submitGroupId) || 'default',
+      ...(collectionId ? { collectionId } : {}),
+    }
   }
   return null
 }

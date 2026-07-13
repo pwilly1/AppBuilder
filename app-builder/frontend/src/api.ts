@@ -151,7 +151,7 @@ export type ProjectAppDataSource = {
   id: string;
   sourceId: string;
   blockId: string;
-  type: 'submitButton' | 'form' | 'contactForm';
+  type: 'collection' | 'submitButton' | 'form' | 'contactForm';
   name: string;
   pageId: string;
   pageTitle: string;
@@ -186,6 +186,10 @@ export function listProjectAppDataSources(projectId: string) {
 
 export function listProjectAppDataRecords(projectId: string, sourceId: string) {
   return request(`/projects/${projectId}/app-data/sources/${sourceId}/records`) as Promise<ProjectAppDataRecord[]>;
+}
+
+export function listPublicCollectionRecords(projectId: string, collectionId: string) {
+  return request(`/public/projects/${projectId}/app-data/collections/${collectionId}/records`) as Promise<ProjectAppDataRecord[]>;
 }
 
 export function exportProjectAppDataCsv(projectId: string, sourceId: string) {

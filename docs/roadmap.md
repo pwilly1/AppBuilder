@@ -153,11 +153,12 @@ These are important to the long-term product vision but should wait until the ed
 | --- | --- |
 | Completed | Schema-backed form and grouped submit-button records tied to project schema. |
 | Completed | Apptura-hosted app-data source listing, record viewing, CSV export, and web/Android submission. |
-| Later | App-level data collections. |
+| Completed | App-level data collections with typed field definitions and stable IDs. |
 | Later | Richer app-level relational data collections. |
-| Later | Data-bound list/detail blocks. |
+| Completed | Read-only Data List block across web and Android. |
+| Later | Data-bound record detail and update/delete blocks. |
 | Later | Generated app user accounts. |
-| Later | Project-specific access rules. |
+| In Progress | Access rules; collection public-read control exists, broader ownership rules remain. |
 
 ### 9. Offline-First Runtime
 

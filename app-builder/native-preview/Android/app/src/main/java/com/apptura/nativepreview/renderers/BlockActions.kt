@@ -9,7 +9,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 sealed interface BlockAction {
     data class Navigate(val targetPageId: String) : BlockAction
-    data class SubmitData(val submitGroupId: String) : BlockAction
+    data class SubmitData(val submitGroupId: String, val collectionId: String? = null) : BlockAction
     data class OpenUrl(val url: String) : BlockAction
 }
 
@@ -17,13 +17,19 @@ fun resolveBlockAction(block: Block): BlockAction? {
     val action = block.props["action"] as? JsonObject
     when ((action?.get("type") as? JsonPrimitive)?.content) {
         "navigate" -> return BlockAction.Navigate(action.stringValue("targetPageId"))
-        "submitData" -> return BlockAction.SubmitData(action.stringValue("submitGroupId").ifBlank { "default" })
+        "submitData" -> return BlockAction.SubmitData(
+            submitGroupId = action.stringValue("submitGroupId").ifBlank { "default" },
+            collectionId = action.stringValue("collectionId").ifBlank { null },
+        )
         "openUrl" -> return BlockAction.OpenUrl(action.stringValue("url"))
     }
 
     return when (block.type) {
         "navButton" -> BlockAction.Navigate(block.stringProp("toPageId"))
-        "submitButton" -> BlockAction.SubmitData(block.stringProp("submitGroupId").ifBlank { "default" })
+        "submitButton" -> BlockAction.SubmitData(
+            submitGroupId = block.stringProp("submitGroupId").ifBlank { "default" },
+            collectionId = block.stringProp("collectionId").ifBlank { null },
+        )
         else -> null
     }
 }

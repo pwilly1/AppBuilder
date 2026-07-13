@@ -21,6 +21,7 @@ import { ImageGallery } from './blocks/ImageGallery';
 import { ContainerBlock } from './blocks/ContainerBlock';
 import { FormBlock } from './blocks/FormBlock';
 import { SubmitButton } from './blocks/SubmitButton';
+import { DataListBlock } from './blocks/DataListBlock';
 import { getBlockContentScale } from './schema/contentScale';
 import { resolveBlockAction } from './actions/blockActions';
 
@@ -40,6 +41,7 @@ const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   input: InputBlock,
   textarea: TextareaBlock,
   image: ImageBlock,
+  dataList: DataListBlock,
   servicesList: ServicesList,
   contactForm: ContactForm,
   imageGallery: ImageGallery,

@@ -25,6 +25,7 @@ export const CONTAINER_CHILD_BLOCK_TYPES = [
   'checkbox',
   'toggle',
   'progressBar',
+  'dataList',
 ] as const satisfies readonly BlockType[]
 
 export const FORM_CHILD_BLOCK_TYPES = [
