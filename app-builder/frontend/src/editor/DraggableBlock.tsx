@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from 'react'
 import { BlockRenderer } from '../shared/BlockRenderer'
 import type { Block, GridPlacement } from '../shared/schema/types'
+import { hasPageStateBinding, type RuntimeContext } from '../shared/runtime/runtimeBindings'
 import {
   clampRenderMetadataToPlacement,
   getPlacementRect,
@@ -36,6 +37,8 @@ type DraggableProps = {
   containerRef: RefObject<HTMLDivElement | null>
   gridMetrics: GridMetrics
   previewMode?: boolean
+  runtimeContext?: RuntimeContext
+  onSetPageState?: (variableId: string, value: string) => void
   onNavigate?: (pageId: string) => void
   onDragStateChange?: (dragging: boolean) => void
   onGridPreviewChange?: (preview: { blockId: string; left: number; top: number; width: number; height: number } | null) => void
@@ -57,6 +60,8 @@ export function DraggableBlock({
   containerRef,
   gridMetrics,
   previewMode,
+  runtimeContext,
+  onSetPageState,
   onNavigate,
   onDragStateChange,
   onGridPreviewChange,
@@ -69,9 +74,12 @@ export function DraggableBlock({
   allowDragOutsideBounds,
   children,
 }: DraggableProps) {
-  const supportsInlineEdit = block.type === 'hero' || block.type === 'text' || block.type === 'navButton' || block.type === 'submitButton'
+  const isInlineEditableType = block.type === 'hero' || block.type === 'text' || block.type === 'button'
+  const hasBoundTextContent = (block.type === 'hero' && hasPageStateBinding(block, 'headline'))
+    || (block.type === 'text' && hasPageStateBinding(block, 'value'))
+  const supportsInlineEdit = isInlineEditableType && !hasBoundTextContent
   const usesContainerResize =
-    supportsInlineEdit ||
+    isInlineEditableType ||
     block.type === 'shape' ||
     block.type === 'badge' ||
     block.type === 'icon' ||
@@ -81,7 +89,6 @@ export function DraggableBlock({
     block.type === 'input' ||
     block.type === 'textarea' ||
     block.type === 'image' ||
-    block.type === 'submitButton' ||
     block.type === 'container' ||
     block.type === 'form'
   const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
@@ -781,6 +788,8 @@ export function DraggableBlock({
             block={renderedBlock}
             projectId={projectId}
             previewMode={previewMode}
+            runtimeContext={runtimeContext}
+            onSetPageState={onSetPageState}
             onNavigate={previewMode ? onNavigate : undefined}
           >
             {children}

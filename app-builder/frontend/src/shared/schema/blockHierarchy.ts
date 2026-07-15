@@ -14,8 +14,7 @@ export const FORM_BLOCK_TYPE: BlockType = 'form'
 export const CONTAINER_CHILD_BLOCK_TYPES = [
   'text',
   'hero',
-  'navButton',
-  'submitButton',
+  'button',
   'shape',
   'badge',
   'icon',

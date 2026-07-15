@@ -30,7 +30,12 @@ import com.apptura.nativepreview.models.Block
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
-fun ImageBlockView(block: Block, onNavigate: ((String) -> Unit)? = null) {
+fun ImageBlockView(
+    block: Block,
+    onNavigate: ((String) -> Unit)? = null,
+    runtimeContext: RuntimeContext,
+    formRuntime: FormRuntimeState? = null,
+) {
     val src = imagePropString(block, "src", "")
     val alt = imagePropString(block, "alt", "Image")
     val fit = imagePropString(block, "fit", "cover")
@@ -53,7 +58,7 @@ fun ImageBlockView(block: Block, onNavigate: ((String) -> Unit)? = null) {
             .clip(shape)
             .background(backgroundColor)
             .clickable(enabled = interactive) {
-                if (action != null) executeBlockTapAction(context, action, onNavigate)
+                if (action != null) executeBlockTapAction(context, action, onNavigate, runtimeContext, formRuntime)
             }
             .then(
                 if (borderWidth > 0f) {

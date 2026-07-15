@@ -380,3 +380,42 @@ Representative areas:
 - `backend/src/services/AppDataService.ts`
 - `backend/test/appDataContracts.test.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/DataListView.kt`
+
+## Phase 19: Dynamic Page State And Text Bindings
+
+Date range: July 2026
+
+The shared runtime contract expanded beyond navigation and submission into page-scoped runtime state. Pages can now define stable text variables with initial preview values, Text and Hero blocks can bind to those variables, and Nav Button, Icon, and Image can update them through schema-backed `setPageState` actions. Input and Textarea blocks can supply live action values by stable block ID, and both web preview and Android resolve the same binding/action JSON with static-property fallbacks.
+
+Important outcome:
+
+```text
+Apptura now has the first cross-platform dynamic data-binding slice without collapsing bindings, actions, and persisted props into one mechanism.
+```
+
+The implementation intentionally stops at local page-runtime state. Page parameters, page-owned collection-record sources, generated-app users, and record mutation remain future work and are governed by the dedicated architecture document rather than ad hoc schema growth.
+
+Representative areas:
+
+- `frontend/src/components/PageVariablesPanel.tsx`
+- `frontend/src/components/Inspector.tsx`
+- `frontend/src/shared/runtime/runtimeBindings.ts`
+- `frontend/src/shared/actions/webActionExecutor.ts`
+- `frontend/src/shared/schema/types.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/BlockActions.kt`
+- `docs/dynamic-data-binding.md`
+
+## Phase 20: Unified Button Actions
+
+Date range: July 2026
+
+The Nav Button and Submit Button implementations were consolidated into one schema-backed Button block. A Button can remain static or run Navigate, Submit Data, Open URL, or Set Page Variable through the shared action contract. Section templates now create unified buttons, hosted app-data discovery recognizes only unified buttons configured for submission, and Android dispatches the same button schema to native tap or submission behavior. A schema migration converts previously saved button records before normal rendering, allowing the duplicate editor and runtime implementations to be removed.
+
+Representative areas:
+
+- `frontend/src/shared/blocks/ButtonBlock.tsx`
+- `frontend/src/components/Inspector.tsx`
+- `frontend/src/shared/schema/registry.ts`
+- `backend/src/services/AppDataService.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`

@@ -5,6 +5,7 @@ import type {
   ProjectRecord,
   ProjectRepository,
 } from '../repositories/ProjectRepository.js';
+import { migrateProjectRecord } from './ProjectSchemaMigration.js';
 
 export class ProjectNotFoundError extends Error {
   constructor() {
@@ -20,14 +21,15 @@ export class ProjectManager {
     private readonly users: IUserRepository,
   ) {}
 
-  listOwned(ownerId: string): Promise<ProjectRecord[]> {
+  async listOwned(ownerId: string): Promise<ProjectRecord[]> {
     if (!ownerId) throw new ProjectPermissionError('Missing project owner');
-    return this.projects.listByOwner(ownerId);
+    return (await this.projects.listByOwner(ownerId)).map(migrateProjectRecord);
   }
 
-  findById(projectId: string): Promise<ProjectRecord | null> {
+  async findById(projectId: string): Promise<ProjectRecord | null> {
     if (!projectId) return Promise.resolve(null);
-    return this.projects.findById(projectId);
+    const project = await this.projects.findById(projectId);
+    return project ? migrateProjectRecord(project) : null;
   }
 
   async findOwned(projectId: string, ownerId: string): Promise<ProjectRecord | null> {

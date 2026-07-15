@@ -103,11 +103,11 @@ export function metricCard(prefix: string, colStart: number, value: string, labe
   ]
 }
 
-export function navButton(key: string, colStart: number, label: string): TemplateBlockDefinition {
+export function button(key: string, colStart: number, label: string): TemplateBlockDefinition {
   return {
     key,
     parentKey: 'container',
-    type: 'navButton',
+    type: 'button',
     grid: { colStart, rowStart: 1, colSpan: 5, rowSpan: 3 },
     props: {
       label,

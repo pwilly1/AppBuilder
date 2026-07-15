@@ -2,6 +2,8 @@ import type { KeyboardEvent } from 'react'
 import { isActionConfigured } from '../actions/blockActions'
 import { executeWebBlockAction } from '../actions/webActionExecutor'
 import type { BlockAction } from '../schema/types'
+import type { RuntimeContext } from '../runtime/runtimeBindings'
+import { useFormRuntime } from './formRuntime'
 
 export function ImageBlock({
   src = '',
@@ -17,6 +19,8 @@ export function ImageBlock({
   action,
   previewMode,
   onNavigate,
+  runtimeContext,
+  onSetPageState,
 }: {
   src?: string
   alt?: string
@@ -31,7 +35,10 @@ export function ImageBlock({
   action?: BlockAction | null
   previewMode?: boolean
   onNavigate?: (pageId: string) => void
+  runtimeContext?: RuntimeContext
+  onSetPageState?: (variableId: string, value: string) => void
 }) {
+  const formRuntime = useFormRuntime()
   const safeFit = fit === 'contain' || fit === 'fill' ? fit : 'cover'
   const safePositionX = Math.max(0, Math.min(100, Number(positionX) || 50))
   const safePositionY = Math.max(0, Math.min(100, Number(positionY) || 50))
@@ -42,7 +49,7 @@ export function ImageBlock({
   const interactive = Boolean(previewMode && isActionConfigured(action))
   const runAction = () => {
     if (!interactive || !action) return
-    void executeWebBlockAction(action, { onNavigate })
+    void executeWebBlockAction(action, { onNavigate, runtimeContext, onSetPageState, formRuntime })
   }
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return

@@ -4,8 +4,10 @@ export type FormValue = string | boolean
 
 export type FormRuntimeContextValue = {
   values: Record<string, Record<string, FormValue>>
-  setValue: (fieldKey: string, value: FormValue, submitGroupId?: string) => void
+  fieldValuesByBlockId: Record<string, FormValue>
+  setValue: (fieldKey: string, value: FormValue, submitGroupId?: string, fieldBlockId?: string) => void
   getGroupValues: (submitGroupId?: string) => Record<string, FormValue>
+  getFieldValue: (fieldBlockId: string) => FormValue | undefined
   previewMode?: boolean
 }
 

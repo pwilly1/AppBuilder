@@ -37,7 +37,7 @@ type AppDataSourceMatch = {
   id: string;
   sourceId: string;
   blockId: string;
-  type: 'collection' | 'submitButton' | 'form' | 'contactForm';
+  type: 'collection' | 'button' | 'form' | 'contactForm';
   name: string;
   pageId: string;
   pageTitle: string;
@@ -88,12 +88,12 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
     const block = pageBlocks.find((entry) => entry.id === sourceId);
     if (!block) continue;
 
-    if (block.type === 'submitButton') {
+    if (isSubmitSourceBlock(block)) {
       return {
         id: block.id,
         sourceId: block.id,
         blockId: block.id,
-        type: 'submitButton',
+        type: 'button',
         name: readStringProp(block, 'dataSourceName') || readStringProp(block, 'label') || 'App Data',
         pageId: page.id,
         pageTitle: page.title || 'Untitled Page',
@@ -145,8 +145,8 @@ export function collectAppDataSourceMatches(project: ProjectLike): AppDataSource
 
   for (const page of project.pages || []) {
     for (const block of page.blocks || []) {
-      if (block.type !== 'submitButton' && block.type !== 'form' && block.type !== 'contactForm') continue;
-      if (block.type === 'submitButton' && resolveSubmitCollectionId(block)) continue;
+      if (!isSubmitSourceBlock(block) && block.type !== 'form' && block.type !== 'contactForm') continue;
+      if (isSubmitSourceBlock(block) && resolveSubmitCollectionId(block)) continue;
       const source = findAppDataSource(project, block.id);
       if (source) sources.push(source);
     }
@@ -181,7 +181,7 @@ export async function createAppDataRecord(project: ProjectLike, sourceId: string
     throw error;
   }
 
-  const collectionId = requestedSource.block?.type === 'submitButton'
+  const collectionId = requestedSource.block && isSubmitSourceBlock(requestedSource.block)
     ? resolveSubmitCollectionId(requestedSource.block)
     : '';
   const source = resolveAppDataWriteSource(project, sourceId);
@@ -221,7 +221,7 @@ export async function createAppDataRecord(project: ProjectLike, sourceId: string
 export function resolveAppDataWriteSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
   const requestedSource = findAppDataSource(project, sourceId);
   if (!requestedSource) return null;
-  if (requestedSource.block?.type !== 'submitButton') return requestedSource;
+  if (!requestedSource.block || !isSubmitSourceBlock(requestedSource.block)) return requestedSource;
   const collectionId = resolveSubmitCollectionId(requestedSource.block);
   return collectionId ? findAppDataSource(project, collectionId) : requestedSource;
 }
@@ -471,6 +471,12 @@ function resolveSubmitCollectionId(block: BlockLike) {
     return action.collectionId.trim();
   }
   return readStringProp(block, 'collectionId');
+}
+
+function isSubmitSourceBlock(block: BlockLike) {
+  if (block.type !== 'button') return false;
+  const action = block.props?.action;
+  return isRecord(action) && action.type === 'submitData';
 }
 
 function normalizeCollectionFieldType(value: unknown): AppDataFieldDefinition['type'] {

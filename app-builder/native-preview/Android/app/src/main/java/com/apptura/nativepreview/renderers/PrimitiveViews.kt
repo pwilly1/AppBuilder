@@ -64,7 +64,12 @@ fun BadgeView(block: Block) {
 }
 
 @Composable
-fun IconView(block: Block, onNavigate: ((String) -> Unit)? = null) {
+fun IconView(
+    block: Block,
+    onNavigate: ((String) -> Unit)? = null,
+    runtimeContext: RuntimeContext,
+    formRuntime: FormRuntimeState? = null,
+) {
     val iconName = propString(block, "iconName", "star")
     val fontSize = propFloat(block, "fontSize", 28f).coerceAtLeast(8f)
     val color = parsePrimitiveColor(propStringOrNull(block, "color"), Color(0xFF2563EB))
@@ -91,7 +96,7 @@ fun IconView(block: Block, onNavigate: ((String) -> Unit)? = null) {
             .clip(RoundedCornerShape(borderRadius.dp))
             .background(backgroundColor)
             .clickable(enabled = interactive) {
-                if (action != null) executeBlockTapAction(context, action, onNavigate)
+                if (action != null) executeBlockTapAction(context, action, onNavigate, runtimeContext, formRuntime)
             },
         contentAlignment = Alignment.Center
     ) {

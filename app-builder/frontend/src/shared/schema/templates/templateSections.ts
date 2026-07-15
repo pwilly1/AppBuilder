@@ -30,7 +30,7 @@ export const SECTION_TEMPLATE_DEFINITIONS: SectionTemplateDefinition[] = [
       {
         key: 'primaryAction',
         parentKey: 'container',
-        type: 'navButton',
+        type: 'button',
         grid: { colStart: 2, rowStart: 7, colSpan: 6, rowSpan: 2 },
         props: { label: 'Get Started', backgroundColor: '#2563eb', borderRadius: 12 },
         render: { alignX: 'start', alignY: 'start' },
@@ -71,7 +71,7 @@ export const SECTION_TEMPLATE_DEFINITIONS: SectionTemplateDefinition[] = [
       {
         key: 'submit',
         parentKey: 'container',
-        type: 'submitButton',
+        type: 'button',
         grid: { colStart: 2, rowStart: 12, colSpan: 6, rowSpan: 2 },
         props: { label: 'Submit', dataSourceName: 'Signups', submitGroupKey: 'submit', backgroundColor: '#2563eb', borderRadius: 12 },
         render: { alignX: 'start', alignY: 'start' },
@@ -141,7 +141,7 @@ export const SECTION_TEMPLATE_DEFINITIONS: SectionTemplateDefinition[] = [
       {
         key: 'send',
         parentKey: 'container',
-        type: 'submitButton',
+        type: 'button',
         grid: { colStart: 2, rowStart: 9, colSpan: 5, rowSpan: 2 },
         props: { label: 'Send', dataSourceName: 'Contact Requests', submitGroupKey: 'send', backgroundColor: '#2563eb' },
         render: { alignX: 'start', alignY: 'start' },

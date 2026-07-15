@@ -18,15 +18,19 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Visual editor with pages, drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
-- Lightweight primitive blocks: Shape, Badge, Icon, Image, Progress Bar, Form, Submit Button, Input, Textarea, Checkbox, Toggle, and Container
-- Nav Button supports page navigation or safe external URLs through the shared block-action contract
-- Icon and Image can optionally run shared Navigate or Open URL actions in web and Android preview
+- Page-scoped text variables can drive Text and Hero content through schema-backed bindings in web and Android preview
+- Button, Icon, and Image actions can update page-scoped text variables from fixed values or live Input/Textarea values in web and Android preview
+- Lightweight primitive blocks: Button, Shape, Badge, Icon, Image, Progress Bar, Form, Input, Textarea, Checkbox, Toggle, Container, and Data List
+- Button supports no action, page navigation, hosted-data submission, safe external URLs, or page-variable updates through the shared block-action contract
+- Icon and Image can optionally run shared Navigate, Open URL, or Set Page Variable actions in web and Android preview
 - Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
 - Form blocks can collect live app-user submissions in web preview using nested Input, Textarea, Checkbox, and Toggle field blocks
-- Submit Button blocks can submit same-page Input, Textarea, Checkbox, and Toggle fields that share a `submitGroupId`
-- Input, Textarea, Checkbox, and Toggle can act as grouped live fields in web preview when nested inside a Form block or paired with a Submit Button; otherwise they remain editor-time mockup controls
+- Buttons configured with Submit Data can submit same-page Input, Textarea, Checkbox, and Toggle fields that share a `submitGroupId`, either to their own source or to a selected project collection
+- Input, Textarea, Checkbox, and Toggle can act as grouped live fields in web preview when nested inside a Form block or paired with a Submit Data button; otherwise they remain editor-time mockup controls
+- Project-level data collections define stable typed record sources with optional public-read access for runtime list blocks
+- Data List blocks can display records from a publicly readable collection in web and Android preview
 - Container blocks can group supported atomic child blocks including Image, expose container styling in the inspector, and render in both web and Android preview
-- Dashboard project cards include an App Data drawer for reviewing Contact Form, Form, and Submit Button sources, their saved records, and CSV exports
+- Dashboard project cards include an App Data drawer for reviewing collection, Contact Form, Form, and Submit Data button sources, their saved records, and CSV exports
 - Web preview mode with page navigation
 - Android native preview runtime connected to backend project data
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending
@@ -64,6 +68,7 @@ docs/                Architecture, deployment, features, roadmap, project histor
 - [API Reference](docs/api-reference.md) - backend routes, authentication, payloads, and response behavior
 - [Block and Schema Reference](docs/block-reference.md) - project schema, grid contract, block inventory, and migration behavior
 - [Container and Template System](docs/container-template-system.md) - current container/template design and implementation direction
+- [Dynamic Data Binding](docs/dynamic-data-binding.md) - approved architecture for page data, runtime values, bindings, and future generated-app users
 - [How to Add a Block](docs/how-to-add-a-block.md) - end-to-end web and Android block implementation workflow
 - [Features](docs/features.md) - current capabilities, planned product areas, known feature limits
 - [Roadmap](docs/roadmap.md) - priorities, milestones, and next work

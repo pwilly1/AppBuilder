@@ -19,12 +19,12 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
   const lastAcceptedHeroHeightRef = useRef(0)
   const lastAcceptedHeroDraftRef = useRef<Record<string, any>>({ ...(block.props as Record<string, any>) })
   const navInputRef = useRef<HTMLInputElement | null>(null)
-  const lastAcceptedNavLabelRef = useRef(String((block.props as Record<string, any>)?.label ?? (block.type === 'submitButton' ? 'Submit' : 'Go')))
+  const lastAcceptedNavLabelRef = useRef(String((block.props as Record<string, any>)?.label ?? 'Button'))
 
   useEffect(() => {
     setDraft({ ...(block.props as Record<string, any>) })
     lastAcceptedHeroDraftRef.current = { ...(block.props as Record<string, any>) }
-    lastAcceptedNavLabelRef.current = String((block.props as Record<string, any>)?.label ?? (block.type === 'submitButton' ? 'Submit' : 'Go'))
+    lastAcceptedNavLabelRef.current = String((block.props as Record<string, any>)?.label ?? 'Button')
   }, [block])
 
   useEffect(() => {
@@ -210,8 +210,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
     )
   }
 
-  if (block.type === 'navButton' || block.type === 'submitButton') {
-    const disabled = block.type === 'navButton' && !(draft.toPageId as string | undefined)
+  if (block.type === 'button') {
     const contentScale = getBlockContentScale(block)
     const contentPadding = Number(draft.contentPadding ?? 12) || 12
     const buttonPaddingX = Number(draft.buttonPaddingX ?? 14) || 14
@@ -233,7 +232,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
       >
         <div
           style={{
-            backgroundColor: disabled ? '#e5e7eb' : String(draft.backgroundColor ?? (block.type === 'submitButton' ? '#2563eb' : '#0f172a')),
+            backgroundColor: String(draft.backgroundColor ?? '#2563eb'),
             borderRadius: scaledBorderRadius,
             boxSizing: 'border-box',
             maxWidth: '100%',
@@ -245,10 +244,10 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
           <input
             ref={navInputRef}
             autoFocus
-            value={String(draft.label ?? (block.type === 'submitButton' ? 'Submit' : 'Go'))}
+            value={String(draft.label ?? 'Button')}
             onChange={(event) => {
               const nextLabel = event.target.value
-              const currentLabel = String(draft.label ?? (block.type === 'submitButton' ? 'Submit' : 'Go'))
+              const currentLabel = String(draft.label ?? 'Button')
               const isShrinking = nextLabel.length < currentLabel.length
               const fitsWidth = event.target.scrollWidth <= event.target.clientWidth + 1
 
@@ -277,7 +276,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
               padding: 0,
               boxSizing: 'border-box',
               fontFamily: 'inherit',
-              color: disabled ? '#475569' : String(draft.textColor ?? '#ffffff'),
+              color: String(draft.textColor ?? '#ffffff'),
               fontSize: scaledFontSize,
               minWidth: 0,
               maxWidth: width ? Math.max(1, width - scaledContentPadding * 2 - scaledButtonPaddingX * 2) : undefined,

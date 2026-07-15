@@ -88,32 +88,8 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultRender: { alignX: 'center', alignY: 'center' },
     defaultProps: { value: 'Text', fontSize: 16 },
   },
-  navButton: {
-    displayName: 'Nav Button',
-    layoutClass: 'action',
-    defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'sm' },
-    gridConstraints: {
-      defaultSpan: { cols: 4, rows: 2 },
-      minSpan: { cols: 1, rows: 1 },
-      maxSpan: { cols: 16, rows: 48 },
-      allowInnerMove: true,
-    },
-    defaultRender: { alignX: 'center', alignY: 'center' },
-    defaultProps: {
-      label: 'Go',
-      toPageId: '',
-      action: { type: 'navigate', targetPageId: '' },
-      fontSize: 14,
-      contentPadding: 12,
-      buttonPaddingX: 14,
-      buttonPaddingY: 10,
-      borderRadius: 10,
-      backgroundColor: '#0f172a',
-      textColor: '#ffffff',
-    },
-  },
-  submitButton: {
-    displayName: 'Submit Button',
+  button: {
+    displayName: 'Button',
     layoutClass: 'action',
     defaultLayout: { width: 'content', align: 'center', spacingTop: 'xs', spacingBottom: 'sm' },
     gridConstraints: {
@@ -124,10 +100,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     },
     defaultRender: { alignX: 'center', alignY: 'center' },
     defaultProps: {
-      label: 'Submit',
+      label: 'Button',
       dataSourceName: 'App Data',
       submitGroupId: 'default',
-      action: { type: 'submitData', submitGroupId: 'default' },
       successMessage: 'Submission received.',
       fontSize: 14,
       contentPadding: 12,
@@ -446,30 +421,11 @@ export function createBlock<T extends BlockType = BlockType>(type: T, overrides:
   const def = BlockRegistry[type]
   const blockId = crypto.randomUUID()
   const props = { ...(def?.defaultProps || {}), ...(overrides || {}) }
-  const hasExplicitAction = Object.prototype.hasOwnProperty.call(overrides, 'action')
   if (
-    type === 'submitButton'
-    && !hasExplicitAction
+    type === 'button'
     && !Object.prototype.hasOwnProperty.call(overrides, 'submitGroupId')
   ) {
     props.submitGroupId = `submit_${blockId.replace(/-/g, '').slice(0, 10)}`
-  }
-  if (!hasExplicitAction && type === 'navButton') {
-    props.action = {
-      type: 'navigate',
-      targetPageId: typeof props.toPageId === 'string' ? props.toPageId : '',
-    }
-  }
-  if (!hasExplicitAction && type === 'submitButton') {
-    props.action = {
-      type: 'submitData',
-      submitGroupId: typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
-        ? props.submitGroupId.trim()
-        : 'default',
-      ...(typeof props.collectionId === 'string' && props.collectionId.trim()
-        ? { collectionId: props.collectionId.trim() }
-        : {}),
-    }
   }
   return {
     id: blockId,

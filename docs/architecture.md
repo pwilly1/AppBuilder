@@ -71,14 +71,14 @@ This keeps large image bytes out of the MongoDB project document. Pasted remote 
 
 ### Submitting schema-backed forms
 
-1. A saved schema-backed submission source renders in web preview as either a top-level Form block with child fields or a Submit Button block paired with same-page grouped fields.
+1. A saved schema-backed submission source renders in web preview as either a top-level Form block with child fields or a Button configured with Submit Data and paired with same-page grouped fields.
 2. Each participating field resolves a submission key from `props.fieldKey`, its label, or its block ID.
-3. Submit Button flows select fields by matching the field and button `submitGroupId` after normalization.
+3. Submit Data button flows select fields by matching the field and button `submitGroupId` after normalization.
 4. Preview submission posts JSON to `POST /public/projects/:id/forms/:blockId/submissions`.
-5. The backend locates the owning Form or Submit Button source, validates required fields, and stores the sanitized payload in MongoDB through `AppSubmission`.
+5. The backend locates the owning Form or Submit Data button source, validates required fields, and stores the sanitized payload in MongoDB through `AppSubmission`.
 6. The dashboard can load app-data sources through `GET /projects/:id/app-data/sources`, fetch source records through `GET /projects/:id/app-data/sources/:sourceId/records`, and export them through the matching CSV route.
 
-Legacy `contactForm` blocks still use the older fixed submission shape and optional email notifications. The new `form` and `submitButton` flows are the schema-backed paths for flexible app-user data capture.
+Legacy `contactForm` blocks still use the older fixed submission shape and optional email notifications. The `form` and `button` with `submitData` are the primary schema-backed paths for flexible app-user data capture.
 
 ### Rendering a project
 
@@ -111,7 +111,7 @@ type Page = {
 }
 ```
 
-Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Submit Buttons can target a collection while still gathering same-page fields through `submitGroupId`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Data List blocks read those records through the public collection endpoint only when `publicRead` is enabled.
+Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Buttons configured with Submit Data can target a collection while still gathering same-page fields through `submitGroupId`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Data List blocks read those records through the public collection endpoint only when `publicRead` is enabled.
 
 A block has:
 
@@ -229,8 +229,7 @@ The visible add-block panel currently exposes:
 
 - Hero
 - Text
-- Nav Button
-- Submit Button
+- Button
 - Badge
 - Icon
 - Shape
@@ -243,17 +242,17 @@ The visible add-block panel currently exposes:
 - Toggle
 - Container
 
-Hero, Text, Nav Button, Shape, and Image are still the main public-demo blocks. The lighter primitives above are also available now, while the older business blocks remain in the codebase but are not the preferred public-demo direction.
+Hero, Text, Button, Shape, and Image are still the main public-demo blocks. The lighter primitives above are also available now, while the older business blocks remain in the codebase but are not the preferred public-demo direction.
 
 Behavior notes:
 
-- Nav Button uses the shared block-action contract for page navigation or safe external URLs while retaining `toPageId` fallback support for older projects.
+- Button uses the shared block-action contract for static presentation, page navigation, hosted-data submission, safe external URLs, or page-variable updates.
 - Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
 - Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, opacity, and optional tap actions across web and Android preview.
 - Form is a schema-backed submission surface with shared parent/child layout rules across web and Android preview.
-- Submit Button is a schema-backed submission trigger that gathers same-page fields through `submitGroupId` in both web and Android preview, then posts them to its own source or a configured project collection.
+- Button with `submitData` is a schema-backed submission trigger that gathers same-page fields through `submitGroupId` in both web and Android preview, then posts them to its own source or a configured project collection.
 - Data List is a schema-backed read primitive that displays records from a publicly readable project collection across web and Android preview.
-- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or when paired with a same-group Submit Button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
+- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or when paired with a same-group Submit Data button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
 ### Block Action Contract
@@ -264,9 +263,18 @@ Interactive blocks can store one schema-backed action in `props.action`:
 navigate   -> targetPageId
 submitData -> submitGroupId
 openUrl    -> HTTPS or HTTP URL
+setPageState -> variableId plus RuntimeValueRef
 ```
 
-Nav Button, Icon, and Image support navigation and URL actions. Submit Button uses the submission action and remains the app-data source identity. Web and Android have separate executors over the same action JSON. The resolver derives actions from legacy `toPageId` and `submitGroupId` props when saved projects do not yet contain `props.action`.
+Button supports no action, navigation, submission, URL, and page-variable actions; Icon and Image support their applicable tap actions. `setPageState` can assign a fixed text value or the current value of an Input/Textarea block referenced by stable block ID. A Submit Data button remains the app-data source identity. Web and Android have separate executors over the same action JSON.
+
+### Dynamic Data Binding Foundation
+
+The first dynamic binding slice is implemented. Pages can define stable text state variables with initial preview values, and Text/Hero blocks can bind their content properties to those variables. Button, Icon, and Image can set those values at runtime. Web and Android resolve the same binding/action JSON and fall back to the block's static property when a reference is missing. Existing projects without bindings remain unchanged.
+
+App-state actions, page parameters, collection-record page sources, and generated-app users are not implemented. Page-state values currently reset when the page runtime is recreated and are not persisted as hosted app data. The approved direction keeps static properties, runtime bindings, and event actions separate. Pages will eventually declare and resolve named data sources once, while blocks bind individual properties to values exposed by that page context. Blocks must not become independent database query clients.
+
+The full proposed schema, lifecycle, security prerequisites, phased rollout, and web/Android parity requirements are documented in [Dynamic Data Binding Architecture](dynamic-data-binding.md). That document is the source of truth for future binding, state, generated-app user, and data-driven page work.
 
 ## Frontend Responsibilities
 
@@ -301,7 +309,7 @@ The backend provides:
 - public project routes under `/public`
 - MongoDB persistence through Mongoose
 - JWT session validation
-- schema-backed `form` and `submitButton` submission storage plus app-data source listing, record retrieval, and CSV export
+- schema-backed `form` and Submit Data button storage plus app-data source listing, record retrieval, and CSV export
 - optional email notification support for contact submissions
 - Azure-backed image asset storage for saved-project uploads
 

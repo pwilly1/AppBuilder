@@ -16,9 +16,10 @@ import {
   resolveBlockRenderRect,
   type GridMetrics,
 } from '../shared/schema/gridLayout'
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { DraggableBlock } from './DraggableBlock'
 import { BlockRenderer } from '../shared/BlockRenderer'
+import { createPageRuntimeContext, type RuntimeContext } from '../shared/runtime/runtimeBindings'
 import { BLOCK_DRAG_DATA_TYPE, getActiveDraggedBlock, getDraggedBlockFromDataTransfer } from './blockDrag'
 import { FormRuntimeProvider, resolveSubmitGroupId, type FormValue } from '../shared/blocks/formRuntime'
 import {
@@ -46,6 +47,8 @@ type ContainerChildrenLayerProps = {
   isActiveContainer: boolean
   previewMode?: boolean
   projectId?: string
+  runtimeContext: RuntimeContext
+  onSetPageState: (variableId: string, value: string) => void
   onNavigate?: (pageId: string) => void
   onSelectBlock?: (b: Block | null) => void
   onUpdateBlock?: (b: Block) => void
@@ -92,6 +95,26 @@ export function PageRenderer({
   const [newBlockPreview, setNewBlockPreview] = useState<GridPreview | null>(null)
   const [screenWidth, setScreenWidth] = useState(390)
   const [fieldValues, setFieldValues] = useState<Record<string, Record<string, FormValue>>>({})
+  const [fieldValuesByBlockId, setFieldValuesByBlockId] = useState<Record<string, FormValue>>({})
+  const pageStateVariables = page.stateVariables
+  const initialPageState = useMemo(
+    () => createPageRuntimeContext({ stateVariables: pageStateVariables }).pageState,
+    [pageStateVariables],
+  )
+  const [pageState, setPageState] = useState<Record<string, string>>(() => initialPageState)
+  const runtimeContext = useMemo<RuntimeContext>(() => ({ pageState }), [pageState])
+  const pageStateVariableIds = useMemo(
+    () => new Set((pageStateVariables || []).map((variable) => variable.id)),
+    [pageStateVariables],
+  )
+  const handleSetPageState = useCallback((variableId: string, value: string) => {
+    if (!pageStateVariableIds.has(variableId)) return
+    setPageState((current) => ({ ...current, [variableId]: value }))
+  }, [pageStateVariableIds])
+
+  useEffect(() => {
+    setPageState(initialPageState)
+  }, [page.id, initialPageState])
 
   useEffect(() => {
     setIsDragTargeting(false)
@@ -100,6 +123,7 @@ export function PageRenderer({
     setShowHGuide(false)
     setShowVGuide(false)
     setFieldValues({})
+    setFieldValuesByBlockId({})
   }, [page.id, page.blocks.length])
 
   useEffect(() => {
@@ -208,6 +232,8 @@ export function PageRenderer({
         isActiveContainer={isActiveContainer}
         previewMode={previewMode}
         projectId={projectId}
+        runtimeContext={runtimeContext}
+        onSetPageState={handleSetPageState}
         onNavigate={onNavigate}
         onSelectBlock={onSelectBlock}
         onUpdateBlock={onUpdateBlock}
@@ -419,7 +445,7 @@ export function PageRenderer({
 
   const activeGridPreview = gridPreview ?? newBlockPreview
 
-  function setFieldValue(fieldKey: string, value: FormValue, submitGroupId?: string) {
+  function setFieldValue(fieldKey: string, value: FormValue, submitGroupId?: string, fieldBlockId?: string) {
     const groupId = resolveSubmitGroupId(submitGroupId)
     setFieldValues((current) => ({
       ...current,
@@ -428,6 +454,9 @@ export function PageRenderer({
         [fieldKey]: value,
       },
     }))
+    if (fieldBlockId) {
+      setFieldValuesByBlockId((current) => ({ ...current, [fieldBlockId]: value }))
+    }
   }
 
   function getGroupValues(submitGroupId?: string) {
@@ -435,7 +464,14 @@ export function PageRenderer({
   }
 
   return (
-    <FormRuntimeProvider value={{ values: fieldValues, setValue: setFieldValue, getGroupValues, previewMode }}>
+    <FormRuntimeProvider value={{
+      values: fieldValues,
+      fieldValuesByBlockId,
+      setValue: setFieldValue,
+      getGroupValues,
+      getFieldValue: (fieldBlockId) => fieldValuesByBlockId[fieldBlockId],
+      previewMode,
+    }}>
       <div className="editor-stage px-3 py-3">
       <div className="mx-auto flex w-full justify-center">
         <div className="phone-frame shadow-sm" style={{ height: phoneScreenHeight }}>
@@ -521,6 +557,8 @@ export function PageRenderer({
                 containerRef={containerRef}
                 gridMetrics={gridMetrics}
                 previewMode={previewMode}
+                runtimeContext={runtimeContext}
+                onSetPageState={handleSetPageState}
                 onNavigate={onNavigate}
                 onEnterContainer={previewMode ? undefined : onEnterContainer}
                 onDragStateChange={previewMode ? undefined : setIsDragTargeting}
@@ -619,6 +657,8 @@ function ContainerChildrenLayer({
   isActiveContainer,
   previewMode,
   projectId,
+  runtimeContext,
+  onSetPageState,
   onNavigate,
   onSelectBlock,
   onUpdateBlock,
@@ -739,6 +779,8 @@ function ContainerChildrenLayer({
                 block={child}
                 projectId={projectId}
                 previewMode={previewMode}
+                runtimeContext={runtimeContext}
+                onSetPageState={onSetPageState}
                 onNavigate={previewMode ? onNavigate : undefined}
               />
             </div>
@@ -807,6 +849,8 @@ function ContainerChildrenLayer({
           containerRef={layerRef}
           gridMetrics={childGridMetrics}
           previewMode={false}
+          runtimeContext={runtimeContext}
+          onSetPageState={onSetPageState}
           onNavigate={onNavigate}
           onDragStateChange={setChildDragActive}
           onGridPreviewChange={handleChildGridPreviewChange}

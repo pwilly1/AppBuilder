@@ -5,7 +5,8 @@ import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'
 import DataCollectionsPanel from '../components/DataCollectionsPanel'
-import type { Block, Page, Project } from '../shared/schema/types'
+import PageVariablesPanel from '../components/PageVariablesPanel'
+import type { Block, Page, PageStateVariable, Project } from '../shared/schema/types'
 import type { TemplateDefinition } from '../shared/schema/templates'
 import { instantiateSectionTemplate, instantiateTemplatePage, isSectionTemplate } from '../shared/schema/templates'
 import {
@@ -583,6 +584,17 @@ export default function EditorLayout(props: Props) {
               onDelete={(id) => deletePage?.(id)}
             />
 
+            <PageVariablesPanel
+              variables={page?.stateVariables || []}
+              onChange={(stateVariables: PageStateVariable[]) => {
+                if (!page?.id) return
+                applyProjectTransaction?.((current: Project) => ({
+                  ...current,
+                  pages: current.pages.map((candidate) => candidate.id === page.id ? { ...candidate, stateVariables } : candidate),
+                }))
+              }}
+            />
+
             <DataCollectionsPanel
               collections={project?.dataCollections || []}
               onChange={(dataCollections) => applyProjectTransaction?.((current: Project) => ({ ...current, dataCollections }))}
@@ -671,6 +683,7 @@ export default function EditorLayout(props: Props) {
               projectId={projectId}
               pages={pages}
               pageBlocks={page?.blocks || []}
+              pageStateVariables={page?.stateVariables || []}
               dataCollections={project?.dataCollections || []}
               activeContainerId={activeContainerId}
               onEditContainer={(block: any) => enterContainer(block)}

@@ -1,4 +1,5 @@
 import type { Block, BlockAction } from '../schema/types'
+import { normalizeRuntimeValueRef } from '../runtime/runtimeBindings'
 
 export function normalizeBlockAction(value: unknown): BlockAction | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
@@ -18,6 +19,13 @@ export function normalizeBlockAction(value: unknown): BlockAction | null {
   if (action.type === 'openUrl') {
     return { type: 'openUrl', url: readString(action.url) }
   }
+  if (action.type === 'setPageState') {
+    return {
+      type: 'setPageState',
+      variableId: readString(action.variableId),
+      value: normalizeRuntimeValueRef(action.value) ?? { source: 'static', value: '' },
+    }
+  }
   return null
 }
 
@@ -26,17 +34,6 @@ export function resolveBlockAction(block: Block): BlockAction | null {
   const action = normalizeBlockAction(props.action)
   if (action) return action
 
-  if (block.type === 'navButton') {
-    return { type: 'navigate', targetPageId: readString(props.toPageId) }
-  }
-  if (block.type === 'submitButton') {
-    const collectionId = readString(props.collectionId)
-    return {
-      type: 'submitData',
-      submitGroupId: readString(props.submitGroupId) || 'default',
-      ...(collectionId ? { collectionId } : {}),
-    }
-  }
   return null
 }
 
@@ -44,7 +41,8 @@ export function isActionConfigured(action: BlockAction | null | undefined): bool
   if (!action) return false
   if (action.type === 'navigate') return Boolean(action.targetPageId.trim())
   if (action.type === 'submitData') return Boolean(action.submitGroupId.trim())
-  return isSupportedExternalUrl(action.url)
+  if (action.type === 'openUrl') return isSupportedExternalUrl(action.url)
+  return Boolean(action.variableId.trim())
 }
 
 export function isSupportedExternalUrl(value: string): boolean {

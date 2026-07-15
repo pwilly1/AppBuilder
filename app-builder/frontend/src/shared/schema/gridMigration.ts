@@ -11,7 +11,37 @@ import type { Block, GridPlacement, Page, Project } from './types'
 
 export const GRID_DENSITY_SCHEMA_VERSION = 2
 export const CONTAINER_SCHEMA_VERSION = 3
-export const CURRENT_SCHEMA_VERSION = CONTAINER_SCHEMA_VERSION
+export const UNIFIED_BUTTON_SCHEMA_VERSION = 4
+export const CURRENT_SCHEMA_VERSION = UNIFIED_BUTTON_SCHEMA_VERSION
+
+function migrateLegacyButton(block: Block): Block {
+  const legacyType = String(block.type)
+  if (legacyType !== 'navButton' && legacyType !== 'submitButton') return block
+
+  const props = { ...(block.props as Record<string, unknown>) }
+  if (!props.action) {
+    if (legacyType === 'navButton') {
+      props.action = {
+        type: 'navigate',
+        targetPageId: typeof props.toPageId === 'string' ? props.toPageId : '',
+      }
+    } else {
+      const submitGroupId = typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
+        ? props.submitGroupId.trim()
+        : 'default'
+      const collectionId = typeof props.collectionId === 'string' ? props.collectionId.trim() : ''
+      props.action = {
+        type: 'submitData',
+        submitGroupId,
+        ...(collectionId ? { collectionId } : {}),
+      }
+    }
+  }
+  if (!props.label) props.label = legacyType === 'submitButton' ? 'Submit' : 'Go'
+  delete props.toPageId
+
+  return { ...block, type: 'button', props }
+}
 
 function scalePlacementFromEightColumnGrid(placement: GridPlacement): GridPlacement {
   return {
@@ -46,10 +76,11 @@ function ensureRenderDefaults(block: Block): Block {
 }
 
 export function migratePageToGridLayout(page: Page, options: { scaleLegacyGridDensity?: boolean } = {}): Page {
-  const supportedBlocks = page.blocks.filter((block) => isSupportedBlockType(block.type))
-  if (!supportedBlocks.length) return supportedBlocks.length === page.blocks.length ? page : { ...page, blocks: [] }
+  const convertedBlocks = page.blocks.map(migrateLegacyButton)
+  const supportedBlocks = convertedBlocks.filter((block) => isSupportedBlockType(block.type))
+  if (!supportedBlocks.length) return supportedBlocks.length === convertedBlocks.length ? { ...page, blocks: convertedBlocks } : { ...page, blocks: [] }
 
-  const supportedPage = supportedBlocks.length === page.blocks.length ? page : { ...page, blocks: supportedBlocks }
+  const supportedPage = { ...page, blocks: supportedBlocks }
 
   const migratedById = new Map<string, Block>()
   const placedBlocks: Block[] = []

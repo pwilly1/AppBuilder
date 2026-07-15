@@ -24,6 +24,7 @@ type Block = {
   type: BlockType
   parentId?: string
   props: Record<string, any>
+  bindings?: Record<string, RuntimeValueRef>
   layout?: BlockRuntimeLayout
   render?: BlockRenderMetadata
   editorPlacement?: BlockEditorPlacement
@@ -32,6 +33,8 @@ type Block = {
 
 `editorPlacement` is transitional compatibility data. New runtime behavior should use `layout.grid`, `render`, and `props`.
 `parentId` is ownership metadata for container children. Top-level blocks omit it.
+
+Pages may define text `stateVariables` with stable IDs, names, and initial values. Text `value` and Hero `headline` may bind to those IDs through `block.bindings`. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an Input/Textarea block during a preview session. Runtime field references use stable block IDs, so changing a field label does not break the action. The runtime resolves the page value without mutating `props`; the static property remains the fallback for old projects and missing variables. Page parameters and collection-record bindings are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
 
 ## Layout Contract
 
@@ -65,7 +68,7 @@ type BlockRuntimeLayout = {
 }
 ```
 
-`scaleContent` is currently meaningful for Hero, Text, and Nav Button. Other blocks resize their occupied/rendered area without using the text content-scale path.
+`scaleContent` is currently meaningful for Hero, Text, and Button. Other blocks resize their occupied/rendered area without using the text content-scale path.
 
 ## Render Metadata
 
@@ -105,20 +108,19 @@ The grid remains the collision and placement boundary. Render width, height, and
 
 | Type | Main props | Default grid span | Runtime notes |
 | --- | --- | --- | --- |
-| `hero` | `headline`, `headlineSize` | 16 x 6 | Inline editable; supports content scaling |
-| `text` | `value`, `fontSize` | 8 x 4 | Inline editable; supports content scaling and row auto-growth |
-| `navButton` | `label`, `action`, legacy `toPageId`, font/colors/padding/radius | 4 x 2 | Inline editable; supports page navigation, safe external URLs, and content scaling |
-| `submitButton` | `label`, submission `action`, `submitGroupId`, optional `collectionId`, success message, font/colors/padding/radius | 5 x 2 | Inline editable; submits same-page grouped fields to its own source or a project collection in web and Android preview |
+| `hero` | `headline`, `headlineSize`, optional `bindings.headline` | 16 x 6 | Inline editable while static; supports page-text binding and content scaling |
+| `text` | `value`, `fontSize`, optional `bindings.value` | 8 x 4 | Inline editable while static; supports page-text binding, content scaling, and row auto-growth |
+| `button` | `label`, optional `action`, submission/source settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, submission, URL, page-state updates, inline editing, and content scaling |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
 | `shape` | `shapeType`, fill/border/radius/opacity | 6 x 4 | Shape type is chosen before insertion |
 | `badge` | `text`, font/colors/border/radius/padding | 4 x 2 | Visual status/tag primitive |
 | `icon` | `iconName`, `fontSize`, colors/radius, optional `action` | 2 x 2 | Uses the supported icon-name set; can navigate or open a safe URL |
-| `checkbox` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
-| `toggle` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
+| `checkbox` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group Submit Data button; visual mockup elsewhere |
+| `toggle` | `label`, `fieldKey`, `submitGroupId`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when paired with a same-group Submit Data button; visual mockup elsewhere |
 | `progressBar` | `label`, `value`, visibility and colors | 8 x 2 | Visual status primitive |
-| `input` | label/fieldKey/submitGroupId/value/placeholder/type/required/font/colors/radius | 8 x 3 | Functional text field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
-| `textarea` | label/fieldKey/submitGroupId/value/placeholder/rows/required/font/colors/radius | 8 x 4 | Functional text field inside a `form` or when paired with a same-group `submitButton`; visual mockup elsewhere |
+| `input` | label/fieldKey/submitGroupId/value/placeholder/type/required/font/colors/radius | 8 x 3 | Functional text field inside a `form` or when paired with a same-group Submit Data button; visual mockup elsewhere |
+| `textarea` | label/fieldKey/submitGroupId/value/placeholder/rows/required/font/colors/radius | 8 x 4 | Functional text field inside a `form` or when paired with a same-group Submit Data button; visual mockup elsewhere |
 | `image` | `src`, `alt`, `fit`, focus, background/border/radius/opacity, optional `action` | 8 x 6 | Atomic image block; supports pasted/uploaded assets plus navigation or safe URL taps |
 | `dataList` | `collectionId`, title/empty message, display field keys, colors/radius | 12 x 8 | Read-only collection list; requires the collection's public-read setting in web and Android preview |
 | `servicesList` | `title`, `items` | 16 x 6 | Existing business block; hidden from the preferred palette |
@@ -127,7 +129,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 
 The exact defaults and constraints must be read from the registry rather than duplicated in feature logic.
 
-Actions use a discriminated schema object in `props.action`. Current action types are `navigate`, `submitData`, and `openUrl`. A `submitData` action may include a stable project `collectionId`; otherwise it retains the original source-block behavior. Only HTTP and HTTPS links are executable. Runtime resolvers preserve old Nav Button and Submit Button behavior when `props.action` is absent.
+Actions use a discriminated schema object in `props.action`. The `button` block may omit the action for static presentation or use `navigate`, `submitData`, `openUrl`, or `setPageState`. A `submitData` action may include a stable project `collectionId`; otherwise it retains the source-block behavior. `setPageState` stores a target variable ID and a `RuntimeValueRef`; its current value sources are `static` and `formValue` for Input/Textarea blocks. Only HTTP and HTTPS links are executable.
 
 ## Container Hierarchy Contract
 
@@ -136,9 +138,9 @@ Actions use a discriminated schema object in `props.action`. Current action type
 - `container` and `form` are the current parent block types, and both remain top-level only.
 - Nested parent blocks are not supported.
 - Container and form children use relative `layout.grid` coordinates.
-- `container` currently accepts lightweight child blocks including `submitButton`, but not nested `container` or `form` blocks.
+- `container` currently accepts lightweight child blocks including `button`, but not nested `container` or `form` blocks.
 - `form` only accepts `input`, `textarea`, `checkbox`, and `toggle` children.
-- `submitButton` is not a Form child. It stays top-level or inside a Container and submits same-page fields with the same normalized `submitGroupId`.
+- A Submit Data `button` is not a Form child. It stays top-level or inside a Container and submits same-page fields with the same normalized `submitGroupId`.
 - Unsupported or orphaned child relationships are repaired at load time.
 
 ## Rendering Surfaces

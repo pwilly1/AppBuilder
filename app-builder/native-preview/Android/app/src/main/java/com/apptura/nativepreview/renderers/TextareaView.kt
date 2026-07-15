@@ -84,7 +84,7 @@ fun TextareaView(block: Block, formRuntime: FormRuntimeState? = null) {
             } else {
                 BasicTextField(
                     value = value,
-                    onValueChange = { formRuntime.setString(fieldKey, it, submitGroupId) },
+                    onValueChange = { formRuntime.setString(fieldKey, it, submitGroupId, block.id) },
                     modifier = Modifier.fillMaxSize(),
                     textStyle = TextStyle(
                         fontSize = previewSp(fontSize),

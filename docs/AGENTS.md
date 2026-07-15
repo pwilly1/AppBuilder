@@ -73,8 +73,10 @@ props.scaleY
 - Do not claim planned strategic features are implemented unless the code supports them.
 - Update docs when architecture, deployment, schema, or roadmap changes.
 - Image file uploads should use the backend asset upload path when storage is configured; saved blocks store the returned URL in `props.src`. Data URLs are only a local/unsaved fallback.
-- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or when paired with a same-page `submitButton` through matching `submitGroupId`; otherwise document them as editor-time mockup controls.
-- Shared interactive behavior now flows through `props.action`; Nav Button, Icon, and Image can navigate/open URLs, while Submit Button keeps submission behavior through the same action contract plus legacy fallbacks.
+- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or when paired with a same-page `button` using `submitData` and a matching `submitGroupId`; otherwise document them as editor-time mockup controls.
+- Shared interactive behavior flows through `props.action`; Button can be static, navigate, submit, open URLs, or set page variables, while Icon and Image support the applicable tap actions.
+- Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, and Data List reads publicly readable collection records in web and Android preview.
+- Pages may define text `stateVariables`, Text/Hero blocks may resolve `bindings` from those stable variable IDs, and supported interactive blocks may update them through `setPageState` in web and Android. Set Page Variable can use a fixed value or a live Input/Textarea value referenced by block ID. Values are page-runtime state rather than persisted app data. Static props remain the fallback; broader page data and generated-app users are still planned.
 
 ## Current Block Inventory
 
@@ -82,8 +84,7 @@ Visible editor palette today:
 
 - Hero
 - Text
-- Nav Button
-- Submit Button
+- Button
 - Badge
 - Icon
 - Shape
@@ -95,6 +96,7 @@ Visible editor palette today:
 - Checkbox
 - Toggle
 - Container
+- Data List
 
 Business/demo-experiment blocks still present in code but not the preferred public-demo direction:
 
@@ -109,6 +111,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 - [Block and Schema Reference](block-reference.md)
 - [How to Add a Block](how-to-add-a-block.md)
 - [Container and Template System](container-template-system.md)
+- [Dynamic Data Binding](dynamic-data-binding.md)
 - [Deployment](deployment.md)
 - [Features](features.md)
 - [Roadmap](roadmap.md)
@@ -130,6 +133,8 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/frontend/src/editor/DraggableBlock.tsx` | Block movement/resizing behavior |
 | `app-builder/frontend/src/editor/InlineBlockEditor.tsx` | Direct text editing behavior |
 | `app-builder/frontend/src/editor/Preview.tsx` | Web preview renderer |
+| `app-builder/frontend/src/components/DataCollectionsPanel.tsx` | Project-level collection editor and public-read settings |
+| `app-builder/frontend/src/shared/blocks/DataListBlock.tsx` | Web runtime collection-record list block |
 | `app-builder/frontend/src/shared/schema/gridLayout.ts` | Grid math and collision logic |
 | `app-builder/frontend/src/shared/schema/registry.ts` | Block defaults and constraints |
 | `app-builder/frontend/src/shared/schema/contentScale.ts` | Shared content scale helper |
@@ -151,6 +156,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/backend/src/controllers/AppDataController.ts` | Hosted app-data HTTP adapter |
 | `app-builder/backend/src/models/AppSubmission.ts` | Schema-backed submission persistence model |
 | `app-builder/backend/src/services/AppDataService.ts` | Schema-backed app-data validation, persistence, queries, and CSV helpers |
+| `app-builder/backend/src/services/ProjectManager.ts` | Typed project mutation behavior including `dataCollections` persistence |
 | `app-builder/backend/src/services/AppSubmissionService.ts` | Legacy form-submission compatibility aliases |
 | `app-builder/backend/src/services/AssetStorageService.ts` | Azure Blob Storage upload helper for project images |
 | `app-builder/backend/src/services/AuthService.ts` | Auth behavior |
@@ -165,6 +171,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt` | Kotlin schema models |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/layout/GridLayout.kt` | Android grid math |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt` | Android page preview |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/DataListView.kt` | Compose runtime collection-record list block |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/*View.kt` | Compose block renderers |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/BlockActions.kt` | Android shared block-action resolution and execution |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RenderScale.kt` | Android content scaling helper |
@@ -188,6 +195,7 @@ Risky changes:
 - adding complex blocks that should be templates or containers
 - removing legacy migration code too early
 - treating future strategic features as current product capabilities
+- adding dynamic bindings, state, or generated-app user behavior without following `dynamic-data-binding.md`
 
 ## Recommended Agent Workflow
 

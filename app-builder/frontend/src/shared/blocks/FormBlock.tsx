@@ -35,13 +35,17 @@ export function FormBlock({
   children,
 }: FormBlockProps) {
   const [values, setValues] = useState<Record<string, Record<string, FormValue>>>({})
+  const [fieldValuesByBlockId, setFieldValuesByBlockId] = useState<Record<string, FormValue>>({})
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const canSubmit = Boolean(previewMode && projectId && blockId)
 
-  function setValue(fieldKey: string, value: FormValue, submitGroupId?: string) {
+  function setValue(fieldKey: string, value: FormValue, submitGroupId?: string, fieldBlockId?: string) {
     const groupId = resolveSubmitGroupId(submitGroupId ?? blockId)
     setValues((current) => ({ ...current, [groupId]: { ...(current[groupId] || {}), [fieldKey]: value } }))
+    if (fieldBlockId) {
+      setFieldValuesByBlockId((current) => ({ ...current, [fieldBlockId]: value }))
+    }
     if (status !== 'idle') {
       setStatus('idle')
       setErrorMessage('')
@@ -67,7 +71,14 @@ export function FormBlock({
 
   if (!previewMode) {
     return (
-      <FormRuntimeProvider value={{ values, setValue, getGroupValues: (groupId) => values[resolveSubmitGroupId(groupId ?? blockId)] || {}, previewMode }}>
+      <FormRuntimeProvider value={{
+        values,
+        fieldValuesByBlockId,
+        setValue,
+        getGroupValues: (groupId) => values[resolveSubmitGroupId(groupId ?? blockId)] || {},
+        getFieldValue: (fieldBlockId) => fieldValuesByBlockId[fieldBlockId],
+        previewMode,
+      }}>
         <div className="relative h-full w-full overflow-hidden">
           <div className="absolute inset-0">{children}</div>
         </div>
@@ -76,7 +87,14 @@ export function FormBlock({
   }
 
   return (
-    <FormRuntimeProvider value={{ values, setValue, getGroupValues: (groupId) => values[resolveSubmitGroupId(groupId ?? blockId)] || {}, previewMode }}>
+    <FormRuntimeProvider value={{
+      values,
+      fieldValuesByBlockId,
+      setValue,
+      getGroupValues: (groupId) => values[resolveSubmitGroupId(groupId ?? blockId)] || {},
+      getFieldValue: (fieldBlockId) => fieldValuesByBlockId[fieldBlockId],
+      previewMode,
+    }}>
       <div
         className="relative h-full w-full overflow-hidden"
         style={{

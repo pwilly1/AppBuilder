@@ -68,7 +68,7 @@ Containers support only simple atomic blocks in v1:
 
 - text
 - hero
-- navButton
+- button
 - shape
 - badge
 - icon
@@ -429,11 +429,11 @@ After insertion, the project contains only normal pages and blocks. Editing the 
 
 Current visible section templates include:
 
-- Hero layout using hero/text/navButton
-- Basic form mockup using text/input/textarea/navButton
+- Hero layout using hero/text/button
+- Basic form mockup using text/input/textarea/button
 - Feature list using icon/text rows
 - Checklist card using text/checkbox
-- Contact card using text/textarea/navButton
+- Contact card using text/textarea/button
 
 Page template and app template scaffolding exists in code, but the page and app catalogs are intentionally empty for now. User-created templates, marketplace publishing, and template drag-preview placement are deferred.
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import type { AppDataCollection, Block } from '../shared/schema/types';
+import type { AppDataCollection, Block, PageStateVariable } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
 import { uploadProjectImage } from '../api';
@@ -13,6 +13,7 @@ type InspectorProps = {
   projectId?: string;
   pages?: PageLite[];
   pageBlocks?: Block[];
+  pageStateVariables?: PageStateVariable[];
   dataCollections?: AppDataCollection[];
   activeContainerId?: string | null;
   onSave?: (b: Block) => void;
@@ -82,6 +83,7 @@ export default function Inspector({
   projectId,
   pages,
   pageBlocks = [],
+  pageStateVariables = [],
   dataCollections = [],
   activeContainerId,
   onSave,
@@ -98,8 +100,20 @@ export default function Inspector({
   const previewedPropsRef = React.useRef<Record<string, any> | null>(null);
   const [imageUploadError, setImageUploadError] = React.useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+  const [pageStateBindingId, setPageStateBindingId] = React.useState(() => getPageStateBindingId(block));
   const actionType = watch('action.type') as string | undefined;
+  const actionValueSource = watch('action.value.source') as string | undefined;
+  const selectedActionFieldBlockId = watch('action.value.fieldBlockId') as string | undefined;
   const watchedSubmitGroupId = watch('submitGroupId') as string | undefined;
+  const stateValueFieldBlocks = React.useMemo(() => {
+    const formIds = new Set(pageBlocks.filter((candidate) => candidate.type === 'form').map((candidate) => candidate.id));
+    const actionFormScope = block?.parentId && formIds.has(block.parentId) ? block.parentId : null;
+    return pageBlocks.filter((candidate) => {
+      if (candidate.type !== 'input' && candidate.type !== 'textarea') return false;
+      const candidateFormScope = candidate.parentId && formIds.has(candidate.parentId) ? candidate.parentId : null;
+      return candidateFormScope === actionFormScope;
+    });
+  }, [block?.parentId, pageBlocks]);
   const submitTargets = React.useMemo(() => {
     const targets = new Map<string, {
       blockId: string;
@@ -109,7 +123,7 @@ export default function Inspector({
     }>();
 
     for (const candidate of pageBlocks) {
-      if (candidate.type !== 'submitButton') continue;
+      if (candidate.type !== 'button') continue;
       const action = resolveBlockAction(candidate);
       if (action?.type !== 'submitData') continue;
       const groupId = normalizeSubmitGroupId(action.submitGroupId);
@@ -136,6 +150,7 @@ export default function Inspector({
       return;
     }
     reset(getInspectorDefaultProps(block));
+    setPageStateBindingId(getPageStateBindingId(block));
     setImageUploadError(null);
   }, [block, reset]);
 
@@ -167,31 +182,46 @@ export default function Inspector({
     if (props.positionX !== undefined) props.positionX = Number(props.positionX);
     if (props.positionY !== undefined) props.positionY = Number(props.positionY);
     if (props.value !== undefined && block.type === 'progressBar') props.value = Number(props.value);
-    if (block.type === 'navButton' || block.type === 'icon' || block.type === 'image') {
+    if (block.type === 'button') {
+      if (props.action?.type === 'submitData') {
+        const submitGroupId = typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
+          ? props.submitGroupId.trim()
+          : 'default';
+        const collectionId = typeof props.collectionId === 'string' ? props.collectionId.trim() : '';
+        props.submitGroupId = submitGroupId;
+        props.collectionId = collectionId;
+        props.action = {
+          type: 'submitData',
+          submitGroupId,
+          ...(collectionId ? { collectionId } : {}),
+        };
+      } else {
+        const action = normalizeBlockAction(props.action);
+        if (action) props.action = action;
+        else delete props.action;
+      }
+    }
+    if (block.type === 'icon' || block.type === 'image') {
       const action = normalizeBlockAction(props.action);
       if (action) props.action = action;
       else delete props.action;
-      if (block.type === 'navButton') {
-        props.toPageId = action?.type === 'navigate' ? action.targetPageId : '';
+    }
+    const nextBlock: Block = { ...block, props };
+    const bindingProperty = getBindableTextProperty(block);
+    if (bindingProperty) {
+      const bindings = { ...(block.bindings || {}) };
+      if (pageStateBindingId) {
+        bindings[bindingProperty] = { source: 'pageState', variableId: pageStateBindingId };
+      } else {
+        delete bindings[bindingProperty];
       }
+      if (Object.keys(bindings).length > 0) nextBlock.bindings = bindings;
+      else delete nextBlock.bindings;
     }
-    if (block.type === 'submitButton') {
-      const submitGroupId = typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
-        ? props.submitGroupId.trim()
-        : 'default';
-      props.submitGroupId = submitGroupId;
-      const collectionId = typeof props.collectionId === 'string' ? props.collectionId.trim() : '';
-      props.collectionId = collectionId;
-      props.action = {
-        type: 'submitData',
-        submitGroupId,
-        ...(collectionId ? { collectionId } : {}),
-      };
-    }
-    onSave?.({ ...block, props });
+    onSave?.(nextBlock);
   };
 
-  function renderActionControls() {
+  function renderActionControls(allowSubmit = false) {
     return (
       <FormSection title="Action" description="Choose what happens when a user taps this block in preview or the Android runtime.">
         <div className="grid gap-2">
@@ -199,7 +229,9 @@ export default function Inspector({
           <select className="inspector-input" {...register('action.type')}>
             <option value="">No action</option>
             <option value="navigate">Navigate to page</option>
+            {allowSubmit ? <option value="submitData">Submit data</option> : null}
             <option value="openUrl">Open URL</option>
+            <option value="setPageState">Set page variable</option>
           </select>
         </div>
         {actionType === 'navigate' ? (
@@ -220,6 +252,89 @@ export default function Inspector({
             <p className="text-xs text-slate-500">Only HTTP and HTTPS links are supported.</p>
           </div>
         ) : null}
+        {allowSubmit && actionType === 'submitData' ? (
+          <>
+            <div className="grid gap-2">
+              <FieldLabel>Data source name</FieldLabel>
+              <TextInput placeholder="Contact Requests" {...register('dataSourceName')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Store records in</FieldLabel>
+              <select className="inspector-input" {...register('collectionId')}>
+                <option value="">This button's own data source</option>
+                {dataCollections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>{collection.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">Choose a collection when these records should also power Data List blocks.</p>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Success message</FieldLabel>
+              <TextInput {...register('successMessage')} />
+            </div>
+            <details className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-600">Advanced connection settings</summary>
+              <div className="mt-3 grid gap-2">
+                <FieldLabel>Connection ID</FieldLabel>
+                <TextInput placeholder="Automatically generated" {...register('submitGroupId')} />
+                <p className="text-xs text-slate-500">Fields connect to this button through this ID. Normally it should not be changed.</p>
+              </div>
+            </details>
+          </>
+        ) : null}
+        {actionType === 'setPageState' ? (
+          <>
+            <div className="grid gap-2">
+              <FieldLabel>Page variable</FieldLabel>
+              <select className="inspector-input" {...register('action.variableId')}>
+                <option value="">Select a variable...</option>
+                {pageStateVariables.map((variable) => (
+                  <option key={variable.id} value={variable.id}>{variable.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Value source</FieldLabel>
+              <select className="inspector-input" defaultValue="static" {...register('action.value.source')}>
+                <option value="static">Fixed value</option>
+                <option value="formValue">Input or textarea</option>
+              </select>
+            </div>
+            {actionValueSource === 'formValue' ? (
+              <div className="grid gap-2">
+                <FieldLabel>Source field</FieldLabel>
+                <select className="inspector-input" {...register('action.value.fieldBlockId')}>
+                  <option value="">Select a field...</option>
+                  {selectedActionFieldBlockId && !stateValueFieldBlocks.some((field) => field.id === selectedActionFieldBlockId) ? (
+                    <option value={selectedActionFieldBlockId}>Missing field</option>
+                  ) : null}
+                  {stateValueFieldBlocks.map((field) => (
+                    <option key={field.id} value={field.id}>
+                      {String(field.props.label || field.props.placeholder || (field.type === 'textarea' ? 'Textarea' : 'Input'))}
+                    </option>
+                  ))}
+                </select>
+                {stateValueFieldBlocks.length === 0 ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                    Add an Input or Textarea block to this page first.
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                <FieldLabel>New value</FieldLabel>
+                <TextInput placeholder="Value to set when tapped" {...register('action.value.value')} />
+              </div>
+            )}
+            {pageStateVariables.length === 0 ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                Add a page variable in the left sidebar before configuring this action.
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500">The value changes for this preview session and resets when the page reloads.</p>
+            )}
+          </>
+        ) : null}
       </FormSection>
     );
   }
@@ -239,7 +354,7 @@ export default function Inspector({
         <div className="grid gap-2">
           <FieldLabel>Submit with</FieldLabel>
           <select className="inspector-input" {...register('submitGroupId')}>
-            <option value="">Choose a Submit Button...</option>
+            <option value="">Choose a Button...</option>
             {submitTargets.map((target) => (
               <option key={target.blockId} value={target.groupId}>
                 {target.label}{target.collection ? ` -> ${target.collection.name}` : ''}
@@ -251,11 +366,11 @@ export default function Inspector({
           </select>
           {submitTargets.length === 0 ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-              Add a Submit Button to this page, then return here to connect this field.
+              Add a Button with a Submit Data action to this page, then return here to connect this field.
             </p>
           ) : !selectedSubmitTarget ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-              This field is not connected yet. Choose a Submit Button above.
+              This field is not connected yet. Choose a Button above.
             </p>
           ) : (
             <p className="text-xs text-slate-500">This field will be included when {selectedSubmitTarget.label} is pressed.</p>
@@ -305,7 +420,7 @@ export default function Inspector({
 
     const clone = contentNode.cloneNode(true) as HTMLElement;
     const renderedRoot = clone.firstElementChild as HTMLElement | null;
-    const textNode = block.type === 'navButton' || block.type === 'submitButton'
+    const textNode = block.type === 'button'
       ? renderedRoot?.querySelector<HTMLElement>('button')
       : block.type === 'text'
         ? renderedRoot?.querySelector<HTMLElement>('p')
@@ -358,6 +473,41 @@ export default function Inspector({
         onPreview?.({ ...block!, props: nextProps });
       },
     };
+  }
+
+  function renderTextBindingControls(propertyLabel: 'text' | 'headline') {
+    const selectedVariable = pageStateVariables.find((variable) => variable.id === pageStateBindingId);
+    const hasMissingVariable = Boolean(pageStateBindingId && !selectedVariable);
+
+    return (
+      <FormSection title="Data binding" description={`Choose whether this ${propertyLabel} uses static content or a page text variable.`}>
+        <div className="grid gap-2">
+          <FieldLabel>Value source</FieldLabel>
+          <select
+            className="inspector-input"
+            value={pageStateBindingId}
+            onChange={(event) => setPageStateBindingId(event.target.value)}
+          >
+            <option value="">Static content</option>
+            {hasMissingVariable ? <option value={pageStateBindingId}>Missing page variable</option> : null}
+            {pageStateVariables.map((variable) => (
+              <option key={variable.id} value={variable.id}>{variable.name || 'Unnamed variable'}</option>
+            ))}
+          </select>
+        </div>
+        {selectedVariable ? (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+            Preview value: <strong>{selectedVariable.initialValue || '(empty)'}</strong>
+          </div>
+        ) : null}
+        {hasMissingVariable ? (
+          <p className="text-xs font-medium text-red-600">The saved variable no longer exists. Choose another variable or switch to static content.</p>
+        ) : null}
+        {pageStateVariables.length === 0 ? (
+          <p className="text-xs text-slate-500">Create a text variable in Page Data on the left before adding a binding.</p>
+        ) : null}
+      </FormSection>
+    );
   }
 
   function registerLiveContainerStyle(field: 'backgroundColor' | 'borderColor' | 'borderWidth' | 'borderRadius' | 'opacity') {
@@ -436,7 +586,7 @@ export default function Inspector({
   const rawScaleX = Number(placement.scaleX ?? 1);
   const rawScaleY = Number(placement.scaleY ?? 1);
   const hasCustomScale = Math.abs(rawScaleX - 1) > 0.001 || Math.abs(rawScaleY - 1) > 0.001;
-  const supportsContentScaling = block!.type === 'hero' || block!.type === 'text' || block!.type === 'navButton' || block!.type === 'submitButton';
+  const supportsContentScaling = block!.type === 'hero' || block!.type === 'text' || block!.type === 'button';
   const resizeBehavior = block!.layout?.resizeBehavior ?? 'boxOnly';
   const isParentBlock = block!.type === 'container' || block!.type === 'form';
   const isEditingThisContainer = isParentBlock && activeContainerId === block!.id;
@@ -455,7 +605,7 @@ export default function Inspector({
         nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 16) || 16) * currentContentScale);
         nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
       }
-      if (block!.type === 'navButton' || block!.type === 'submitButton') {
+      if (block!.type === 'button') {
         nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 14) || 14) * currentContentScale);
         nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
         nextProps.buttonPaddingX = Math.round((Number(nextProps.buttonPaddingX ?? 14) || 14) * currentContentScale);
@@ -640,111 +790,47 @@ export default function Inspector({
         )}
 
         {block.type === 'text' && (
-          <FormSection title="Content" description="Edit the text copy and its display size.">
-            <div className="grid gap-2">
-              <FieldLabel>Text</FieldLabel>
-              <TextArea {...registerLiveText('value')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Font size (px)</FieldLabel>
-              <TextInput type="number" className="max-w-[120px]" {...register('fontSize')} />
-            </div>
-          </FormSection>
-        )}
-
-        {block.type === 'hero' && (
-          <FormSection title="Hero copy" description="Control the first headline users see on this page.">
-            <div className="grid gap-2">
-              <FieldLabel>Headline</FieldLabel>
-              <TextInput {...registerLiveText('headline')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Headline size (px)</FieldLabel>
-              <TextInput type="number" className="max-w-[120px]" {...register('headlineSize')} />
-            </div>
-          </FormSection>
-        )}
-
-        {block.type === 'navButton' && (
           <>
-            <FormSection title="Button" description="Set the label shown inside this action button.">
+            {renderTextBindingControls('text')}
+            <FormSection title="Content" description="Edit the static text or fallback shown when a bound value is unavailable.">
               <div className="grid gap-2">
-                <FieldLabel>Label</FieldLabel>
-                <TextInput {...registerLiveText('label')} />
+                <FieldLabel>Text</FieldLabel>
+                <TextArea {...registerLiveText('value')} />
               </div>
-            </FormSection>
-            {renderActionControls()}
-            <FormSection title="Button style" description="Tune the visual button without creating a separate button type.">
               <div className="grid gap-2">
                 <FieldLabel>Font size (px)</FieldLabel>
-                <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Background color</FieldLabel>
-                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Text color</FieldLabel>
-                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Corner radius (px)</FieldLabel>
-                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Button padding X (px)</FieldLabel>
-                <TextInput type="number" min={0} className="max-w-[120px]" {...register('buttonPaddingX')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Button padding Y (px)</FieldLabel>
-                <TextInput type="number" min={0} className="max-w-[120px]" {...register('buttonPaddingY')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Outer padding (px)</FieldLabel>
-                <TextInput type="number" min={0} className="max-w-[120px]" {...register('contentPadding')} />
+                <TextInput type="number" className="max-w-[120px]" {...register('fontSize')} />
               </div>
             </FormSection>
           </>
         )}
 
-        {block.type === 'submitButton' && (
+        {block.type === 'hero' && (
           <>
-            <FormSection title="Submit action" description="Submits fields on this page that use the same submit group.">
+            {renderTextBindingControls('headline')}
+            <FormSection title="Hero copy" description="Control the static headline or fallback shown when a bound value is unavailable.">
+              <div className="grid gap-2">
+                <FieldLabel>Headline</FieldLabel>
+                <TextInput {...registerLiveText('headline')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Headline size (px)</FieldLabel>
+                <TextInput type="number" className="max-w-[120px]" {...register('headlineSize')} />
+              </div>
+            </FormSection>
+          </>
+        )}
+
+        {block.type === 'button' && (
+          <>
+            <FormSection title="Button" description="Set the label and choose what happens when this button is tapped.">
               <div className="grid gap-2">
                 <FieldLabel>Label</FieldLabel>
                 <TextInput {...registerLiveText('label')} />
               </div>
-              <div className="grid gap-2">
-                <FieldLabel>Data source name</FieldLabel>
-                <TextInput placeholder="Contact Requests" {...register('dataSourceName')} />
-              </div>
-              <details className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-                <summary className="cursor-pointer text-xs font-semibold text-slate-600">Advanced connection settings</summary>
-                <div className="mt-3 grid gap-2">
-                  <FieldLabel>Connection ID</FieldLabel>
-                  <TextInput placeholder="Automatically generated" {...register('submitGroupId')} />
-                  <p className="text-xs text-slate-500">Field blocks connect to this button by name. Only edit this ID for legacy configurations.</p>
-                </div>
-              </details>
-              <div className="grid gap-2">
-                <FieldLabel>Store records in</FieldLabel>
-                <select className="inspector-input" {...register('collectionId')}>
-                  <option value="">This button's own data source</option>
-                  {dataCollections.map((collection) => (
-                    <option key={collection.id} value={collection.id}>{collection.name}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-slate-500">Choose a collection to make records reusable by Data List blocks.</p>
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Success message</FieldLabel>
-                <TextInput {...register('successMessage')} />
-              </div>
-              <p className="text-xs text-slate-500">
-                Any input, textarea, checkbox, or toggle with this group will be submitted together.
-              </p>
             </FormSection>
-            <FormSection title="Button style" description="Tune the submit button appearance.">
+            {renderActionControls(true)}
+            <FormSection title="Button style" description="Tune the button appearance without changing its action.">
               <div className="grid gap-2">
                 <FieldLabel>Font size (px)</FieldLabel>
                 <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
@@ -931,7 +1017,7 @@ export default function Inspector({
         )}
 
         {block.type === 'checkbox' && (
-          <FormSection title="Checkbox" description="Works as a boolean field when submitted by a Submit Button with the same group.">
+          <FormSection title="Checkbox" description="Works as a boolean field when submitted by a Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
@@ -969,7 +1055,7 @@ export default function Inspector({
         )}
 
         {block.type === 'toggle' && (
-          <FormSection title="Toggle" description="Works as a boolean field when submitted by a Submit Button with the same group.">
+          <FormSection title="Toggle" description="Works as a boolean field when submitted by a Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...registerLiveText('label')} />
@@ -1040,7 +1126,7 @@ export default function Inspector({
         )}
 
         {block.type === 'input' && (
-          <FormSection title="Input" description="Works as a single-line field when submitted by a Submit Button with the same group.">
+          <FormSection title="Input" description="Works as a single-line field when submitted by a Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
@@ -1096,7 +1182,7 @@ export default function Inspector({
         )}
 
         {block.type === 'textarea' && (
-          <FormSection title="Textarea" description="Works as a multi-line field when submitted by a Submit Button with the same group.">
+          <FormSection title="Textarea" description="Works as a multi-line field when submitted by a Button with the same group.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
@@ -1374,6 +1460,19 @@ function normalizeSubmitGroupId(value: unknown) {
 function friendlyFieldType(type: AppDataCollection['fields'][number]['type']) {
   if (type === 'boolean') return 'Yes / No';
   return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function getBindableTextProperty(block?: Block | null): 'value' | 'headline' | null {
+  if (block?.type === 'text') return 'value';
+  if (block?.type === 'hero') return 'headline';
+  return null;
+}
+
+function getPageStateBindingId(block?: Block | null): string {
+  const property = getBindableTextProperty(block);
+  if (!property) return '';
+  const reference = block?.bindings?.[property];
+  return reference?.source === 'pageState' ? reference.variableId : '';
 }
 
 

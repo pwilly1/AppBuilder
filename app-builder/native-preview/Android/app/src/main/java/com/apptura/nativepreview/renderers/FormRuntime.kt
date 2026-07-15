@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 class FormRuntimeState {
     private val values = mutableStateMapOf<String, Map<String, JsonPrimitive>>()
+    private val valuesByBlockId = mutableStateMapOf<String, JsonPrimitive>()
 
     fun getString(fieldKey: String, submitGroupId: String): String? =
         values[resolveSubmitGroupId(submitGroupId)]
@@ -17,13 +18,17 @@ class FormRuntimeState {
             ?.content
             ?.toBooleanStrictOrNull()
 
-    fun setString(fieldKey: String, value: String, submitGroupId: String) {
+    fun setString(fieldKey: String, value: String, submitGroupId: String, fieldBlockId: String? = null) {
         setValue(fieldKey, JsonPrimitive(value), submitGroupId)
+        if (!fieldBlockId.isNullOrBlank()) valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
     }
 
-    fun setBoolean(fieldKey: String, value: Boolean, submitGroupId: String) {
+    fun setBoolean(fieldKey: String, value: Boolean, submitGroupId: String, fieldBlockId: String? = null) {
         setValue(fieldKey, JsonPrimitive(value), submitGroupId)
+        if (!fieldBlockId.isNullOrBlank()) valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
     }
+
+    fun getFieldValue(fieldBlockId: String): JsonPrimitive? = valuesByBlockId[fieldBlockId]
 
     fun getGroupValues(submitGroupId: String): Map<String, JsonPrimitive> =
         values[resolveSubmitGroupId(submitGroupId)].orEmpty()

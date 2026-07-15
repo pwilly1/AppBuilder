@@ -189,7 +189,7 @@ These endpoints support two submission models:
 
 - legacy `contactForm` blocks, which store the older fixed `name` / `email` / `phone` / `message` payload and can trigger email notifications
 - schema-backed `form` blocks, which store dynamic field data collected from child `input`, `textarea`, `checkbox`, and `toggle` blocks
-- schema-backed `submitButton` blocks, which store dynamic field data collected from same-page `input`, `textarea`, `checkbox`, and `toggle` blocks that share the same normalized `submitGroupId`
+- schema-backed `button` blocks with `action.type = "submitData"`, which store dynamic field data collected from same-page `input`, `textarea`, `checkbox`, and `toggle` blocks that share the same normalized `submitGroupId`
 
 Legacy `contactForm` submission data can contain:
 
@@ -202,7 +202,7 @@ Legacy `contactForm` submission data can contain:
 }
 ```
 
-Schema-backed `form` and `submitButton` submissions accept JSON keyed by each field's `fieldKey`. If `fieldKey` is blank, the backend derives a slug from the field label and also accepts the raw child `blockId` as a fallback key.
+Schema-backed `form` and Submit Data button submissions accept JSON keyed by each field's `fieldKey`. If `fieldKey` is blank, the backend derives a slug from the field label and also accepts the raw child `blockId` as a fallback key.
 
 Example dynamic payload:
 
@@ -215,13 +215,13 @@ Example dynamic payload:
 }
 ```
 
-For `submitButton` sources, the backend gathers fields from the same page by matching each field's normalized `submitGroupId` against the button's normalized `submitGroupId`.
+For Submit Data buttons, the backend gathers fields from the same page by matching each field's normalized `submitGroupId` against the button's normalized `submitGroupId`.
 
 At least one populated field is required. Required text fields must be non-empty, and required checkbox/toggle fields must be `true`. Successful legacy `contactForm` submissions may trigger an email notification when email settings are configured.
 
 ### `GET /projects/:id/forms/:blockId/submissions`
 
-Requires authentication and project ownership. Returns submissions for one `contactForm`, `form`, or `submitButton` block.
+Requires authentication and project ownership. Returns submissions for one `contactForm`, `form`, or Submit Data `button` block.
 
 ### `POST /projects/:id/forms/:blockId/submissions`
 
@@ -231,13 +231,13 @@ Success: `201` with the stored submission.
 
 ### `POST /public/projects/:id/forms/:blockId/submissions`
 
-Does not require authentication. It exists so a rendered public project can submit its `contactForm`, schema-backed `form`, or schema-backed `submitButton` source in preview/runtime surfaces.
+Does not require authentication. It exists so a rendered public project can submit its `contactForm`, schema-backed `form`, or Submit Data `button` source in preview/runtime surfaces.
 
 Success: `201` with the stored submission.
 
 ## App Data Source Endpoints
 
-These routes expose the broader app-data source model used by the dashboard and frontend runtime. A source can be a project collection, legacy `contactForm`, schema-backed `form`, or schema-backed `submitButton`. Submit Buttons targeting collections are represented by the stable collection source instead of creating a duplicate source entry.
+These routes expose the broader app-data source model used by the dashboard and frontend runtime. A source can be a project collection, legacy `contactForm`, schema-backed `form`, or Submit Data `button`. Buttons targeting collections are represented by the stable collection source instead of creating a duplicate source entry.
 
 ### `GET /projects/:id/app-data/sources`
 
@@ -255,7 +255,7 @@ Requires authentication and project ownership. Returns the same source records a
 
 Does not require authentication. This is the canonical public runtime endpoint used by the current web preview for schema-backed app-data submission.
 
-For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and `submitButton` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppSubmission`.
+For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and Submit Data `button` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppSubmission`.
 
 Success: `201` with the stored record.
 

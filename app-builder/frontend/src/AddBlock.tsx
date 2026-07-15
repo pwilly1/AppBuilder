@@ -236,8 +236,7 @@ export function AddBlock({
         <div className="grid gap-2">
           <BlockEntry title="Hero" note="Intro headline" create={() => createBlock('hero', { headline: 'New Hero' })} onAdd={onAdd} />
           <BlockEntry title="Text" note="Paragraphs or short body copy" create={() => createBlock('text', { value: 'New text' })} onAdd={onAdd} />
-          <BlockEntry title="Nav Button" note="Link to another page in the app" create={() => createBlock('navButton', { label: 'Go', toPageId: '' })} onAdd={onAdd} />
-          <BlockEntry title="Submit Button" note="Save connected fields" create={() => createBlock('submitButton')} onAdd={onAdd} />
+          <BlockEntry title="Button" note="Navigate, submit data, open a URL, or update page state" create={() => createBlock('button')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
 

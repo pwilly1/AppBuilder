@@ -2,6 +2,8 @@ import type { KeyboardEvent } from 'react'
 import { isActionConfigured } from '../actions/blockActions'
 import { executeWebBlockAction } from '../actions/webActionExecutor'
 import type { BlockAction } from '../schema/types'
+import type { RuntimeContext } from '../runtime/runtimeBindings'
+import { useFormRuntime } from './formRuntime'
 
 const iconMap: Record<string, string> = {
   star: '★',
@@ -24,6 +26,8 @@ export function IconBlock({
   action,
   previewMode,
   onNavigate,
+  runtimeContext,
+  onSetPageState,
 }: {
   iconName?: string
   fontSize?: number
@@ -33,11 +37,14 @@ export function IconBlock({
   action?: BlockAction | null
   previewMode?: boolean
   onNavigate?: (pageId: string) => void
+  runtimeContext?: RuntimeContext
+  onSetPageState?: (variableId: string, value: string) => void
 }) {
+  const formRuntime = useFormRuntime()
   const interactive = Boolean(previewMode && isActionConfigured(action))
   const runAction = () => {
     if (!interactive || !action) return
-    void executeWebBlockAction(action, { onNavigate })
+    void executeWebBlockAction(action, { onNavigate, runtimeContext, onSetPageState, formRuntime })
   }
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') return

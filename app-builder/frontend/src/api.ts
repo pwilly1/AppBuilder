@@ -151,7 +151,7 @@ export type ProjectAppDataSource = {
   id: string;
   sourceId: string;
   blockId: string;
-  type: 'collection' | 'submitButton' | 'form' | 'contactForm';
+  type: 'collection' | 'button' | 'form' | 'contactForm';
   name: string;
   pageId: string;
   pageTitle: string;

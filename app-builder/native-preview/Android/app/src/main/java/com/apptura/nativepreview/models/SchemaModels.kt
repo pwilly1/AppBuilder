@@ -21,8 +21,26 @@ data class Block(
     val type: String,
     val parentId: String? = null,
     val props: JsonObject = buildJsonObject { },
+    val bindings: Map<String, RuntimeValueRef> = emptyMap(),
     val layout: BlockRuntimeLayout? = null,
     val render: BlockRenderMetadata? = null
+)
+
+@Serializable
+data class RuntimeValueRef(
+    val source: String,
+    val value: String? = null,
+    val variableId: String? = null,
+    val fieldBlockId: String? = null,
+    val fallback: String? = null,
+)
+
+@Serializable
+data class PageStateVariable(
+    val id: String,
+    val name: String,
+    val type: String = "text",
+    val initialValue: String = "",
 )
 
 @Serializable
@@ -62,6 +80,7 @@ data class Page(
     val title: String? = null,
     val name: String? = null,
     val path: String? = null,
+    val stateVariables: List<PageStateVariable> = emptyList(),
     val blocks: List<Block> = emptyList()
 )
 
@@ -97,6 +116,7 @@ data class AppDataRecord(
 
 object ProjectLoader {
     private const val GRID_DENSITY_SCHEMA_VERSION = 2
+    private const val CURRENT_SCHEMA_VERSION = 4
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -160,16 +180,17 @@ object ProjectLoader {
     private fun normalizeBaseUrl(baseUrl: String): String = baseUrl.trim().removeSuffix("/")
 
     private fun migrateProjectGridDensity(project: Project): Project {
-        if ((project.schemaVersion ?: 1) >= GRID_DENSITY_SCHEMA_VERSION) return project
-
+        val scaleGrid = (project.schemaVersion ?: 1) < GRID_DENSITY_SCHEMA_VERSION
         return project.copy(
-            schemaVersion = GRID_DENSITY_SCHEMA_VERSION,
+            schemaVersion = CURRENT_SCHEMA_VERSION,
             pages = project.pages.map { page ->
                 page.copy(
-                    blocks = page.blocks.map { block ->
-                        val grid = block.layout?.grid ?: return@map block
-                        block.copy(
-                            layout = block.layout.copy(
+                    blocks = page.blocks.map blockMap@ { block ->
+                        val converted = migrateLegacyButton(block)
+                        val grid = converted.layout?.grid
+                        if (!scaleGrid || grid == null) return@blockMap converted
+                        converted.copy(
+                            layout = converted.layout.copy(
                                 grid = GridPlacement(
                                     colStart = (grid.colStart - 1) * 2 + 1,
                                     rowStart = (grid.rowStart - 1) * 2 + 1,
@@ -182,6 +203,31 @@ object ProjectLoader {
                 )
             }
         )
+    }
+
+    private fun migrateLegacyButton(block: Block): Block {
+        if (block.type != "navButton" && block.type != "submitButton") return block
+        val existingAction = block.props["action"]
+        val action = existingAction ?: buildJsonObject {
+            if (block.type == "navButton") {
+                put("type", JsonPrimitive("navigate"))
+                put("targetPageId", block.props["toPageId"] ?: JsonPrimitive(""))
+            } else {
+                put("type", JsonPrimitive("submitData"))
+                put("submitGroupId", block.props["submitGroupId"] ?: JsonPrimitive("default"))
+                block.props["collectionId"]?.let { put("collectionId", it) }
+            }
+        }
+        val props = buildJsonObject {
+            block.props.forEach { (key, value) ->
+                if (key != "toPageId") put(key, value)
+            }
+            put("action", action)
+            if (block.props["label"] == null) {
+                put("label", JsonPrimitive(if (block.type == "submitButton") "Submit" else "Go"))
+            }
+        }
+        return block.copy(type = "button", props = props)
     }
 
     suspend fun submitPublicAppDataRecord(

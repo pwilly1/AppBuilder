@@ -14,8 +14,13 @@ import com.apptura.nativepreview.models.Block
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
-fun HeroView(block: Block) {
-    val headline = (block.props["headline"] as? JsonPrimitive)?.content ?: "Headline"
+fun HeroView(block: Block, runtimeContext: RuntimeContext = RuntimeContext()) {
+    val headline = resolveBoundString(
+        block,
+        "headline",
+        readStaticString(block, "headline", "Headline"),
+        runtimeContext,
+    )
     val subhead = (block.props["subhead"] as? JsonPrimitive)?.content ?: ""
     val headlineSize = (block.props["headlineSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 28.0
     val contentPadding = (block.props["contentPadding"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 16.0

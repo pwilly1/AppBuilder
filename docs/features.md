@@ -40,6 +40,7 @@ Projects support multiple pages:
 - select page
 - rename page
 - delete page
+- define page-scoped text variables with stable IDs and initial preview values
 - configure shared tap actions for page navigation, hosted app-data submission, and safe external URLs
 
 ### Core Blocks
@@ -48,8 +49,7 @@ The current visible block palette is:
 
 - Hero
 - Text
-- Nav Button
-- Submit Button
+- Button
 - Badge
 - Icon
 - Shape
@@ -63,17 +63,17 @@ The current visible block palette is:
 - Container
 - Data List
 
-Hero, Text, Nav Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Submit Button, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
+Hero, Text, Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
-Text-like blocks support canvas editing and inspector editing. Shape supports canvas placement/resizing and inspector-based visual styling. Nav Button supports page navigation or safe external URLs plus inspector-based styling for colors, padding, and corner radius.
+Text-like blocks support canvas editing and inspector editing. Text `value` and Hero `headline` can also bind to page-scoped text variables while keeping their static props as fallbacks. Shape supports canvas placement/resizing and inspector-based visual styling. Button supports a static/no-action mode, page navigation, data submission, safe external URLs, or page-variable updates plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
-Icon and Image can optionally execute Navigate or Open URL actions in web and Android preview.
+Icon and Image can optionally execute Navigate, Open URL, or Set Page Variable actions in web and Android preview.
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
 Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dashboard can review stored records for each saved Form source.
-Submit Button is a second schema-backed submission path. In web preview it submits same-page Input, Textarea, Checkbox, and Toggle fields that share the same normalized `submitGroupId`.
-Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or when paired with a same-group Submit Button. In web and Android preview, these controls collect runtime values and Submit Button posts its grouped fields to the hosted app-data API. In the editor they still behave as mockup controls.
+Button configured with Submit Data is a second schema-backed submission path. In web preview it submits same-page Input, Textarea, Checkbox, and Toggle fields that share the same normalized `submitGroupId`.
+Input and Textarea can also supply live values to Set Page Variable actions through stable block IDs. Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or when paired with a same-group Submit Data button. In web and Android preview, these controls collect runtime values and the button posts its grouped fields to the hosted app-data API. In the editor they still behave as mockup controls.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
-Project-level data collections define stable record sources and typed fields. Submit Buttons can write grouped field values into a selected collection, and Data List can display that collection in web and Android preview when public reads are enabled.
+Project-level data collections define stable record sources and typed fields. Submit Data buttons can write grouped field values into a selected collection, and Data List can display that collection in web and Android preview when public reads are enabled.
 
 ### Grid Layout
 
@@ -97,7 +97,7 @@ Current layout capabilities:
 
 - Projects are saved to MongoDB through the backend.
 - Project CRUD is available through authenticated API routes.
-- Saved projects can review Contact Form, Form, and Submit Button app-data sources from the dashboard, inspect stored records, and export source data as CSV.
+- Saved projects can review Contact Form, Form, and Submit Data button app-data sources from the dashboard, inspect stored records, and export source data as CSV.
 
 ### Deployment
 
@@ -252,6 +252,8 @@ Later AI features:
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
 - Container editing is intentionally limited to one level; nested containers are not supported.
+- Dynamic bindings currently cover page-scoped text variables only. Page parameters, page-owned collection-record sources, app-state actions, and generated-app user bindings are not implemented.
+- Page-variable values are runtime-only preview state. They reset when a page runtime is recreated and are not persisted as hosted app data.
 - Project collections and read-only collection lists are implemented, but record detail, update/delete actions, relationships, filtering, and generated-app user ownership are not.
 - Export and app-store pipeline features are not implemented.
 - GenAI generation is planned, not currently implemented.

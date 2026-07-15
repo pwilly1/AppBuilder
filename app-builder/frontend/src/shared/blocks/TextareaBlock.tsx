@@ -79,7 +79,7 @@ export function TextareaBlock({
           placeholder={placeholder}
           required={required}
           rows={safeRows}
-          onChange={(event) => formRuntime?.setValue(resolvedFieldKey, event.currentTarget.value, resolvedGroupId)}
+          onChange={(event) => formRuntime?.setValue(resolvedFieldKey, event.currentTarget.value, resolvedGroupId, blockId)}
           style={{
             minHeight: 0,
             flex: 1,

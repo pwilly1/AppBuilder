@@ -125,9 +125,17 @@ function resolveTemplateProps(
   const submitGroupKey = typeof next.submitGroupKey === 'string' ? next.submitGroupKey : null
   if (submitGroupKey && blockIdByKey?.has(submitGroupKey)) {
     next.submitGroupId = blockIdByKey.get(submitGroupKey)
-    next.action = { type: 'submitData', submitGroupId: next.submitGroupId }
+    next.action = {
+      type: 'submitData',
+      submitGroupId: next.submitGroupId,
+      ...(typeof next.collectionId === 'string' && next.collectionId.trim() ? { collectionId: next.collectionId.trim() } : {}),
+    }
   } else if (typeof next.submitGroupId === 'string') {
-    next.action = { type: 'submitData', submitGroupId: next.submitGroupId }
+    next.action = {
+      type: 'submitData',
+      submitGroupId: next.submitGroupId,
+      ...(typeof next.collectionId === 'string' && next.collectionId.trim() ? { collectionId: next.collectionId.trim() } : {}),
+    }
   }
   delete next.toPageKey
   delete next.submitGroupKey

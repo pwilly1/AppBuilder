@@ -13,8 +13,13 @@ import com.apptura.nativepreview.models.Block
 import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
-fun TextView(block: Block) {
-    val value = (block.props["value"] as? JsonPrimitive)?.content ?: "Text"
+fun TextView(block: Block, runtimeContext: RuntimeContext = RuntimeContext()) {
+    val value = resolveBoundString(
+        block,
+        "value",
+        readStaticString(block, "value", "Text"),
+        runtimeContext,
+    )
     val fontSize = (block.props["fontSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 16.0
     val contentPadding = (block.props["contentPadding"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 12.0
     val contentScale = getBlockContentScale(block)

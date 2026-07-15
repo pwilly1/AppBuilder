@@ -6,8 +6,7 @@ export type BlockType =
   | 'form'
   | 'hero'
   | 'text'
-  | 'navButton'
-  | 'submitButton'
+  | 'button'
   | 'shape'
   | 'badge'
   | 'icon'
@@ -46,7 +45,22 @@ export type RenderAlign = 'start' | 'center' | 'end';
 export type BlockAction =
   | { type: 'navigate'; targetPageId: string }
   | { type: 'submitData'; submitGroupId: string; collectionId?: string }
-  | { type: 'openUrl'; url: string };
+  | { type: 'openUrl'; url: string }
+  | { type: 'setPageState'; variableId: string; value: RuntimeValueRef };
+
+export type PageStateVariable = {
+  id: string;
+  name: string;
+  type: 'text';
+  initialValue: string;
+};
+
+export type RuntimeValueRef =
+  | { source: 'static'; value: string }
+  | { source: 'pageState'; variableId: string; fallback?: string }
+  | { source: 'formValue'; fieldBlockId: string; fallback?: string };
+
+export type BlockBindings = Record<string, RuntimeValueRef>;
 
 export type AppDataFieldType = 'text' | 'number' | 'boolean' | 'email' | 'date';
 
@@ -130,6 +144,7 @@ export type Block<Props = Record<string, any>> = {
   type: BlockType;
   parentId?: string;
   props: Props;
+  bindings?: BlockBindings;
   layout?: BlockRuntimeLayout;
   render?: BlockRenderMetadata;
   editorPlacement?: BlockEditorPlacement;
@@ -139,6 +154,7 @@ export type Page = {
   id: string;
   title?: string;
   path?: string;
+  stateVariables?: PageStateVariable[];
   blocks: Block[];
 };
 
