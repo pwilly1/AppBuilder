@@ -71,9 +71,9 @@ This keeps large image bytes out of the MongoDB project document. Pasted remote 
 
 ### Submitting schema-backed forms
 
-1. A saved schema-backed submission source renders in web preview as either a top-level Form block with child fields or a Button configured with Submit Data and paired with same-page grouped fields.
+1. A saved schema-backed submission source renders in web preview as either a top-level Form block with child fields or a Button configured with Submit Data and explicit same-page field selections.
 2. Each participating field resolves a submission key from `props.fieldKey`, its label, or its block ID.
-3. Submit Data button flows select fields by matching the field and button `submitGroupId` after normalization.
+3. Submit Data button flows resolve the stable field block IDs stored in the button's `action.fields` list.
 4. Preview submission posts JSON to `POST /public/projects/:id/forms/:blockId/submissions`.
 5. The backend locates the owning Form or Submit Data button source, validates required fields, and stores the sanitized payload in MongoDB through `AppSubmission`.
 6. The dashboard can load app-data sources through `GET /projects/:id/app-data/sources`, fetch source records through `GET /projects/:id/app-data/sources/:sourceId/records`, and export them through the matching CSV route.
@@ -111,7 +111,7 @@ type Page = {
 }
 ```
 
-Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Buttons configured with Submit Data can target a collection while still gathering same-page fields through `submitGroupId`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Data List blocks read those records through the public collection endpoint only when `publicRead` is enabled.
+Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Buttons configured with Submit Data can target a collection while selecting same-page fields explicitly; each selection can map to a collection field through `targetFieldKey`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Data List blocks read those records through the public collection endpoint only when `publicRead` is enabled.
 
 A block has:
 
@@ -250,9 +250,9 @@ Behavior notes:
 - Badge, Icon, Progress Bar, Checkbox, and Toggle are schema-backed primitives with shared frontend and Android renderers.
 - Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, opacity, and optional tap actions across web and Android preview.
 - Form is a schema-backed submission surface with shared parent/child layout rules across web and Android preview.
-- Button with `submitData` is a schema-backed submission trigger that gathers same-page fields through `submitGroupId` in both web and Android preview, then posts them to its own source or a configured project collection.
+- Button with `submitData` is a schema-backed submission trigger that reads explicit same-page field references in both web and Android preview, then posts them to its own source or a configured project collection.
 - Data List is a schema-backed read primitive that displays records from a publicly readable project collection across web and Android preview.
-- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or when paired with a same-group Submit Data button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
+- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or selected by a Submit Data button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
 ### Block Action Contract
@@ -261,7 +261,7 @@ Interactive blocks can store one schema-backed action in `props.action`:
 
 ```text
 navigate   -> targetPageId
-submitData -> submitGroupId
+submitData -> fields[] containing fieldBlockId and optional targetFieldKey
 openUrl    -> HTTPS or HTTP URL
 setPageState -> variableId plus RuntimeValueRef
 ```

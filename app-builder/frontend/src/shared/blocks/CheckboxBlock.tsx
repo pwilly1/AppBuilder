@@ -1,10 +1,10 @@
-import { resolveFieldKey, resolveSubmitGroupId, useFormRuntime } from './formRuntime'
+import { useEffect } from 'react'
+import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 export function CheckboxBlock({
   blockId,
   label = 'Checkbox',
   fieldKey = '',
-  submitGroupId = '',
   required = false,
   checked = true,
   fontSize = 14,
@@ -16,7 +16,6 @@ export function CheckboxBlock({
   blockId?: string
   label?: string
   fieldKey?: string
-  submitGroupId?: string
   required?: boolean
   checked?: boolean
   fontSize?: number
@@ -27,18 +26,22 @@ export function CheckboxBlock({
 }) {
   const formRuntime = useFormRuntime()
   const resolvedFieldKey = resolveFieldKey(blockId, label, fieldKey)
-  const resolvedGroupId = resolveSubmitGroupId(submitGroupId)
-  const runtimeValue = formRuntime?.values[resolvedGroupId]?.[resolvedFieldKey]
+  const runtimeValue = blockId ? formRuntime?.getFieldValue(blockId) : undefined
   const currentChecked = typeof runtimeValue === 'boolean' ? runtimeValue : checked
   const safeFontSize = Math.max(8, Number(fontSize) || 14)
   const isRuntimeField = Boolean(formRuntime?.previewMode)
+
+  useEffect(() => {
+    if (!isRuntimeField || !blockId || formRuntime?.getFieldValue(blockId) !== undefined) return
+    formRuntime?.setValue(resolvedFieldKey, checked, blockId)
+  }, [blockId, checked, formRuntime, isRuntimeField, resolvedFieldKey])
 
   return (
     <button
       type="button"
       aria-label="Checkbox block"
       aria-pressed={currentChecked}
-      onClick={() => formRuntime?.setValue(resolvedFieldKey, !currentChecked, resolvedGroupId)}
+      onClick={() => formRuntime?.setValue(resolvedFieldKey, !currentChecked, blockId)}
       style={{
         display: 'flex',
         alignItems: 'center',

@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -32,8 +33,7 @@ fun TextareaView(block: Block, formRuntime: FormRuntimeState? = null) {
         label,
         (block.props["fieldKey"] as? JsonPrimitive)?.content,
     )
-    val submitGroupId = resolveSubmitGroupId((block.props["submitGroupId"] as? JsonPrimitive)?.content)
-    val value = formRuntime?.getString(fieldKey, submitGroupId) ?: initialValue
+    val value = formRuntime?.getString(block.id) ?: initialValue
     val rows = ((block.props["rows"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 3).coerceAtLeast(1)
     val fontSize = ((block.props["fontSize"] as? JsonPrimitive)?.content?.toFloatOrNull() ?: 14f).coerceAtLeast(8f)
     val backgroundColor = parseTextareaColor((block.props["backgroundColor"] as? JsonPrimitive)?.content, Color.White)
@@ -43,6 +43,12 @@ fun TextareaView(block: Block, formRuntime: FormRuntimeState? = null) {
     val borderRadius = ((block.props["borderRadius"] as? JsonPrimitive)?.content?.toFloatOrNull() ?: 12f).coerceAtLeast(0f)
     val displayValue = value.ifBlank { placeholder }
     val displayColor = if (value.isBlank()) placeholderColor else textColor
+
+    LaunchedEffect(block.id, formRuntime) {
+        if (formRuntime != null && formRuntime.getFieldValue(block.id) == null) {
+            formRuntime.setString(fieldKey, initialValue, block.id)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -84,7 +90,7 @@ fun TextareaView(block: Block, formRuntime: FormRuntimeState? = null) {
             } else {
                 BasicTextField(
                     value = value,
-                    onValueChange = { formRuntime.setString(fieldKey, it, submitGroupId, block.id) },
+                    onValueChange = { formRuntime.setString(fieldKey, it, block.id) },
                     modifier = Modifier.fillMaxSize(),
                     textStyle = TextStyle(
                         fontSize = previewSp(fontSize),

@@ -231,6 +231,7 @@ function AppContent(props: any) {
             path="/editor/:projectId"
             element={authed ? editorElement : <Navigate to="/" replace />}
           />
+
         </Routes>
       </main>
       <Footer />

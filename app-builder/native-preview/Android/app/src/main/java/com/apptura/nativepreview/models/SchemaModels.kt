@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -116,7 +117,9 @@ data class AppDataRecord(
 
 object ProjectLoader {
     private const val GRID_DENSITY_SCHEMA_VERSION = 2
-    private const val CURRENT_SCHEMA_VERSION = 4
+    private const val EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5
+    private const val CURRENT_SCHEMA_VERSION = EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION
+    private val submissionFieldTypes = setOf("input", "textarea", "checkbox", "toggle")
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -181,12 +184,18 @@ object ProjectLoader {
 
     private fun migrateProjectGridDensity(project: Project): Project {
         val scaleGrid = (project.schemaVersion ?: 1) < GRID_DENSITY_SCHEMA_VERSION
+        val migrateLegacySubmissionGroups = (project.schemaVersion ?: 1) < EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION
         return project.copy(
             schemaVersion = CURRENT_SCHEMA_VERSION,
             pages = project.pages.map { page ->
+                val legacyButtonsMigrated = page.blocks.map(::migrateLegacyButton)
+                val submissionFieldsMigrated = if (migrateLegacySubmissionGroups) {
+                    migrateExplicitSubmitFields(legacyButtonsMigrated)
+                } else {
+                    legacyButtonsMigrated
+                }
                 page.copy(
-                    blocks = page.blocks.map blockMap@ { block ->
-                        val converted = migrateLegacyButton(block)
+                    blocks = submissionFieldsMigrated.map blockMap@ { converted ->
                         val grid = converted.layout?.grid
                         if (!scaleGrid || grid == null) return@blockMap converted
                         converted.copy(
@@ -228,6 +237,60 @@ object ProjectLoader {
             }
         }
         return block.copy(type = "button", props = props)
+    }
+
+    private fun migrateExplicitSubmitFields(blocks: List<Block>): List<Block> = blocks.map { block ->
+        val action = block.props["action"] as? JsonObject
+        val isSubmitButton = block.type == "button"
+            && (action?.get("type") as? JsonPrimitive)?.content == "submitData"
+
+        val nextProps = buildJsonObject {
+            block.props.forEach { (key, value) ->
+                if (key != "submitGroupId" && key != "collectionId") put(key, value)
+            }
+
+            if (isSubmitButton && action != null) {
+                val existingFields = (action["fields"] as? JsonArray)
+                    ?.filterIsInstance<JsonObject>()
+                    ?.filter { (it["fieldBlockId"] as? JsonPrimitive)?.content?.isNotBlank() == true }
+                    .orEmpty()
+                val submitGroupId = (action["submitGroupId"] as? JsonPrimitive)?.content?.trim()
+                    ?.takeIf { it.isNotBlank() }
+                    ?: (block.props["submitGroupId"] as? JsonPrimitive)?.content?.trim()
+                        ?.takeIf { it.isNotBlank() }
+                    ?: "default"
+                val fields = if (existingFields.isNotEmpty()) {
+                    existingFields
+                } else {
+                    blocks
+                        .filter { it.type in submissionFieldTypes }
+                        .filter { candidate ->
+                            val candidateGroup = (candidate.props["submitGroupId"] as? JsonPrimitive)
+                                ?.content?.trim()?.takeIf { it.isNotBlank() } ?: "default"
+                            candidateGroup == submitGroupId
+                        }
+                        .map { candidate ->
+                            buildJsonObject {
+                                put("fieldBlockId", JsonPrimitive(candidate.id))
+                                val fieldKey = (candidate.props["fieldKey"] as? JsonPrimitive)?.content?.trim().orEmpty()
+                                if (fieldKey.isNotBlank()) put("targetFieldKey", JsonPrimitive(fieldKey))
+                            }
+                        }
+                }
+                val collectionId = (action["collectionId"] as? JsonPrimitive)?.content?.trim()
+                    ?.takeIf { it.isNotBlank() }
+                    ?: (block.props["collectionId"] as? JsonPrimitive)?.content?.trim()
+                        ?.takeIf { it.isNotBlank() }
+
+                put("action", buildJsonObject {
+                    put("type", JsonPrimitive("submitData"))
+                    put("fields", JsonArray(fields))
+                    if (!collectionId.isNullOrBlank()) put("collectionId", JsonPrimitive(collectionId))
+                })
+            }
+        }
+
+        if (isSubmitButton || block.type in submissionFieldTypes) block.copy(props = nextProps) else block
     }
 
     suspend fun submitPublicAppDataRecord(

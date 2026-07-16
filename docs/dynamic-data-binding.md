@@ -273,6 +273,8 @@ setPageState
 
 `setPageState` targets a stable page-variable ID and receives a `RuntimeValueRef`. The editor currently exposes a fixed text value or a live Input/Textarea value. Field references use stable block IDs rather than labels or submission keys. The value updates bound blocks immediately and resets when that page runtime is recreated; it is not written to hosted app data.
 
+`submitData` stores an explicit list of selected field block IDs on the button action. It does not require fields to point back to the button. When the button targets a project collection, each selected field also stores its target collection key.
+
 Likely future actions are:
 
 ```text

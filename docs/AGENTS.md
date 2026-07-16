@@ -73,10 +73,11 @@ props.scaleY
 - Do not claim planned strategic features are implemented unless the code supports them.
 - Update docs when architecture, deployment, schema, or roadmap changes.
 - Image file uploads should use the backend asset upload path when storage is configured; saved blocks store the returned URL in `props.src`. Data URLs are only a local/unsaved fallback.
-- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or when paired with a same-page `button` using `submitData` and a matching `submitGroupId`; otherwise document them as editor-time mockup controls.
+- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or explicitly selected by a same-page `button` using `submitData`; otherwise document them as editor-time mockup controls.
 - Shared interactive behavior flows through `props.action`; Button can be static, navigate, submit, open URLs, or set page variables, while Icon and Image support the applicable tap actions.
 - Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, and Data List reads publicly readable collection records in web and Android preview.
 - Pages may define text `stateVariables`, Text/Hero blocks may resolve `bindings` from those stable variable IDs, and supported interactive blocks may update them through `setPageState` in web and Android. Set Page Variable can use a fixed value or a live Input/Textarea value referenced by block ID. Values are page-runtime state rather than persisted app data. Static props remain the fallback; broader page data and generated-app users are still planned.
+- The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
 
 ## Current Block Inventory
 

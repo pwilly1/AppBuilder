@@ -12,7 +12,10 @@ import type { Block, GridPlacement, Page, Project } from './types'
 export const GRID_DENSITY_SCHEMA_VERSION = 2
 export const CONTAINER_SCHEMA_VERSION = 3
 export const UNIFIED_BUTTON_SCHEMA_VERSION = 4
-export const CURRENT_SCHEMA_VERSION = UNIFIED_BUTTON_SCHEMA_VERSION
+export const EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5
+export const CURRENT_SCHEMA_VERSION = EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION
+
+const SUBMISSION_FIELD_TYPES = new Set(['input', 'textarea', 'checkbox', 'toggle'])
 
 function migrateLegacyButton(block: Block): Block {
   const legacyType = String(block.type)
@@ -41,6 +44,61 @@ function migrateLegacyButton(block: Block): Block {
   delete props.toPageId
 
   return { ...block, type: 'button', props }
+}
+
+function migrateExplicitSubmitFields(blocks: Block[]): Block[] {
+  return blocks.map((block) => {
+    const props = { ...(block.props as Record<string, any>) }
+    const action = props.action
+
+    if (block.type === 'button' && action?.type === 'submitData') {
+      const existingFields = Array.isArray(action.fields)
+        ? action.fields
+            .map((field: any) => ({
+              fieldBlockId: typeof field?.fieldBlockId === 'string' ? field.fieldBlockId.trim() : '',
+              targetFieldKey: typeof field?.targetFieldKey === 'string' ? field.targetFieldKey.trim() : '',
+            }))
+            .filter((field: { fieldBlockId: string }) => field.fieldBlockId)
+        : []
+      const submitGroupId = typeof action.submitGroupId === 'string' && action.submitGroupId.trim()
+        ? action.submitGroupId.trim()
+        : typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
+          ? props.submitGroupId.trim()
+          : 'default'
+      const fields = existingFields.length > 0
+        ? existingFields
+        : blocks
+            .filter((candidate) => SUBMISSION_FIELD_TYPES.has(candidate.type))
+            .filter((candidate) => {
+              const candidateGroup = typeof candidate.props.submitGroupId === 'string' && candidate.props.submitGroupId.trim()
+                ? candidate.props.submitGroupId.trim()
+                : 'default'
+              return candidateGroup === submitGroupId
+            })
+            .map((candidate) => ({
+              fieldBlockId: candidate.id,
+              ...(typeof candidate.props.fieldKey === 'string' && candidate.props.fieldKey.trim()
+                ? { targetFieldKey: candidate.props.fieldKey.trim() }
+                : {}),
+            }))
+      const collectionId = typeof action.collectionId === 'string' && action.collectionId.trim()
+        ? action.collectionId.trim()
+        : typeof props.collectionId === 'string' && props.collectionId.trim()
+          ? props.collectionId.trim()
+          : ''
+
+      props.action = {
+        type: 'submitData',
+        fields,
+        ...(collectionId ? { collectionId } : {}),
+      }
+      delete props.submitGroupId
+      delete props.collectionId
+    }
+
+    if (SUBMISSION_FIELD_TYPES.has(block.type)) delete props.submitGroupId
+    return { ...block, props }
+  })
 }
 
 function scalePlacementFromEightColumnGrid(placement: GridPlacement): GridPlacement {
@@ -75,8 +133,14 @@ function ensureRenderDefaults(block: Block): Block {
   }
 }
 
-export function migratePageToGridLayout(page: Page, options: { scaleLegacyGridDensity?: boolean } = {}): Page {
-  const convertedBlocks = page.blocks.map(migrateLegacyButton)
+export function migratePageToGridLayout(
+  page: Page,
+  options: { scaleLegacyGridDensity?: boolean; migrateLegacySubmissionGroups?: boolean } = {},
+): Page {
+  const legacyButtonsMigrated = page.blocks.map(migrateLegacyButton)
+  const convertedBlocks = options.migrateLegacySubmissionGroups
+    ? migrateExplicitSubmitFields(legacyButtonsMigrated)
+    : legacyButtonsMigrated
   const supportedBlocks = convertedBlocks.filter((block) => isSupportedBlockType(block.type))
   if (!supportedBlocks.length) return supportedBlocks.length === convertedBlocks.length ? { ...page, blocks: convertedBlocks } : { ...page, blocks: [] }
 
@@ -130,10 +194,14 @@ export function migratePageToGridLayout(page: Page, options: { scaleLegacyGridDe
 
 export function migrateProjectToGridLayout(project: Project): Project {
   const scaleLegacyGridDensity = (project.schemaVersion ?? 1) < GRID_DENSITY_SCHEMA_VERSION
+  const migrateLegacySubmissionGroups = (project.schemaVersion ?? 1) < EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION
 
   return {
     ...project,
     schemaVersion: CURRENT_SCHEMA_VERSION,
-    pages: project.pages.map((page) => migratePageToGridLayout(page, { scaleLegacyGridDensity })),
+    pages: project.pages.map((page) => migratePageToGridLayout(page, {
+      scaleLegacyGridDensity,
+      migrateLegacySubmissionGroups,
+    })),
   }
 }

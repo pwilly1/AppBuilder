@@ -356,7 +356,7 @@ Representative areas:
 
 Date range: July 2026
 
-Interactive blocks gained one shared schema-backed action contract. Navigate, Submit Data, and Open URL actions now resolve consistently across web and Android, while legacy `toPageId` and `submitGroupId` projects continue working through runtime fallbacks. Nav Button, Icon, and Image expose action controls; Submit Button uses the same contract for hosted app-data submission.
+Interactive blocks gained one shared schema-backed action contract. Navigate, Submit Data, and Open URL actions now resolve consistently across web and Android. Legacy button and submission-group records are converted at the schema migration boundary rather than supported as parallel runtime paths.
 
 Representative areas:
 
@@ -435,3 +435,19 @@ Representative areas:
 - `frontend/src/shared/schema/gridLayout.ts`
 - `frontend/src/shared/schema/blockHierarchy.ts`
 - `frontend/src/shared/schema/gridMigration.ts`
+
+## Phase 22: Explicit Submit Field Selection
+
+Date range: July 2026
+
+Submit Data configuration moved from hidden field-to-button group IDs to explicit button-owned field selections. The Button inspector now lists eligible same-page fields under **When tapped**, web and Android runtimes collect values through stable block IDs, and collection targets store explicit field mappings. Schema version 5 converts existing grouped projects once and removes the obsolete connection properties before normal rendering.
+
+Representative areas:
+
+- `frontend/src/components/Inspector.tsx`
+- `frontend/src/shared/actions/blockActions.ts`
+- `frontend/src/shared/blocks/formRuntime.tsx`
+- `backend/src/services/AppDataService.ts`
+- `backend/src/services/ProjectSchemaMigration.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/FormRuntime.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`

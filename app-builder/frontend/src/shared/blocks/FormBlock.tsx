@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { submitPublicProjectForm } from '../../api'
-import { FormRuntimeProvider, resolveSubmitGroupId, type FormValue } from './formRuntime'
+import { collectAllFieldValues, collectFieldValues, FormRuntimeProvider, type FormValue } from './formRuntime'
 
 type FormBlockProps = {
   blockId?: string
@@ -34,18 +34,16 @@ export function FormBlock({
   contentPadding = 16,
   children,
 }: FormBlockProps) {
-  const [values, setValues] = useState<Record<string, Record<string, FormValue>>>({})
   const [fieldValuesByBlockId, setFieldValuesByBlockId] = useState<Record<string, FormValue>>({})
+  const [fieldKeysByBlockId, setFieldKeysByBlockId] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
   const canSubmit = Boolean(previewMode && projectId && blockId)
 
-  function setValue(fieldKey: string, value: FormValue, submitGroupId?: string, fieldBlockId?: string) {
-    const groupId = resolveSubmitGroupId(submitGroupId ?? blockId)
-    setValues((current) => ({ ...current, [groupId]: { ...(current[groupId] || {}), [fieldKey]: value } }))
-    if (fieldBlockId) {
-      setFieldValuesByBlockId((current) => ({ ...current, [fieldBlockId]: value }))
-    }
+  function setValue(fieldKey: string, value: FormValue, fieldBlockId?: string) {
+    const stableBlockId = fieldBlockId || fieldKey
+    setFieldValuesByBlockId((current) => ({ ...current, [stableBlockId]: value }))
+    setFieldKeysByBlockId((current) => ({ ...current, [stableBlockId]: fieldKey }))
     if (status !== 'idle') {
       setStatus('idle')
       setErrorMessage('')
@@ -57,11 +55,7 @@ export function FormBlock({
     setStatus('submitting')
     setErrorMessage('')
     try {
-      const mergedValues = Object.values(values).reduce<Record<string, FormValue>>(
-        (merged, groupValues) => ({ ...merged, ...groupValues }),
-        {},
-      )
-      await submitPublicProjectForm(projectId, blockId, mergedValues)
+      await submitPublicProjectForm(projectId, blockId, collectAllFieldValues(fieldValuesByBlockId, fieldKeysByBlockId))
       setStatus('success')
     } catch (error: any) {
       setStatus('error')
@@ -72,11 +66,12 @@ export function FormBlock({
   if (!previewMode) {
     return (
       <FormRuntimeProvider value={{
-        values,
         fieldValuesByBlockId,
+        fieldKeysByBlockId,
         setValue,
-        getGroupValues: (groupId) => values[resolveSubmitGroupId(groupId ?? blockId)] || {},
         getFieldValue: (fieldBlockId) => fieldValuesByBlockId[fieldBlockId],
+        getFieldValues: (fields) => collectFieldValues(fields, fieldValuesByBlockId),
+        getAllValues: () => collectAllFieldValues(fieldValuesByBlockId, fieldKeysByBlockId),
         previewMode,
       }}>
         <div className="relative h-full w-full overflow-hidden">
@@ -88,11 +83,12 @@ export function FormBlock({
 
   return (
     <FormRuntimeProvider value={{
-      values,
       fieldValuesByBlockId,
+      fieldKeysByBlockId,
       setValue,
-      getGroupValues: (groupId) => values[resolveSubmitGroupId(groupId ?? blockId)] || {},
       getFieldValue: (fieldBlockId) => fieldValuesByBlockId[fieldBlockId],
+      getFieldValues: (fields) => collectFieldValues(fields, fieldValuesByBlockId),
+      getAllValues: () => collectAllFieldValues(fieldValuesByBlockId, fieldKeysByBlockId),
       previewMode,
     }}>
       <div

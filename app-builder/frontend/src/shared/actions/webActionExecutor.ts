@@ -8,7 +8,7 @@ export type WebActionContext = {
   onNavigate?: (pageId: string) => void
   projectId?: string
   sourceBlockId?: string
-  formRuntime?: Pick<FormRuntimeContextValue, 'getGroupValues' | 'getFieldValue'> | null
+  formRuntime?: Pick<FormRuntimeContextValue, 'getFieldValues' | 'getFieldValue'> | null
   runtimeContext?: RuntimeContext
   onSetPageState?: (variableId: string, value: string) => void
 }
@@ -41,6 +41,6 @@ export async function executeWebBlockAction(action: BlockAction, context: WebAct
   }
 
   if (!context.projectId || !context.sourceBlockId) throw new Error('Save the project before submitting data.')
-  const values = context.formRuntime?.getGroupValues(action.submitGroupId) || {}
+  const values = context.formRuntime?.getFieldValues(action.fields) || {}
   await submitPublicAppDataRecord(context.projectId, context.sourceBlockId, values)
 }

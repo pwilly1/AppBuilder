@@ -56,6 +56,8 @@ type Props = {
   onPreviewModeChange?: (previewMode: boolean) => void
 }
 
+type WorkspaceTab = 'pages' | 'blocks' | 'data'
+
 export default function EditorLayout(props: Props) {
   const {
     projectId,
@@ -97,6 +99,7 @@ export default function EditorLayout(props: Props) {
   const [activeContainerId, setActiveContainerId] = useState<string | null>(null)
   const [pendingContainerDelete, setPendingContainerDelete] = useState<Block | null>(null)
   const [templateInsertError, setTemplateInsertError] = useState<string | null>(null)
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('blocks')
   const activeContainer = useMemo(
     () => (page?.blocks || []).find((block: Block) => block.id === activeContainerId && isContainerBlock(block)) ?? null,
     [activeContainerId, page?.blocks],
@@ -566,45 +569,63 @@ export default function EditorLayout(props: Props) {
           <div className="editor-rail-header">
             <div>
               <div className="editor-section-title">Workspace</div>
-              <div className="mt-1 text-base font-semibold text-slate-900">Build tools</div>
+              <div className="mt-1 text-base font-semibold text-slate-900">Build your app</div>
             </div>
-            <div className="flex flex-wrap justify-end gap-2">
-              <span className="editor-pill">{pageCount} pages</span>
-              <span className="editor-pill">{blockCount} blocks</span>
-            </div>
+            <span className="editor-pill">{pageCount} pages</span>
           </div>
 
-          <div className="editor-side-panel-body mt-4 space-y-5">
-            <PagesPanel
-              pages={pages}
-              selectedPageId={selectedPageId}
-              onSelect={(id) => selectPage?.(id)}
-              onAdd={() => addPage?.()}
-              onRename={(id, title) => renamePage?.(id, title)}
-              onDelete={(id) => deletePage?.(id)}
+          <div className="editor-workspace-tabs mt-4" role="tablist" aria-label="Editor workspace tools">
+            <WorkspaceTabButton
+              active={workspaceTab === 'pages'}
+              count={pageCount}
+              label="Pages"
+              onClick={() => setWorkspaceTab('pages')}
             />
-
-            <PageVariablesPanel
-              variables={page?.stateVariables || []}
-              onChange={(stateVariables: PageStateVariable[]) => {
-                if (!page?.id) return
-                applyProjectTransaction?.((current: Project) => ({
-                  ...current,
-                  pages: current.pages.map((candidate) => candidate.id === page.id ? { ...candidate, stateVariables } : candidate),
-                }))
-              }}
+            <WorkspaceTabButton
+              active={workspaceTab === 'blocks'}
+              count={blockCount}
+              label="Blocks"
+              onClick={() => setWorkspaceTab('blocks')}
             />
-
-            <DataCollectionsPanel
-              collections={project?.dataCollections || []}
-              onChange={(dataCollections) => applyProjectTransaction?.((current: Project) => ({ ...current, dataCollections }))}
+            <WorkspaceTabButton
+              active={workspaceTab === 'data'}
+              count={(project?.dataCollections?.length ?? 0) + (page?.stateVariables?.length ?? 0)}
+              label="Data"
+              onClick={() => setWorkspaceTab('data')}
             />
+          </div>
 
-            <div>
-              <div className="editor-rail-section-heading">
+          <div className="editor-side-panel-body mt-4">
+            <div
+              id="workspace-panel-pages"
+              role="tabpanel"
+              aria-label="Pages"
+              hidden={workspaceTab !== 'pages'}
+            >
+              <div className="editor-workspace-intro">
+                <div className="editor-section-title">App structure</div>
+                <p>Manage screens and choose which page you are editing.</p>
+              </div>
+              <PagesPanel
+                pages={pages}
+                selectedPageId={selectedPageId}
+                onSelect={(id) => selectPage?.(id)}
+                onAdd={() => addPage?.()}
+                onRename={(id, title) => renamePage?.(id, title)}
+                onDelete={(id) => deletePage?.(id)}
+              />
+            </div>
+
+            <div
+              id="workspace-panel-blocks"
+              role="tabpanel"
+              aria-label="Blocks"
+              hidden={workspaceTab !== 'blocks'}
+            >
+              <div className="editor-workspace-intro editor-workspace-intro-row">
                 <div>
-                  <div className="editor-section-title">Blocks</div>
-                  <h3 className="mt-1 text-sm font-semibold text-slate-900">Add elements</h3>
+                  <div className="editor-section-title">Block library</div>
+                  <p>Click to add or drag an element onto the canvas.</p>
                 </div>
                 <span className="editor-kicker">Drag to place</span>
               </div>
@@ -619,6 +640,33 @@ export default function EditorLayout(props: Props) {
                   Adding into selected container. Click Exit Container to add to the page again.
                 </div>
               ) : null}
+            </div>
+
+            <div
+              id="workspace-panel-data"
+              className="space-y-4"
+              role="tabpanel"
+              aria-label="Data"
+              hidden={workspaceTab !== 'data'}
+            >
+              <div className="editor-workspace-intro">
+                <div className="editor-section-title">Runtime data</div>
+                <p>Define page values and collections used by interactive blocks.</p>
+              </div>
+              <PageVariablesPanel
+                variables={page?.stateVariables || []}
+                onChange={(stateVariables: PageStateVariable[]) => {
+                  if (!page?.id) return
+                  applyProjectTransaction?.((current: Project) => ({
+                    ...current,
+                    pages: current.pages.map((candidate) => candidate.id === page.id ? { ...candidate, stateVariables } : candidate),
+                  }))
+                }}
+              />
+              <DataCollectionsPanel
+                collections={project?.dataCollections || []}
+                onChange={(dataCollections) => applyProjectTransaction?.((current: Project) => ({ ...current, dataCollections }))}
+              />
             </div>
           </div>
         </div>
@@ -782,6 +830,32 @@ export default function EditorLayout(props: Props) {
         </div>
       ) : null}
     </>
+  )
+}
+
+function WorkspaceTabButton({
+  active,
+  count,
+  label,
+  onClick,
+}: {
+  active: boolean
+  count: number
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      className="editor-workspace-tab"
+      data-active={active}
+      onClick={onClick}
+    >
+      <span>{label}</span>
+      <span className="editor-workspace-tab-count">{count}</span>
+    </button>
   )
 }
 

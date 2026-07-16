@@ -92,9 +92,13 @@ test('block actions normalize each supported action contract', () => {
     type: 'navigate',
     targetPageId: 'page-2',
   })
-  assert.deepEqual(normalizeBlockAction({ type: 'submitData', submitGroupId: ' ', collectionId: ' records ' }), {
+  assert.deepEqual(normalizeBlockAction({
     type: 'submitData',
-    submitGroupId: 'default',
+    fields: [{ fieldBlockId: ' input-1 ', targetFieldKey: ' email ' }],
+    collectionId: ' records ',
+  }), {
+    type: 'submitData',
+    fields: [{ fieldBlockId: 'input-1', targetFieldKey: 'email' }],
     collectionId: 'records',
   })
   assert.deepEqual(normalizeBlockAction({ type: 'openUrl', url: ' https://example.com ' }), {
@@ -116,6 +120,18 @@ test('block actions normalize each supported action contract', () => {
 test('configured action checks reject incomplete and unsafe actions', () => {
   assert.equal(isActionConfigured({ type: 'navigate', targetPageId: '' }), false)
   assert.equal(isActionConfigured({ type: 'navigate', targetPageId: 'page-2' }), true)
+  assert.equal(isActionConfigured({ type: 'submitData', fields: [] }), false)
+  assert.equal(isActionConfigured({ type: 'submitData', fields: [{ fieldBlockId: 'input-1' }] }), true)
+  assert.equal(isActionConfigured({
+    type: 'submitData',
+    fields: [{ fieldBlockId: 'input-1' }],
+    collectionId: 'records',
+  }), false)
+  assert.equal(isActionConfigured({
+    type: 'submitData',
+    fields: [{ fieldBlockId: 'input-1', targetFieldKey: 'email' }],
+    collectionId: 'records',
+  }), true)
   assert.equal(isActionConfigured({ type: 'openUrl', url: 'javascript:alert(1)' }), false)
   assert.equal(isActionConfigured({ type: 'openUrl', url: 'https://example.com' }), true)
   assert.equal(isSupportedExternalUrl('http://localhost:5173'), true)

@@ -40,7 +40,7 @@ export const SECTION_TEMPLATE_DEFINITIONS: SectionTemplateDefinition[] = [
   {
     id: 'signup-form',
     name: 'Signup Form',
-    description: 'Submission layout with grouped fields and a submit action.',
+    description: 'Submission layout with fields selected by a submit action.',
     category: 'section',
     preview: 'Form',
     bounds: { cols: 14, rows: 14 },

@@ -42,9 +42,14 @@ export type LayoutAlign = 'start' | 'center' | 'end';
 export type LayoutSpacing = 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type RenderAlign = 'start' | 'center' | 'end';
 
+export type SubmitDataFieldRef = {
+  fieldBlockId: string;
+  targetFieldKey?: string;
+};
+
 export type BlockAction =
   | { type: 'navigate'; targetPageId: string }
-  | { type: 'submitData'; submitGroupId: string; collectionId?: string }
+  | { type: 'submitData'; fields: SubmitDataFieldRef[]; collectionId?: string }
   | { type: 'openUrl'; url: string }
   | { type: 'setPageState'; variableId: string; value: RuntimeValueRef };
 

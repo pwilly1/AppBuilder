@@ -1,4 +1,4 @@
-import type { Block, BlockAction } from '../schema/types'
+import type { Block, BlockAction, SubmitDataFieldRef } from '../schema/types'
 import { normalizeRuntimeValueRef } from '../runtime/runtimeBindings'
 
 export function normalizeBlockAction(value: unknown): BlockAction | null {
@@ -12,7 +12,7 @@ export function normalizeBlockAction(value: unknown): BlockAction | null {
     const collectionId = readString(action.collectionId)
     return {
       type: 'submitData',
-      submitGroupId: readString(action.submitGroupId) || 'default',
+      fields: normalizeSubmitFields(action.fields),
       ...(collectionId ? { collectionId } : {}),
     }
   }
@@ -40,7 +40,10 @@ export function resolveBlockAction(block: Block): BlockAction | null {
 export function isActionConfigured(action: BlockAction | null | undefined): boolean {
   if (!action) return false
   if (action.type === 'navigate') return Boolean(action.targetPageId.trim())
-  if (action.type === 'submitData') return Boolean(action.submitGroupId.trim())
+  if (action.type === 'submitData') {
+    return action.fields.length > 0
+      && (!action.collectionId || action.fields.every((field) => Boolean(field.targetFieldKey)))
+  }
   if (action.type === 'openUrl') return isSupportedExternalUrl(action.url)
   return Boolean(action.variableId.trim())
 }
@@ -56,4 +59,23 @@ export function isSupportedExternalUrl(value: string): boolean {
 
 function readString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeSubmitFields(value: unknown): SubmitDataFieldRef[] {
+  if (!Array.isArray(value)) return []
+  const fields = new Map<string, SubmitDataFieldRef>()
+
+  for (const candidate of value) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue
+    const field = candidate as Record<string, unknown>
+    const fieldBlockId = readString(field.fieldBlockId)
+    if (!fieldBlockId || fields.has(fieldBlockId)) continue
+    const targetFieldKey = readString(field.targetFieldKey)
+    fields.set(fieldBlockId, {
+      fieldBlockId,
+      ...(targetFieldKey ? { targetFieldKey } : {}),
+    })
+  }
+
+  return Array.from(fields.values())
 }

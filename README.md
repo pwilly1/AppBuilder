@@ -15,7 +15,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - JWT signup/login and protected project APIs
 - Project dashboard with create/open/delete flows
 - Multi-page app projects
-- Visual editor with pages, drag-aware block palette, canvas, and inspector
+- Visual editor with tabbed workspace tools for pages, blocks, and data, plus a drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
 - Page-scoped text variables can drive Text and Hero content through schema-backed bindings in web and Android preview
@@ -25,8 +25,8 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Icon and Image can optionally run shared Navigate, Open URL, or Set Page Variable actions in web and Android preview
 - Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
 - Form blocks can collect live app-user submissions in web preview using nested Input, Textarea, Checkbox, and Toggle field blocks
-- Buttons configured with Submit Data can submit same-page Input, Textarea, Checkbox, and Toggle fields that share a `submitGroupId`, either to their own source or to a selected project collection
-- Input, Textarea, Checkbox, and Toggle can act as grouped live fields in web preview when nested inside a Form block or paired with a Submit Data button; otherwise they remain editor-time mockup controls
+- Buttons configured with Submit Data explicitly select which same-page Input, Textarea, Checkbox, and Toggle fields they submit, either to their own source or to a selected project collection
+- Input, Textarea, Checkbox, and Toggle can act as live fields in web preview when nested inside a Form block or selected by a Submit Data button; otherwise they remain editor-time mockup controls
 - Project-level data collections define stable typed record sources with optional public-read access for runtime list blocks
 - Data List blocks can display records from a publicly readable collection in web and Android preview
 - Container blocks can group supported atomic child blocks including Image, expose container styling in the inspector, and render in both web and Android preview
@@ -88,7 +88,8 @@ props = block-specific content and styling
 The long-term goal is for the same saved schema to power web preview, Android preview, future export targets, and eventual AI-assisted generation.
 
 Today the editor canvas is intentionally constrained to a phone-style 16-column by 29-row workspace so placement stays predictable and closer to the Android reference surface.
-The current add-block palette is grouped into text/navigation, visual elements, forms/fields, and layout blocks so new schema-backed blocks can land without introducing more one-off business sections.
+The current editor keeps page structure, block insertion, and runtime data setup in a tabbed left workspace so the rail stays focused while preserving the same three-column shell.
+Inside the Blocks tab, the add-block palette is grouped into text/navigation, visual elements, forms/fields, and layout blocks so new schema-backed blocks can land without introducing more one-off business sections.
 
 ## License
 

@@ -99,7 +99,7 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
         pageTitle: page.title || 'Untitled Page',
         block,
         pageBlocks,
-        fields: collectGroupedFields(pageBlocks, block),
+        fields: collectSelectedFields(pageBlocks, block),
         publicRead: false,
       };
     }
@@ -302,15 +302,15 @@ function collectFormChildFields(project: ProjectLike, formBlockId: string): AppD
   return fields;
 }
 
-function collectGroupedFields(pageBlocks: BlockLike[], submitBlock: BlockLike): AppDataFieldDefinition[] {
+function collectSelectedFields(pageBlocks: BlockLike[], submitBlock: BlockLike): AppDataFieldDefinition[] {
   const fields: AppDataFieldDefinition[] = [];
   const usedKeys = new Map<string, number>();
-  const submitGroupId = resolveSubmitActionGroupId(submitBlock);
+  const fieldsById = new Map(pageBlocks.map((block) => [block.id, block]));
 
-  for (const block of pageBlocks) {
-    if (!FIELD_TYPES.has(block.type)) continue;
-    if (resolveSubmitGroupId(readStringProp(block, 'submitGroupId')) !== submitGroupId) continue;
-    fields.push(createFieldDefinition(block, usedKeys));
+  for (const fieldRef of readSubmitActionFields(submitBlock)) {
+    const block = fieldsById.get(fieldRef.fieldBlockId);
+    if (!block || !FIELD_TYPES.has(block.type)) continue;
+    fields.push(createFieldDefinition(block, usedKeys, fieldRef.targetFieldKey));
   }
 
   return fields;
@@ -348,8 +348,8 @@ function createCollectionSource(collection: CollectionLike): AppDataSourceMatch 
   };
 }
 
-function createFieldDefinition(block: BlockLike, usedKeys: Map<string, number>): AppDataFieldDefinition {
-  const baseKey = resolveFieldKey(block);
+function createFieldDefinition(block: BlockLike, usedKeys: Map<string, number>, targetFieldKey?: string): AppDataFieldDefinition {
+  const baseKey = targetFieldKey?.trim() || resolveFieldKey(block);
   const count = usedKeys.get(baseKey) ?? 0;
   usedKeys.set(baseKey, count + 1);
   const key = count === 0 ? baseKey : `${baseKey}_${count + 1}`;
@@ -448,21 +448,20 @@ function readStringProp(block: BlockLike, key: string) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
-function resolveSubmitGroupId(value?: string) {
-  const raw = value?.trim() || 'default';
-  const slug = raw
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  return slug || 'default';
-}
-
-function resolveSubmitActionGroupId(block: BlockLike) {
+function readSubmitActionFields(block: BlockLike) {
   const action = block.props?.action;
-  if (isRecord(action) && action.type === 'submitData' && typeof action.submitGroupId === 'string') {
-    return resolveSubmitGroupId(action.submitGroupId);
+  if (!isRecord(action) || action.type !== 'submitData' || !Array.isArray(action.fields)) return [];
+  const fields = new Map<string, { fieldBlockId: string; targetFieldKey?: string }>();
+
+  for (const candidate of action.fields) {
+    if (!isRecord(candidate) || typeof candidate.fieldBlockId !== 'string') continue;
+    const fieldBlockId = candidate.fieldBlockId.trim();
+    if (!fieldBlockId || fields.has(fieldBlockId)) continue;
+    const targetFieldKey = typeof candidate.targetFieldKey === 'string' ? candidate.targetFieldKey.trim() : '';
+    fields.set(fieldBlockId, { fieldBlockId, ...(targetFieldKey ? { targetFieldKey } : {}) });
   }
-  return resolveSubmitGroupId(readStringProp(block, 'submitGroupId'));
+
+  return Array.from(fields.values());
 }
 
 function resolveSubmitCollectionId(block: BlockLike) {

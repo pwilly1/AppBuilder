@@ -21,7 +21,7 @@ import { DraggableBlock } from './DraggableBlock'
 import { BlockRenderer } from '../shared/BlockRenderer'
 import { createPageRuntimeContext, type RuntimeContext } from '../shared/runtime/runtimeBindings'
 import { BLOCK_DRAG_DATA_TYPE, getActiveDraggedBlock, getDraggedBlockFromDataTransfer } from './blockDrag'
-import { FormRuntimeProvider, resolveSubmitGroupId, type FormValue } from '../shared/blocks/formRuntime'
+import { collectAllFieldValues, collectFieldValues, FormRuntimeProvider, type FormValue } from '../shared/blocks/formRuntime'
 import {
   buildBlockHierarchyIndex,
   canBlockBeContainerChild,
@@ -94,8 +94,8 @@ export function PageRenderer({
   const [gridPreview, setGridPreview] = useState<GridPreview | null>(null)
   const [newBlockPreview, setNewBlockPreview] = useState<GridPreview | null>(null)
   const [screenWidth, setScreenWidth] = useState(390)
-  const [fieldValues, setFieldValues] = useState<Record<string, Record<string, FormValue>>>({})
   const [fieldValuesByBlockId, setFieldValuesByBlockId] = useState<Record<string, FormValue>>({})
+  const [fieldKeysByBlockId, setFieldKeysByBlockId] = useState<Record<string, string>>({})
   const pageStateVariables = page.stateVariables
   const initialPageState = useMemo(
     () => createPageRuntimeContext({ stateVariables: pageStateVariables }).pageState,
@@ -122,8 +122,8 @@ export function PageRenderer({
     setNewBlockPreview(null)
     setShowHGuide(false)
     setShowVGuide(false)
-    setFieldValues({})
     setFieldValuesByBlockId({})
+    setFieldKeysByBlockId({})
   }, [page.id, page.blocks.length])
 
   useEffect(() => {
@@ -445,31 +445,20 @@ export function PageRenderer({
 
   const activeGridPreview = gridPreview ?? newBlockPreview
 
-  function setFieldValue(fieldKey: string, value: FormValue, submitGroupId?: string, fieldBlockId?: string) {
-    const groupId = resolveSubmitGroupId(submitGroupId)
-    setFieldValues((current) => ({
-      ...current,
-      [groupId]: {
-        ...(current[groupId] || {}),
-        [fieldKey]: value,
-      },
-    }))
-    if (fieldBlockId) {
-      setFieldValuesByBlockId((current) => ({ ...current, [fieldBlockId]: value }))
-    }
-  }
-
-  function getGroupValues(submitGroupId?: string) {
-    return fieldValues[resolveSubmitGroupId(submitGroupId)] || {}
+  function setFieldValue(fieldKey: string, value: FormValue, fieldBlockId?: string) {
+    const stableBlockId = fieldBlockId || fieldKey
+    setFieldValuesByBlockId((current) => ({ ...current, [stableBlockId]: value }))
+    setFieldKeysByBlockId((current) => ({ ...current, [stableBlockId]: fieldKey }))
   }
 
   return (
     <FormRuntimeProvider value={{
-      values: fieldValues,
       fieldValuesByBlockId,
+      fieldKeysByBlockId,
       setValue: setFieldValue,
-      getGroupValues,
       getFieldValue: (fieldBlockId) => fieldValuesByBlockId[fieldBlockId],
+      getFieldValues: (fields) => collectFieldValues(fields, fieldValuesByBlockId),
+      getAllValues: () => collectAllFieldValues(fieldValuesByBlockId, fieldKeysByBlockId),
       previewMode,
     }}>
       <div className="editor-stage px-3 py-3">

@@ -1,10 +1,10 @@
-import { resolveFieldKey, resolveSubmitGroupId, useFormRuntime } from './formRuntime'
+import { useEffect } from 'react'
+import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 export function InputBlock({
   blockId,
   label = 'Label',
   fieldKey = '',
-  submitGroupId = '',
   required = false,
   placeholder = 'Placeholder',
   value = '',
@@ -19,7 +19,6 @@ export function InputBlock({
   blockId?: string
   label?: string
   fieldKey?: string
-  submitGroupId?: string
   required?: boolean
   placeholder?: string
   value?: string
@@ -33,14 +32,18 @@ export function InputBlock({
 }) {
   const formRuntime = useFormRuntime()
   const resolvedFieldKey = resolveFieldKey(blockId, label, fieldKey)
-  const resolvedGroupId = resolveSubmitGroupId(submitGroupId)
-  const runtimeValue = formRuntime?.values[resolvedGroupId]?.[resolvedFieldKey]
+  const runtimeValue = blockId ? formRuntime?.getFieldValue(blockId) : undefined
   const currentValue = typeof runtimeValue === 'string' ? runtimeValue : value
   const displayValue = currentValue || placeholder
   const isPlaceholder = !currentValue
   const safeFontSize = Math.max(8, Number(fontSize) || 14)
   const safeRadius = Math.max(0, Number(borderRadius) || 0)
   const isRuntimeField = Boolean(formRuntime?.previewMode)
+
+  useEffect(() => {
+    if (!isRuntimeField || !blockId || formRuntime?.getFieldValue(blockId) !== undefined) return
+    formRuntime?.setValue(resolvedFieldKey, value, blockId)
+  }, [blockId, formRuntime, isRuntimeField, resolvedFieldKey, value])
 
   return (
     <div
@@ -78,7 +81,7 @@ export function InputBlock({
           value={currentValue}
           placeholder={placeholder}
           required={required}
-          onChange={(event) => formRuntime?.setValue(resolvedFieldKey, event.currentTarget.value, resolvedGroupId, blockId)}
+          onChange={(event) => formRuntime?.setValue(resolvedFieldKey, event.currentTarget.value, blockId)}
           style={{
             minHeight: 0,
             flex: 1,

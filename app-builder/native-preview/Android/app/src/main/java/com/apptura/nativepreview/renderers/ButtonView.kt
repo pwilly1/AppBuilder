@@ -37,7 +37,6 @@ fun ButtonView(
     val label = (block.props["label"] as? JsonPrimitive)?.content ?: "Button"
     val action = resolveBlockAction(block)
     val submitAction = action as? BlockAction.SubmitData
-    val submitGroupId = resolveSubmitGroupId(submitAction?.submitGroupId)
     val successMessage = (block.props["successMessage"] as? JsonPrimitive)?.content ?: "Submission received."
     val fontSize = (block.props["fontSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 14.0
     val contentPadding = (block.props["contentPadding"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 12.0
@@ -48,7 +47,10 @@ fun ButtonView(
     val textColor = parseButtonColor((block.props["textColor"] as? JsonPrimitive)?.content, Color.White)
     val contentScale = getBlockContentScale(block)
     val scaledFontSize = fontSize.toFloat() * contentScale
-    val canSubmit = submitAction != null && !projectId.isNullOrBlank() && !baseUrl.isNullOrBlank() && formRuntime != null
+    val submitFieldsConfigured = submitAction != null
+        && submitAction.fields.isNotEmpty()
+        && (submitAction.collectionId == null || submitAction.fields.all { !it.targetFieldKey.isNullOrBlank() })
+    val canSubmit = submitFieldsConfigured && !projectId.isNullOrBlank() && !baseUrl.isNullOrBlank() && formRuntime != null
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember(block.id) { mutableStateOf(ButtonStatus.IDLE) }
@@ -75,7 +77,7 @@ fun ButtonView(
                             baseUrl = baseUrl,
                             projectId = projectId,
                             sourceId = block.id,
-                            values = formRuntime.getGroupValues(submitGroupId),
+                            values = formRuntime.getFieldValues(submitAction.fields),
                         )
                         status = ButtonStatus.SUCCESS
                     } catch (error: Exception) {

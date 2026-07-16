@@ -44,16 +44,33 @@ export function instantiateSectionTemplate(
   } = {},
 ): Block[] {
   const idByKey = new Map<string, string>()
+  const submitFieldsByGroupKey = new Map<string, Array<{ fieldBlockId: string }>>()
 
   for (const block of template.blocks) {
     idByKey.set(block.key, crypto.randomUUID())
+  }
+
+  for (const block of template.blocks) {
+    const submitGroupKey = typeof block.props?.submitGroupKey === 'string' ? block.props.submitGroupKey : ''
+    if (!submitGroupKey || !isSubmissionFieldType(block.type)) continue
+    const fieldBlockId = idByKey.get(block.key)
+    if (!fieldBlockId) continue
+    submitFieldsByGroupKey.set(submitGroupKey, [
+      ...(submitFieldsByGroupKey.get(submitGroupKey) || []),
+      { fieldBlockId },
+    ])
   }
 
   return template.blocks.map((definition) => {
     const overrideProps = options.blockProps?.[definition.key] ?? {}
     const base = createBlock(
       definition.type,
-      resolveTemplateProps({ ...(definition.props || {}), ...overrideProps }, options.pageIdByKey, idByKey),
+      resolveTemplateProps(
+        definition.type,
+        { ...(definition.props || {}), ...overrideProps },
+        options.pageIdByKey,
+        submitFieldsByGroupKey,
+      ),
     )
     const id = idByKey.get(definition.key) ?? crypto.randomUUID()
     const parentId = definition.parentKey ? idByKey.get(definition.parentKey) : undefined
@@ -110,9 +127,10 @@ export function instantiateTemplate(template: SectionTemplateDefinition, placeme
 }
 
 function resolveTemplateProps(
+  blockType: Block['type'],
   props: Record<string, any>,
   pageIdByKey?: Map<string, string>,
-  blockIdByKey?: Map<string, string>,
+  submitFieldsByGroupKey?: Map<string, Array<{ fieldBlockId: string }>>,
 ) {
   const next = { ...props }
   const toPageKey = typeof next.toPageKey === 'string' ? next.toPageKey : null
@@ -123,21 +141,20 @@ function resolveTemplateProps(
     next.action = { type: 'navigate', targetPageId: next.toPageId }
   }
   const submitGroupKey = typeof next.submitGroupKey === 'string' ? next.submitGroupKey : null
-  if (submitGroupKey && blockIdByKey?.has(submitGroupKey)) {
-    next.submitGroupId = blockIdByKey.get(submitGroupKey)
+  if (blockType === 'button' && submitGroupKey) {
     next.action = {
       type: 'submitData',
-      submitGroupId: next.submitGroupId,
-      ...(typeof next.collectionId === 'string' && next.collectionId.trim() ? { collectionId: next.collectionId.trim() } : {}),
-    }
-  } else if (typeof next.submitGroupId === 'string') {
-    next.action = {
-      type: 'submitData',
-      submitGroupId: next.submitGroupId,
+      fields: submitFieldsByGroupKey?.get(submitGroupKey) || [],
       ...(typeof next.collectionId === 'string' && next.collectionId.trim() ? { collectionId: next.collectionId.trim() } : {}),
     }
   }
   delete next.toPageKey
   delete next.submitGroupKey
+  delete next.submitGroupId
+  delete next.collectionId
   return next
+}
+
+function isSubmissionFieldType(type: Block['type']) {
+  return type === 'input' || type === 'textarea' || type === 'checkbox' || type === 'toggle'
 }

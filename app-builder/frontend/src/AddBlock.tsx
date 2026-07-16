@@ -201,7 +201,7 @@ export function AddBlock({
       {onAddTemplate ? (
         <>
           {SECTION_TEMPLATE_DEFINITIONS.length ? (
-            <CollapsibleSection title="Section Templates" defaultOpen>
+            <CollapsibleSection title="Section Templates">
               <div className="grid gap-2">
                 {SECTION_TEMPLATE_DEFINITIONS.map((template) => (
                   <TemplateEntry key={template.id} template={template} onAddTemplate={onAddTemplate} />
@@ -232,7 +232,7 @@ export function AddBlock({
         </>
       ) : null}
 
-      <CollapsibleSection title="Text & Navigation" defaultOpen>
+      <CollapsibleSection title="Text & Navigation">
         <div className="grid gap-2">
           <BlockEntry title="Hero" note="Intro headline" create={() => createBlock('hero', { headline: 'New Hero' })} onAdd={onAdd} />
           <BlockEntry title="Text" note="Paragraphs or short body copy" create={() => createBlock('text', { value: 'New text' })} onAdd={onAdd} />
@@ -240,7 +240,7 @@ export function AddBlock({
         </div>
       </CollapsibleSection>
 
-      <CollapsibleSection title="Visual Elements" defaultOpen>
+      <CollapsibleSection title="Visual Elements">
         <div className="grid gap-2">
           <BlockEntry title="Badge" note="Pill status or tag" create={() => createBlock('badge')} onAdd={onAdd} />
           <BlockEntry title="Icon" note="Simple symbol from a safe set" create={() => createBlock('icon')} onAdd={onAdd} />

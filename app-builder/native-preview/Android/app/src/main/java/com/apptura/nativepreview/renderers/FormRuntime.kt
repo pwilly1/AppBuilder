@@ -4,39 +4,31 @@ import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.serialization.json.JsonPrimitive
 
 class FormRuntimeState {
-    private val values = mutableStateMapOf<String, Map<String, JsonPrimitive>>()
     private val valuesByBlockId = mutableStateMapOf<String, JsonPrimitive>()
+    private val fieldKeysByBlockId = mutableStateMapOf<String, String>()
 
-    fun getString(fieldKey: String, submitGroupId: String): String? =
-        values[resolveSubmitGroupId(submitGroupId)]
-            ?.get(fieldKey)
-            ?.content
+    fun getString(fieldBlockId: String): String? = valuesByBlockId[fieldBlockId]?.content
 
-    fun getBoolean(fieldKey: String, submitGroupId: String): Boolean? =
-        values[resolveSubmitGroupId(submitGroupId)]
-            ?.get(fieldKey)
-            ?.content
-            ?.toBooleanStrictOrNull()
+    fun getBoolean(fieldBlockId: String): Boolean? =
+        valuesByBlockId[fieldBlockId]?.content?.toBooleanStrictOrNull()
 
-    fun setString(fieldKey: String, value: String, submitGroupId: String, fieldBlockId: String? = null) {
-        setValue(fieldKey, JsonPrimitive(value), submitGroupId)
-        if (!fieldBlockId.isNullOrBlank()) valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
+    fun setString(fieldKey: String, value: String, fieldBlockId: String) {
+        valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
+        fieldKeysByBlockId[fieldBlockId] = fieldKey
     }
 
-    fun setBoolean(fieldKey: String, value: Boolean, submitGroupId: String, fieldBlockId: String? = null) {
-        setValue(fieldKey, JsonPrimitive(value), submitGroupId)
-        if (!fieldBlockId.isNullOrBlank()) valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
+    fun setBoolean(fieldKey: String, value: Boolean, fieldBlockId: String) {
+        valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
+        fieldKeysByBlockId[fieldBlockId] = fieldKey
     }
 
     fun getFieldValue(fieldBlockId: String): JsonPrimitive? = valuesByBlockId[fieldBlockId]
 
-    fun getGroupValues(submitGroupId: String): Map<String, JsonPrimitive> =
-        values[resolveSubmitGroupId(submitGroupId)].orEmpty()
-
-    private fun setValue(fieldKey: String, value: JsonPrimitive, submitGroupId: String) {
-        val groupId = resolveSubmitGroupId(submitGroupId)
-        values[groupId] = values[groupId].orEmpty() + (fieldKey to value)
-    }
+    fun getFieldValues(fields: List<SubmitDataFieldRef>): Map<String, JsonPrimitive> = fields.mapNotNull { field ->
+        valuesByBlockId[field.fieldBlockId]?.let { value ->
+            (field.targetFieldKey ?: field.fieldBlockId) to value
+        }
+    }.toMap()
 }
 
 fun resolveFieldKey(blockId: String, label: String?, explicitKey: String?): String {
@@ -45,10 +37,6 @@ fun resolveFieldKey(blockId: String, label: String?, explicitKey: String?): Stri
         ?: blockId
     return slugifyRuntimeKey(raw).ifBlank { blockId }
 }
-
-fun resolveSubmitGroupId(submitGroupId: String?): String =
-    slugifyRuntimeKey(submitGroupId?.trim().takeUnless { it.isNullOrBlank() } ?: "default")
-        .ifBlank { "default" }
 
 private fun slugifyRuntimeKey(value: String): String = value
     .lowercase()

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import type { AppDataCollection, Block, PageStateVariable } from '../shared/schema/types';
+import type { AppDataCollection, Block, PageStateVariable, SubmitDataFieldRef } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
 import { uploadProjectImage } from '../api';
@@ -104,7 +104,11 @@ export default function Inspector({
   const actionType = watch('action.type') as string | undefined;
   const actionValueSource = watch('action.value.source') as string | undefined;
   const selectedActionFieldBlockId = watch('action.value.fieldBlockId') as string | undefined;
-  const watchedSubmitGroupId = watch('submitGroupId') as string | undefined;
+  const watchedSubmitFields = watch('action.fields');
+  const selectedSubmitFields = Array.isArray(watchedSubmitFields)
+    ? watchedSubmitFields as SubmitDataFieldRef[]
+    : [];
+  const selectedSubmitCollectionId = watch('action.collectionId') as string | undefined;
   const stateValueFieldBlocks = React.useMemo(() => {
     const formIds = new Set(pageBlocks.filter((candidate) => candidate.type === 'form').map((candidate) => candidate.id));
     const actionFormScope = block?.parentId && formIds.has(block.parentId) ? block.parentId : null;
@@ -114,35 +118,16 @@ export default function Inspector({
       return candidateFormScope === actionFormScope;
     });
   }, [block?.parentId, pageBlocks]);
-  const submitTargets = React.useMemo(() => {
-    const targets = new Map<string, {
-      blockId: string;
-      label: string;
-      groupId: string;
-      collection: AppDataCollection | null;
-    }>();
-
-    for (const candidate of pageBlocks) {
-      if (candidate.type !== 'button') continue;
-      const action = resolveBlockAction(candidate);
-      if (action?.type !== 'submitData') continue;
-      const groupId = normalizeSubmitGroupId(action.submitGroupId);
-      if (targets.has(groupId)) continue;
-      targets.set(groupId, {
-        blockId: candidate.id,
-        label: String(candidate.props.label || 'Submit'),
-        groupId,
-        collection: dataCollections.find((collection) => collection.id === action.collectionId) ?? null,
-      });
-    }
-
-    return Array.from(targets.values());
-  }, [dataCollections, pageBlocks]);
-  const selectedSubmitTarget = watchedSubmitGroupId === ''
-    ? null
-    : submitTargets.find(
-      (target) => target.groupId === normalizeSubmitGroupId(watchedSubmitGroupId),
-    ) ?? null;
+  const submitFieldBlocks = React.useMemo(() => {
+    const activeFormId = findOwningFormId(block, pageBlocks);
+    return pageBlocks.filter((candidate) => (
+      isSubmissionField(candidate)
+      && findOwningFormId(candidate, pageBlocks) === activeFormId
+    ));
+  }, [block, pageBlocks]);
+  const selectedSubmitCollection = dataCollections.find(
+    (collection) => collection.id === selectedSubmitCollectionId,
+  ) ?? null;
 
   React.useEffect(() => {
     if (previewedPropsRef.current === block?.props) {
@@ -183,23 +168,11 @@ export default function Inspector({
     if (props.positionY !== undefined) props.positionY = Number(props.positionY);
     if (props.value !== undefined && block.type === 'progressBar') props.value = Number(props.value);
     if (block.type === 'button') {
-      if (props.action?.type === 'submitData') {
-        const submitGroupId = typeof props.submitGroupId === 'string' && props.submitGroupId.trim()
-          ? props.submitGroupId.trim()
-          : 'default';
-        const collectionId = typeof props.collectionId === 'string' ? props.collectionId.trim() : '';
-        props.submitGroupId = submitGroupId;
-        props.collectionId = collectionId;
-        props.action = {
-          type: 'submitData',
-          submitGroupId,
-          ...(collectionId ? { collectionId } : {}),
-        };
-      } else {
-        const action = normalizeBlockAction(props.action);
-        if (action) props.action = action;
-        else delete props.action;
-      }
+      const action = normalizeBlockAction(props.action);
+      if (action) props.action = action;
+      else delete props.action;
+      delete props.submitGroupId;
+      delete props.collectionId;
     }
     if (block.type === 'icon' || block.type === 'image') {
       const action = normalizeBlockAction(props.action);
@@ -223,7 +196,7 @@ export default function Inspector({
 
   function renderActionControls(allowSubmit = false) {
     return (
-      <FormSection title="Action" description="Choose what happens when a user taps this block in preview or the Android runtime.">
+      <FormSection title="When tapped" description="Choose what happens when a user taps this block in preview or the Android runtime.">
         <div className="grid gap-2">
           <FieldLabel>Action type</FieldLabel>
           <select className="inspector-input" {...register('action.type')}>
@@ -260,7 +233,12 @@ export default function Inspector({
             </div>
             <div className="grid gap-2">
               <FieldLabel>Store records in</FieldLabel>
-              <select className="inspector-input" {...register('collectionId')}>
+              <select
+                className="inspector-input"
+                {...register('action.collectionId', {
+                  onChange: () => clearSubmitFieldTargets(),
+                })}
+              >
                 <option value="">This button's own data source</option>
                 {dataCollections.map((collection) => (
                   <option key={collection.id} value={collection.id}>{collection.name}</option>
@@ -269,17 +247,61 @@ export default function Inspector({
               <p className="text-xs text-slate-500">Choose a collection when these records should also power Data List blocks.</p>
             </div>
             <div className="grid gap-2">
+              <FieldLabel>Fields to submit</FieldLabel>
+              {submitFieldBlocks.length > 0 ? (
+                <div className="grid gap-2">
+                  {submitFieldBlocks.map((field) => {
+                    const selectedField = selectedSubmitFields.find((entry) => entry.fieldBlockId === field.id);
+                    const compatibleCollectionFields = selectedSubmitCollection?.fields.filter((target) => (
+                      isBooleanSubmissionField(field) ? target.type === 'boolean' : target.type !== 'boolean'
+                    )) ?? [];
+                    return (
+                      <div key={field.id} className="rounded-xl border border-slate-200 bg-white/80 px-3 py-3">
+                        <label className="flex items-center gap-3 text-sm font-medium text-slate-800">
+                          <ToggleInput
+                            type="checkbox"
+                            checked={Boolean(selectedField)}
+                            onChange={(event) => updateSubmitField(field.id, event.currentTarget.checked)}
+                          />
+                          {getSubmissionFieldLabel(field)}
+                        </label>
+                        {selectedField && selectedSubmitCollection ? (
+                          <div className="mt-3 grid gap-2 pl-7">
+                            <FieldLabel>Save to collection field</FieldLabel>
+                            <select
+                              className="inspector-input"
+                              value={selectedField.targetFieldKey ?? ''}
+                              onChange={(event) => updateSubmitFieldTarget(field.id, event.currentTarget.value)}
+                            >
+                              <option value="">Choose a field...</option>
+                              {compatibleCollectionFields.map((target) => (
+                                <option key={target.id} value={target.key}>
+                                  {target.label} ({friendlyFieldType(target.type)})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                  Add an Input, Textarea, Checkbox, or Toggle to this page first.
+                </p>
+              )}
+              <p className="text-xs text-slate-500">Only the checked fields are included when this button is tapped.</p>
+              {selectedSubmitCollection && selectedSubmitFields.some((field) => !field.targetFieldKey) ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                  Choose a collection field for every checked field before testing this button.
+                </p>
+              ) : null}
+            </div>
+            <div className="grid gap-2">
               <FieldLabel>Success message</FieldLabel>
               <TextInput {...register('successMessage')} />
             </div>
-            <details className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2.5">
-              <summary className="cursor-pointer text-xs font-semibold text-slate-600">Advanced connection settings</summary>
-              <div className="mt-3 grid gap-2">
-                <FieldLabel>Connection ID</FieldLabel>
-                <TextInput placeholder="Automatically generated" {...register('submitGroupId')} />
-                <p className="text-xs text-slate-500">Fields connect to this button through this ID. Normally it should not be changed.</p>
-              </div>
-            </details>
           </>
         ) : null}
         {actionType === 'setPageState' ? (
@@ -339,76 +361,41 @@ export default function Inspector({
     );
   }
 
-  function renderSubmissionBindingControls() {
-    const currentGroupId = normalizeSubmitGroupId(watchedSubmitGroupId);
-    const hasUnmatchedLegacyGroup = Boolean(
-      watchedSubmitGroupId && !submitTargets.some((target) => target.groupId === currentGroupId),
-    );
-    const compatibleFields = selectedSubmitTarget?.collection?.fields.filter((field) => {
-      if (block?.type === 'checkbox' || block?.type === 'toggle') return field.type === 'boolean';
-      return field.type !== 'boolean';
-    }) ?? [];
-
+  function renderDataFieldControls() {
     return (
-      <>
-        <div className="grid gap-2">
-          <FieldLabel>Submit with</FieldLabel>
-          <select className="inspector-input" {...register('submitGroupId')}>
-            <option value="">Choose a Button...</option>
-            {submitTargets.map((target) => (
-              <option key={target.blockId} value={target.groupId}>
-                {target.label}{target.collection ? ` -> ${target.collection.name}` : ''}
-              </option>
-            ))}
-            {hasUnmatchedLegacyGroup ? (
-              <option value={currentGroupId}>Existing group: {currentGroupId}</option>
-            ) : null}
-          </select>
-          {submitTargets.length === 0 ? (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-              Add a Button with a Submit Data action to this page, then return here to connect this field.
-            </p>
-          ) : !selectedSubmitTarget ? (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-              This field is not connected yet. Choose a Button above.
-            </p>
-          ) : (
-            <p className="text-xs text-slate-500">This field will be included when {selectedSubmitTarget.label} is pressed.</p>
-          )}
-        </div>
-
-        {selectedSubmitTarget?.collection ? (
-          <div className="grid gap-2">
-            <FieldLabel>Save to field</FieldLabel>
-            <select className="inspector-input" {...register('fieldKey')}>
-              <option value="">Choose a field in {selectedSubmitTarget.collection.name}...</option>
-              {compatibleFields.map((field) => (
-                <option key={field.id} value={field.key}>{field.label} ({friendlyFieldType(field.type)})</option>
-              ))}
-            </select>
-            {compatibleFields.length === 0 ? (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                {block?.type === 'checkbox' || block?.type === 'toggle'
-                  ? 'Add a Yes / No field to this collection first.'
-                  : 'Add a text, email, number, or date field to this collection first.'}
-              </p>
-            ) : (
-              <p className="text-xs text-slate-500">The submitted value will be stored in {selectedSubmitTarget.collection.name}.</p>
-            )}
-          </div>
-        ) : (
-          <div className="grid gap-2">
-            <FieldLabel>Field name</FieldLabel>
-            <TextInput placeholder="Automatically uses the label" {...register('fieldKey')} />
-            <p className="text-xs text-slate-500">
-              {selectedSubmitTarget
-                ? 'This button uses its own data source, so a custom field name is optional.'
-                : 'This value is preserved for forms and existing custom submission groups.'}
-            </p>
-          </div>
-        )}
-      </>
+      <div className="grid gap-2">
+        <FieldLabel>Data field name</FieldLabel>
+        <TextInput placeholder="Automatically uses the label" {...register('fieldKey')} />
+        <p className="text-xs text-slate-500">Buttons choose this field from their own Submit Data settings.</p>
+      </div>
     );
+  }
+
+  function updateSubmitField(fieldBlockId: string, selected: boolean) {
+    const currentValue = getValues('action.fields');
+    const current = Array.isArray(currentValue) ? currentValue as SubmitDataFieldRef[] : [];
+    const next = selected
+      ? current.some((field) => field.fieldBlockId === fieldBlockId)
+        ? current
+        : [...current, { fieldBlockId }]
+      : current.filter((field) => field.fieldBlockId !== fieldBlockId);
+    setValue('action.fields', next, { shouldDirty: true });
+  }
+
+  function updateSubmitFieldTarget(fieldBlockId: string, targetFieldKey: string) {
+    const currentValue = getValues('action.fields');
+    const current = Array.isArray(currentValue) ? currentValue as SubmitDataFieldRef[] : [];
+    setValue('action.fields', current.map((field) => (
+      field.fieldBlockId === fieldBlockId
+        ? { fieldBlockId, ...(targetFieldKey ? { targetFieldKey } : {}) }
+        : field
+    )), { shouldDirty: true });
+  }
+
+  function clearSubmitFieldTargets() {
+    const currentValue = getValues('action.fields');
+    const current = Array.isArray(currentValue) ? currentValue as SubmitDataFieldRef[] : [];
+    setValue('action.fields', current.map((field) => ({ fieldBlockId: field.fieldBlockId })), { shouldDirty: true });
   }
 
   function candidateTextFits(nextText: string) {
@@ -1017,12 +1004,12 @@ export default function Inspector({
         )}
 
         {block.type === 'checkbox' && (
-          <FormSection title="Checkbox" description="Works as a boolean field when submitted by a Button with the same group.">
+          <FormSection title="Checkbox" description="A boolean field that a Submit Data button can include.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
-            {renderSubmissionBindingControls()}
+            {renderDataFieldControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -1055,12 +1042,12 @@ export default function Inspector({
         )}
 
         {block.type === 'toggle' && (
-          <FormSection title="Toggle" description="Works as a boolean field when submitted by a Button with the same group.">
+          <FormSection title="Toggle" description="A boolean field that a Submit Data button can include.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...registerLiveText('label')} />
             </div>
-            {renderSubmissionBindingControls()}
+            {renderDataFieldControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -1126,12 +1113,12 @@ export default function Inspector({
         )}
 
         {block.type === 'input' && (
-          <FormSection title="Input" description="Works as a single-line field when submitted by a Button with the same group.">
+          <FormSection title="Input" description="A single-line field that a Submit Data button can include.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
-            {renderSubmissionBindingControls()}
+            {renderDataFieldControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -1182,12 +1169,12 @@ export default function Inspector({
         )}
 
         {block.type === 'textarea' && (
-          <FormSection title="Textarea" description="Works as a multi-line field when submitted by a Button with the same group.">
+          <FormSection title="Textarea" description="A multi-line field that a Submit Data button can include.">
             <div className="grid gap-2">
               <FieldLabel>Label</FieldLabel>
               <TextInput {...register('label')} />
             </div>
-            {renderSubmissionBindingControls()}
+            {renderDataFieldControls()}
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
               <ToggleInput type="checkbox" {...register('required')} />
               Required in forms
@@ -1449,17 +1436,38 @@ export default function Inspector({
   );
 }
 
-function normalizeSubmitGroupId(value: unknown) {
-  const raw = typeof value === 'string' && value.trim() ? value.trim() : 'default';
-  return raw
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '') || 'default';
-}
-
 function friendlyFieldType(type: AppDataCollection['fields'][number]['type']) {
   if (type === 'boolean') return 'Yes / No';
   return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function isSubmissionField(block: Block) {
+  return block.type === 'input' || block.type === 'textarea' || block.type === 'checkbox' || block.type === 'toggle';
+}
+
+function isBooleanSubmissionField(block: Block) {
+  return block.type === 'checkbox' || block.type === 'toggle';
+}
+
+function getSubmissionFieldLabel(block: Block) {
+  return String(block.props.label || block.props.placeholder || block.type);
+}
+
+function findOwningFormId(block: Block | null | undefined, pageBlocks: Block[]) {
+  if (!block) return null;
+  const blocksById = new Map(pageBlocks.map((candidate) => [candidate.id, candidate]));
+  let parentId = block.parentId;
+  const visited = new Set<string>();
+
+  while (parentId && !visited.has(parentId)) {
+    visited.add(parentId);
+    const parent = blocksById.get(parentId);
+    if (!parent) return null;
+    if (parent.type === 'form') return parent.id;
+    parentId = parent.parentId;
+  }
+
+  return null;
 }
 
 function getBindableTextProperty(block?: Block | null): 'value' | 'headline' | null {

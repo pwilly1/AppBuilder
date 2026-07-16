@@ -102,7 +102,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultProps: {
       label: 'Button',
       dataSourceName: 'App Data',
-      submitGroupId: 'default',
       successMessage: 'Submission received.',
       fontSize: 14,
       contentPadding: 12,
@@ -188,7 +187,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultProps: {
       label: 'Checkbox',
       fieldKey: '',
-      submitGroupId: 'default',
       required: false,
       checked: true,
       fontSize: 14,
@@ -212,7 +210,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultProps: {
       label: 'Toggle',
       fieldKey: '',
-      submitGroupId: 'default',
       required: false,
       checked: true,
       fontSize: 14,
@@ -257,7 +254,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultProps: {
       label: 'Label',
       fieldKey: '',
-      submitGroupId: 'default',
       required: false,
       placeholder: 'Placeholder',
       value: '',
@@ -284,7 +280,6 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultProps: {
       label: 'Message',
       fieldKey: '',
-      submitGroupId: 'default',
       required: false,
       placeholder: 'Write something...',
       value: '',
@@ -421,12 +416,6 @@ export function createBlock<T extends BlockType = BlockType>(type: T, overrides:
   const def = BlockRegistry[type]
   const blockId = crypto.randomUUID()
   const props = { ...(def?.defaultProps || {}), ...(overrides || {}) }
-  if (
-    type === 'button'
-    && !Object.prototype.hasOwnProperty.call(overrides, 'submitGroupId')
-  ) {
-    props.submitGroupId = `submit_${blockId.replace(/-/g, '').slice(0, 10)}`
-  }
   return {
     id: blockId,
     type,

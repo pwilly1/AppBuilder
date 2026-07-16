@@ -6,11 +6,14 @@ import android.net.Uri
 import com.apptura.nativepreview.models.Block
 import com.apptura.nativepreview.models.RuntimeValueRef
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+
+data class SubmitDataFieldRef(val fieldBlockId: String, val targetFieldKey: String? = null)
 
 sealed interface BlockAction {
     data class Navigate(val targetPageId: String) : BlockAction
-    data class SubmitData(val submitGroupId: String, val collectionId: String? = null) : BlockAction
+    data class SubmitData(val fields: List<SubmitDataFieldRef>, val collectionId: String? = null) : BlockAction
     data class OpenUrl(val url: String) : BlockAction
     data class SetPageState(val variableId: String, val value: RuntimeValueRef) : BlockAction
 }
@@ -20,7 +23,7 @@ fun resolveBlockAction(block: Block): BlockAction? {
     when ((action?.get("type") as? JsonPrimitive)?.content) {
         "navigate" -> return BlockAction.Navigate(action.stringValue("targetPageId"))
         "submitData" -> return BlockAction.SubmitData(
-            submitGroupId = action.stringValue("submitGroupId").ifBlank { "default" },
+            fields = action.submitFields(),
             collectionId = action.stringValue("collectionId").ifBlank { null },
         )
         "openUrl" -> return BlockAction.OpenUrl(action.stringValue("url"))
@@ -98,3 +101,16 @@ private fun JsonObject.runtimeValue(key: String): RuntimeValueRef? {
 
 private fun JsonObject.rawStringValue(key: String): String =
     (get(key) as? JsonPrimitive)?.content.orEmpty()
+
+private fun JsonObject.submitFields(): List<SubmitDataFieldRef> {
+    val fields = get("fields") as? JsonArray ?: return emptyList()
+    return fields.mapNotNull { candidate ->
+        val field = candidate as? JsonObject ?: return@mapNotNull null
+        val fieldBlockId = field.stringValue("fieldBlockId")
+        if (fieldBlockId.isBlank()) return@mapNotNull null
+        SubmitDataFieldRef(
+            fieldBlockId = fieldBlockId,
+            targetFieldKey = field.stringValue("targetFieldKey").ifBlank { null },
+        )
+    }.distinctBy { it.fieldBlockId }
+}

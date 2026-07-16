@@ -189,7 +189,7 @@ These endpoints support two submission models:
 
 - legacy `contactForm` blocks, which store the older fixed `name` / `email` / `phone` / `message` payload and can trigger email notifications
 - schema-backed `form` blocks, which store dynamic field data collected from child `input`, `textarea`, `checkbox`, and `toggle` blocks
-- schema-backed `button` blocks with `action.type = "submitData"`, which store dynamic field data collected from same-page `input`, `textarea`, `checkbox`, and `toggle` blocks that share the same normalized `submitGroupId`
+- schema-backed `button` blocks with `action.type = "submitData"`, which store dynamic field data from the same-page `input`, `textarea`, `checkbox`, and `toggle` blocks listed in `action.fields`
 
 Legacy `contactForm` submission data can contain:
 
@@ -215,7 +215,7 @@ Example dynamic payload:
 }
 ```
 
-For Submit Data buttons, the backend gathers fields from the same page by matching each field's normalized `submitGroupId` against the button's normalized `submitGroupId`.
+For Submit Data buttons, the backend resolves each stable `fieldBlockId` in `action.fields`. Optional `targetFieldKey` values map selected fields into a project collection.
 
 At least one populated field is required. Required text fields must be non-empty, and required checkbox/toggle fields must be `true`. Successful legacy `contactForm` submissions may trigger an email notification when email settings are configured.
 

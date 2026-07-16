@@ -30,11 +30,14 @@ const project = {
         id: 'button-collection',
         type: 'button',
         props: {
-          submitGroupId: 'tasks',
-          action: { type: 'submitData', submitGroupId: 'tasks', collectionId: collection.id },
+          action: {
+            type: 'submitData',
+            fields: [{ fieldBlockId: 'input-1', targetFieldKey: 'title' }],
+            collectionId: collection.id,
+          },
         },
       },
-      { id: 'input-1', type: 'input', props: { submitGroupId: 'tasks', fieldKey: 'title', label: 'Title' } },
+      { id: 'input-1', type: 'input', props: { fieldKey: 'title', label: 'Title' } },
     ],
   }],
 }
@@ -52,20 +55,27 @@ const unifiedButtonProject = {
         props: {
           label: 'Join',
           dataSourceName: 'Signups',
-          submitGroupId: 'signups',
-          action: { type: 'submitData', submitGroupId: 'signups' },
+          action: { type: 'submitData', fields: [{ fieldBlockId: 'email-1' }] },
         },
       },
-      { id: 'email-1', type: 'input', props: { submitGroupId: 'signups', fieldKey: 'email', label: 'Email' } },
+      { id: 'email-1', type: 'input', props: { fieldKey: 'email', label: 'Email' } },
       { id: 'static-1', type: 'button', props: { label: 'Decorative button' } },
     ],
   }],
 }
 
 test('submit actions preserve collection targets during normalization', () => {
-  assert.deepEqual(normalizeBlockAction({ type: 'submitData', submitGroupId: 'tasks', collectionId: 'collection-1' }), {
+  assert.deepEqual(normalizeBlockAction({
     type: 'submitData',
-    submitGroupId: 'tasks',
+    fields: [
+      { fieldBlockId: ' input-1 ', targetFieldKey: ' title ' },
+      { fieldBlockId: 'input-1' },
+      { fieldBlockId: '' },
+    ],
+    collectionId: 'collection-1',
+  }), {
+    type: 'submitData',
+    fields: [{ fieldBlockId: 'input-1', targetFieldKey: 'title' }],
     collectionId: 'collection-1',
   })
 })
@@ -105,13 +115,18 @@ test('project migration converts retired button records to the unified schema', 
       blocks: [
         { id: 'old-nav', type: 'navButton', props: { label: 'Next', toPageId: 'page-2' } },
         { id: 'old-submit', type: 'submitButton', props: { label: 'Save', submitGroupId: 'profile' } },
+        { id: 'profile-name', type: 'input', props: { label: 'Name', submitGroupId: 'profile' } },
       ],
     }],
   } as any)
 
-  assert.deepEqual(migrated.pages[0].blocks.map((block) => block.type), ['button', 'button'])
+  assert.deepEqual(migrated.pages[0].blocks.map((block) => block.type), ['button', 'button', 'input'])
   assert.deepEqual(migrated.pages[0].blocks[0].props.action, { type: 'navigate', targetPageId: 'page-2' })
-  assert.deepEqual(migrated.pages[0].blocks[1].props.action, { type: 'submitData', submitGroupId: 'profile' })
+  assert.deepEqual(migrated.pages[0].blocks[1].props.action, {
+    type: 'submitData',
+    fields: [{ fieldBlockId: 'profile-name' }],
+  })
+  assert.equal(migrated.pages[0].blocks[2].props.submitGroupId, undefined)
 })
 
 test('backend project migration exposes only unified button records', () => {
@@ -122,14 +137,18 @@ test('backend project migration exposes only unified button records', () => {
     schemaVersion: 3,
     pages: [{
       id: 'page-1',
-      blocks: [{ id: 'old-submit', type: 'submitButton', props: { submitGroupId: 'profile' } }],
+      blocks: [
+        { id: 'old-submit', type: 'submitButton', props: { submitGroupId: 'profile' } },
+        { id: 'profile-name', type: 'input', props: { label: 'Name', submitGroupId: 'profile' } },
+      ],
     }],
   })
 
-  assert.equal(migrated.schemaVersion, 4)
+  assert.equal(migrated.schemaVersion, 5)
   assert.equal(migrated.pages?.[0].blocks?.[0].type, 'button')
   assert.deepEqual(migrated.pages?.[0].blocks?.[0].props.action, {
     type: 'submitData',
-    submitGroupId: 'profile',
+    fields: [{ fieldBlockId: 'profile-name' }],
   })
+  assert.equal(migrated.pages?.[0].blocks?.[1].props.submitGroupId, undefined)
 })
