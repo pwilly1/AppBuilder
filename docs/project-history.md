@@ -419,3 +419,19 @@ Representative areas:
 - `frontend/src/shared/schema/registry.ts`
 - `backend/src/services/AppDataService.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`
+
+## Phase 21: Runtime Contract Test Foundation
+
+Date range: July 2026
+
+The existing Node test runner now protects deterministic contracts shared by the editor, backend, and Android-facing schema. Coverage includes runtime value resolution, unified action normalization, URL safety, grid quantization and collisions, render bounds, container hierarchy attach/detach/repair/resize behavior, and project schema migration. These tests exercise pure frontend modules without adding another framework or changing production behavior.
+
+Representative areas:
+
+- `backend/test/runtimeContracts.test.ts`
+- `backend/test/gridHierarchy.test.ts`
+- `backend/test/schemaMigration.test.ts`
+- `frontend/src/shared/runtime/runtimeBindings.ts`
+- `frontend/src/shared/schema/gridLayout.ts`
+- `frontend/src/shared/schema/blockHierarchy.ts`
+- `frontend/src/shared/schema/gridMigration.ts`

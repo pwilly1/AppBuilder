@@ -54,7 +54,7 @@ Goal: make Hero, Text, Button, and Shape behavior dependable before expanding bl
 | In Progress | Continue reducing inline-editing visual differences. |
 | In Progress | Keep grid snapping exact and predictable. |
 | Planned | Add stronger manual regression checklist. |
-| Planned | Add automated tests around schema/grid helpers. |
+| Completed | Add focused automated tests around runtime bindings, actions, schema migration, grid helpers, and container hierarchy. |
 
 ### 3. Android/Web Runtime Parity
 

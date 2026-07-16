@@ -341,7 +341,7 @@ Progress on the smallest complete vertical slice:
 - Completed: missing-variable warnings and safe missing-reference behavior.
 - Completed: schema-backed `setPageState` actions with fixed and Input/Textarea values in web and Android.
 - Completed: backward-compatible static `props` rendering.
-- Remaining: focused automated resolver tests.
+- Completed: focused automated resolver and action-contract tests.
 - Remaining: page parameters.
 
 Do not include generated-app authentication, collection queries, record mutation, conditional visibility, or visual workflow chains in this milestone.
