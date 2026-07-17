@@ -4,6 +4,7 @@ import { useProjectBlocks } from './project/useProjectBlocks';
 import { useProjectHistory } from './project/useProjectHistory';
 import { useProjectPages } from './project/useProjectPages';
 import { useProjectPersistence } from './project/useProjectPersistence';
+import { createDemoProject, isDemoProject } from '../demo/demoProject';
 
 export default function useProject(setAuthed: (authed: boolean) => void) {
   const initialProject = createInitialProject();
@@ -27,6 +28,11 @@ export default function useProject(setAuthed: (authed: boolean) => void) {
     setSaveError: persistence.setSaveError,
   });
 
+  function openDemoProject() {
+    blocks.setSelectedBlock(null);
+    return persistence.openLocalProject(createDemoProject());
+  }
+
   return {
     project: history.project,
     setProject: history.setProject,
@@ -43,6 +49,7 @@ export default function useProject(setAuthed: (authed: boolean) => void) {
     renamePage: pages.renamePage,
     deletePage: pages.deletePage,
     openProject: persistence.openProject,
+    openDemoProject,
     loadProjectById: persistence.loadProjectById,
     editBlock: blocks.editBlock,
     deleteBlock: blocks.deleteBlock,
@@ -55,5 +62,6 @@ export default function useProject(setAuthed: (authed: boolean) => void) {
     isSaving: persistence.isSaving,
     lastSavedAt: persistence.lastSavedAt,
     saveError: persistence.saveError,
+    isDemoMode: isDemoProject(history.project),
   };
 }

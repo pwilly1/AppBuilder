@@ -451,3 +451,18 @@ Representative areas:
 - `backend/src/services/ProjectSchemaMigration.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/FormRuntime.kt`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`
+
+## Phase 23: One-Click Interactive Demo
+
+Date range: July 2026
+
+The landing page now opens a schema-backed sample project without requiring account creation. The demo uses the normal editor, preview, history, actions, and binding runtime, while persistence is explicitly disabled so reviewer changes remain temporary and never create backend projects. Direct `/editor/demo` links initialize the same fixture safely, and contract tests protect its grid bounds and stable schema references.
+
+Representative areas:
+
+- `frontend/src/demo/demoProject.ts`
+- `frontend/src/components/Landing.tsx`
+- `frontend/src/hooks/useProject.ts`
+- `frontend/src/hooks/project/useProjectPersistence.ts`
+- `frontend/src/App.tsx`
+- `backend/test/demoProject.test.ts`

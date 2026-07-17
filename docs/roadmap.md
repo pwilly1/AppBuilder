@@ -38,7 +38,7 @@ Goal: make the deployed app easy to understand and safe to show.
 | --- | --- |
 | In Progress | Polish dashboard and editor presentation. |
 | In Progress | Keep public block palette focused on stable core blocks. |
-| Planned | Add a clean sample/demo project. |
+| Completed | Add a clean sample/demo project with one-click reviewer entry. |
 | Planned | Add screenshots or GIFs to README/portfolio material. |
 | Planned | Add clearer loading and error states. |
 | Planned | Add concise current-limitations messaging. |

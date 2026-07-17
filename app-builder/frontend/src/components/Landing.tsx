@@ -3,8 +3,18 @@ import Login from './Login'
 import Signup from './Signup'
 
 // ï¿½ 2025 Preston Willis. All rights reserved.
-export default function Landing({ onLogin }: { onLogin: () => void }) {
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
+type AuthMode = 'signin' | 'signup'
+
+export default function Landing({
+  onLogin,
+  onDemo,
+  initialAuthMode = 'signin',
+}: {
+  onLogin: () => void
+  onDemo: () => void
+  initialAuthMode?: AuthMode
+}) {
+  const [authMode, setAuthMode] = useState<AuthMode>(initialAuthMode)
 
   return (
     <div className="relative min-h-[calc(100vh-14rem)] overflow-hidden px-2 py-4">
@@ -25,6 +35,12 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <button type="button" className="btn min-w-[170px]" onClick={onDemo}>
+              Try live demo
+            </button>
+            <a className="ghost-btn min-w-[150px] text-center" href="#features">
+              Explore features
+            </a>
           </div>
 
           <div className="mt-8 rounded-[1.75rem] border border-slate-200/70 bg-white/55 p-3 shadow-inner">
@@ -109,8 +125,8 @@ export default function Landing({ onLogin }: { onLogin: () => void }) {
           </div>
 
           <div className="mb-4 rounded-2xl border border-blue-300/20 bg-blue-300/10 px-4 py-3 text-sm leading-6 text-blue-50">
-            <span className="font-semibold">Demo note:</span> Create a temporary account to try the live builder. No payment
-            or email verification is required, and your projects can be saved after signing in.
+            <span className="font-semibold">Want to look around first?</span> The live demo opens instantly with a sample
+            project. Its changes are temporary; create an account when you want to save your own work.
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/6 p-4">

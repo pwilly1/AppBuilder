@@ -11,6 +11,7 @@ import Header from './components/Header'
 import EditorLayout from './layout/EditorLayout'
 import { getToken } from './api'
 import Footer from './components/Footer'
+import { DEMO_PROJECT_ID, DEMO_PROJECT_ROUTE } from './demo/demoProject'
 
 export default function App() {
   const [authed, setAuthed] = useState<boolean>(() => !!getToken())
@@ -32,6 +33,7 @@ export default function App() {
     renamePage,
     deletePage,
     openProject,
+    openDemoProject,
     loadProjectById,
     editBlock,
     deleteBlock,
@@ -44,6 +46,7 @@ export default function App() {
     isSaving,
     lastSavedAt,
     saveError,
+    isDemoMode,
   } = projectApi
 
   function logout() {
@@ -73,6 +76,7 @@ export default function App() {
           renamePage={renamePage}
           deletePage={deletePage}
           openProject={openProject}
+          openDemoProject={openDemoProject}
           loadProjectById={loadProjectById}
           editBlock={editBlock}
           deleteBlock={deleteBlock}
@@ -85,6 +89,7 @@ export default function App() {
           isSaving={isSaving}
           lastSavedAt={lastSavedAt}
           saveError={saveError}
+          isDemoMode={isDemoMode}
         />
       </div>
     </BrowserRouter>
@@ -113,6 +118,7 @@ function AppContent(props: any) {
     renamePage,
     deletePage,
     openProject,
+    openDemoProject,
     loadProjectById,
     editBlock,
     deleteBlock,
@@ -125,9 +131,11 @@ function AppContent(props: any) {
     isSaving,
     lastSavedAt,
     saveError,
+    isDemoMode,
   } = props
   const isEditorRoute = location.pathname.startsWith('/editor')
   const isDashboardRoute = location.pathname.startsWith('/dashboard')
+  const isDemoRoute = location.pathname === DEMO_PROJECT_ROUTE
   const editorElement = (
     <EditorScreen
       project={project}
@@ -150,11 +158,14 @@ function AppContent(props: any) {
       isSaving={isSaving}
       lastSavedAt={lastSavedAt}
       saveError={saveError}
+      isDemoMode={isDemoMode || isDemoRoute}
+      isAuthenticated={authed}
       addPage={addPage}
       selectPage={selectPage}
       renamePage={renamePage}
       deletePage={deletePage}
       loadProjectById={loadProjectById}
+      openDemoProject={openDemoProject}
       previewMode={previewMode}
       onPreviewModeChange={setPreviewMode}
     />
@@ -199,7 +210,18 @@ function AppContent(props: any) {
             path="/"
             element={(
               <section className="col-span-3">
-                {authed ? <Navigate to="/dashboard" replace /> : <Landing onLogin={() => { setAuthed(true); navigate('/dashboard') }} />}
+                {authed ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <Landing
+                    onLogin={() => { setAuthed(true); navigate('/dashboard') }}
+                    initialAuthMode={new URLSearchParams(location.search).get('mode') === 'signup' ? 'signup' : 'signin'}
+                    onDemo={() => {
+                      openDemoProject()
+                      navigate(DEMO_PROJECT_ROUTE)
+                    }}
+                  />
+                )}
               </section>
             )}
           />
@@ -229,7 +251,7 @@ function AppContent(props: any) {
 
           <Route
             path="/editor/:projectId"
-            element={authed ? editorElement : <Navigate to="/" replace />}
+            element={authed || isDemoRoute ? editorElement : <Navigate to="/" replace />}
           />
 
         </Routes>
@@ -246,6 +268,7 @@ function EditorScreen(props: any) {
   const {
     project,
     loadProjectById,
+    openDemoProject,
     page,
     pages,
     selectedPageId,
@@ -265,6 +288,8 @@ function EditorScreen(props: any) {
     isSaving,
     lastSavedAt,
     saveError,
+    isDemoMode,
+    isAuthenticated,
     addPage,
     selectPage,
     renamePage,
@@ -275,9 +300,13 @@ function EditorScreen(props: any) {
 
   React.useEffect(() => {
     if (!projectId) return
+    if (projectId === 'demo') {
+      if (project?.id !== DEMO_PROJECT_ID) openDemoProject()
+      return
+    }
     if (project?.id === projectId && project?.pages?.length) return
     void loadProjectById(projectId)
-  }, [loadProjectById, project?.id, project?.pages?.length, projectId])
+  }, [loadProjectById, openDemoProject, project?.id, project?.pages?.length, projectId])
 
   React.useEffect(() => {
     const isObjectIdLike = typeof project?.id === 'string' && /^[0-9a-fA-F]{24}$/.test(project.id)
@@ -309,6 +338,8 @@ function EditorScreen(props: any) {
       isSaving={isSaving}
       lastSavedAt={lastSavedAt}
       saveError={saveError}
+      isDemoMode={isDemoMode}
+      isAuthenticated={isAuthenticated}
       addPage={addPage}
       selectPage={selectPage}
       renamePage={renamePage}

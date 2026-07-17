@@ -48,6 +48,8 @@ type Props = {
   isSaving?: boolean
   lastSavedAt?: number | null
   saveError?: string | null
+  isDemoMode?: boolean
+  isAuthenticated?: boolean
   addPage?: () => void
   selectPage?: (id: string) => void
   renamePage?: (id: string, title: string) => void
@@ -81,6 +83,8 @@ export default function EditorLayout(props: Props) {
     isSaving,
     lastSavedAt,
     saveError,
+    isDemoMode = false,
+    isAuthenticated = false,
     addPage,
     selectPage,
     renamePage,
@@ -511,8 +515,8 @@ export default function EditorLayout(props: Props) {
       <div className="col-span-full editor-panel rounded-[1.85rem] px-4 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200/70 bg-white/45 p-1">
-            <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate('/dashboard')}>
-              Back to Dashboard
+            <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate(isDemoMode ? '/' : '/dashboard')}>
+              {isDemoMode ? 'Exit Demo' : 'Back to Dashboard'}
             </button>
             <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={undo} disabled={!canUndo || previewMode}>
               Undo
@@ -520,15 +524,38 @@ export default function EditorLayout(props: Props) {
             <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={redo} disabled={!canRedo || previewMode}>
               Redo
             </button>
-            <button className="btn" onClick={saveProject} disabled={isSaving || previewMode}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
+            {isDemoMode ? (
+              <>
+                <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
+                  Temporary demo
+                </span>
+                {isAuthenticated ? (
+                  <button className="btn" type="button" onClick={() => navigate('/dashboard')}>
+                    Return to dashboard
+                  </button>
+                ) : (
+                  <button className="btn" type="button" onClick={() => navigate('/?mode=signup#auth-panel')}>
+                    Create account to save projects
+                  </button>
+                )}
+              </>
+            ) : (
+              <button className="btn" onClick={saveProject} disabled={isSaving || previewMode}>
+                {isSaving ? 'Saving...' : 'Save'}
+              </button>
+            )}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200/70 bg-white/45 p-1">
             <div className="min-w-[150px] px-3 text-right text-xs text-slate-500">
-              {isSaving ? 'Saving...' : lastSavedAt ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}` : 'Not saved yet'}
-              {saveError ? ` | ${saveError}` : null}
+              {isDemoMode
+                ? 'Interactive demo · changes reset on refresh'
+                : isSaving
+                  ? 'Saving...'
+                  : lastSavedAt
+                    ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}`
+                    : 'Not saved yet'}
+              {!isDemoMode && saveError ? ` | ${saveError}` : null}
             </div>
             {activeContainer ? (
               <button

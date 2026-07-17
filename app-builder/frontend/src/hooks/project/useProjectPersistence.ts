@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import type { Project } from '../../shared/schema/types';
 import { createProject, getProject, getToken, listProjects, updateProject } from '../../api';
+import { isDemoProject } from '../../demo/demoProject';
 import { isObjectIdLike, normalizeProject, rememberProjectId } from './projectUtils';
 
 type UseProjectPersistenceOptions = {
@@ -24,11 +25,13 @@ export function useProjectPersistence({
   const autosaveTimer = useRef<number | null>(null);
   const isFirstMount = useRef<boolean>(true);
 
-  function applyLoadedProject(full: any) {
+  function applyLoadedProject(full: any, options: { remember?: boolean } = {}) {
     const normalized = normalizeProject(full);
     resetProject(normalized);
     setSelectedPageId(normalized.pages[0]?.id ?? '');
-    rememberProjectId(normalized.id);
+    setSaveError(null);
+    setLastSavedAt(null);
+    if (options.remember !== false) rememberProjectId(normalized.id);
     return normalized;
   }
 
@@ -49,7 +52,15 @@ export function useProjectPersistence({
     return applyLoadedProject(full);
   }
 
+  function openLocalProject(localProject: Project) {
+    return applyLoadedProject(localProject, { remember: false });
+  }
+
   async function saveProject() {
+    if (isDemoProject(project)) {
+      setSaveError('Demo changes are temporary and cannot be saved.');
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -93,6 +104,10 @@ export function useProjectPersistence({
       return;
     }
     if (!getToken()) return;
+    if (isDemoProject(project)) {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      return;
+    }
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = window.setTimeout(async () => {
       setIsSaving(true);
@@ -130,6 +145,7 @@ export function useProjectPersistence({
 
   return {
     openProject,
+    openLocalProject,
     loadProjectById,
     saveProject,
     isSaving,

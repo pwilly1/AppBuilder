@@ -175,10 +175,14 @@ Planned runtime work:
 
 ### Demo And Portfolio Polish
 
+Current demo support:
+
+- one-click reviewer entry without creating an account
+- editable in-memory sample project using the normal project schema and editor runtime
+- clear temporary-mode messaging with persistence disabled
+
 Planned demo improvements:
 
-- sample project
-- easier reviewer entry
 - screenshots/GIFs in README
 - clearer limitation messaging
 - smoother loading/error states

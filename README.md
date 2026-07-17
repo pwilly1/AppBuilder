@@ -13,6 +13,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 ## Current Features
 
 - JWT signup/login and protected project APIs
+- One-click interactive demo with a temporary schema-backed sample project
 - Project dashboard with create/open/delete flows
 - Multi-page app projects
 - Visual editor with tabbed workspace tools for pages, blocks, and data, plus a drag-aware block palette, canvas, and inspector
