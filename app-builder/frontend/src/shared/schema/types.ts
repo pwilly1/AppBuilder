@@ -60,6 +60,10 @@ export type PageStateVariable = {
   initialValue: string;
 };
 
+export type PageAppearance = {
+  backgroundColor?: string;
+};
+
 export type RuntimeValueRef =
   | { source: 'static'; value: string }
   | { source: 'pageState'; variableId: string; fallback?: string }
@@ -159,6 +163,7 @@ export type Page = {
   id: string;
   title?: string;
   path?: string;
+  appearance?: PageAppearance;
   stateVariables?: PageStateVariable[];
   blocks: Block[];
 };

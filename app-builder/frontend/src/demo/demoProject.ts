@@ -40,6 +40,7 @@ export function createDemoProject(): Project {
         id: HOME_PAGE_ID,
         title: 'Welcome',
         path: '/welcome',
+        appearance: { backgroundColor: '#eff6ff' },
         blocks: [
           createDemoBlock('demo-badge', 'badge', { colStart: 2, rowStart: 2, colSpan: 7, rowSpan: 2 }, {
             text: 'FIELD OPERATIONS',
@@ -73,6 +74,7 @@ export function createDemoProject(): Project {
         id: CHECK_IN_PAGE_ID,
         title: 'Check In',
         path: '/check-in',
+        appearance: { backgroundColor: '#fffbf5' },
         stateVariables: [
           {
             id: GREETING_VARIABLE_ID,

@@ -29,6 +29,7 @@ import {
   isPlacementWithinPlacement,
   pageToContainerPlacement,
 } from '../shared/schema/blockHierarchy'
+import { normalizePageBackgroundColor } from '../shared/schema/pageAppearance'
 
 const DEFAULT_PHONE_GRID_ROWS = GRID_DEFAULT_ROW_COUNT
 
@@ -96,6 +97,7 @@ export function PageRenderer({
   const [screenWidth, setScreenWidth] = useState(390)
   const [fieldValuesByBlockId, setFieldValuesByBlockId] = useState<Record<string, FormValue>>({})
   const [fieldKeysByBlockId, setFieldKeysByBlockId] = useState<Record<string, string>>({})
+  const pageBackgroundColor = normalizePageBackgroundColor(page.appearance?.backgroundColor)
   const pageStateVariables = page.stateVariables
   const initialPageState = useMemo(
     () => createPageRuntimeContext({ stateVariables: pageStateVariables }).pageState,
@@ -467,7 +469,11 @@ export function PageRenderer({
           <div
             ref={containerRef}
             className="phone-screen"
-            style={{ minHeight: 640, touchAction: previewMode ? 'auto' : 'none' }}
+            style={{
+              minHeight: 640,
+              touchAction: previewMode ? 'auto' : 'none',
+              backgroundColor: pageBackgroundColor,
+            }}
             onDragEnter={
               previewMode
                 ? undefined

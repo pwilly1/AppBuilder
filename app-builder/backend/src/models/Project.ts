@@ -7,6 +7,9 @@ export interface ProjectPage {
   id: string;
   title?: string;
   path?: string;
+  appearance?: {
+    backgroundColor?: string;
+  };
   blocks?: any[];
 }
 

@@ -82,3 +82,13 @@ test('migration applies renderer alignment defaults without overwriting saved me
     widthPx: 90,
   })
 })
+
+test('migration preserves optional page appearance settings', () => {
+  const migrated = migratePageToGridLayout({
+    id: 'page-1',
+    appearance: { backgroundColor: '#eff6ff' },
+    blocks: [],
+  })
+
+  assert.deepEqual(migrated.appearance, { backgroundColor: '#eff6ff' })
+})

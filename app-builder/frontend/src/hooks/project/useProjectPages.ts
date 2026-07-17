@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Project } from '../../shared/schema/types';
 import { slugify, uniquePath } from './projectUtils';
+import { normalizePageBackgroundColor } from '../../shared/schema/pageAppearance';
 
 type UseProjectPagesOptions = {
   project: Project;
@@ -21,7 +22,7 @@ export function useProjectPages({ project, applyChange }: UseProjectPagesOptions
       const nextIndex = currentProject.pages.length + 1;
       const pageTitle = (title && title.trim()) || `Page ${nextIndex}`;
       const path = uniquePath(slugify(pageTitle), currentProject.pages);
-      const newPage = { id, title: pageTitle, path, blocks: [] };
+      const newPage = { id, title: pageTitle, path, appearance: { backgroundColor: '#ffffff' }, blocks: [] };
       return { ...currentProject, pages: [...currentProject.pages, newPage] };
     });
     setSelectedPageId(id);
@@ -56,6 +57,24 @@ export function useProjectPages({ project, applyChange }: UseProjectPagesOptions
     if (nextSelectedPageId) setSelectedPageId(nextSelectedPageId);
   }
 
+  function setPageBackgroundColor(id: string, backgroundColor: string) {
+    const normalizedColor = normalizePageBackgroundColor(backgroundColor);
+    applyChange((currentProject) => ({
+      ...currentProject,
+      pages: currentProject.pages.map((candidate) => (
+        candidate.id === id
+          ? {
+              ...candidate,
+              appearance: {
+                ...(candidate.appearance || {}),
+                backgroundColor: normalizedColor,
+              },
+            }
+          : candidate
+      )),
+    }));
+  }
+
   return {
     selectedPageId,
     setSelectedPageId,
@@ -64,5 +83,6 @@ export function useProjectPages({ project, applyChange }: UseProjectPagesOptions
     addPage,
     renamePage,
     deletePage,
+    setPageBackgroundColor,
   };
 }

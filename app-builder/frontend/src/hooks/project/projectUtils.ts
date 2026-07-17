@@ -10,7 +10,7 @@ export function createInitialProject(): Project {
     name: 'My App',
     dataCollections: [],
     pages: [
-      { id: 'home', title: 'Home', path: '/home', blocks: [] },
+      { id: 'home', title: 'Home', path: '/home', appearance: { backgroundColor: '#ffffff' }, blocks: [] },
     ],
   };
 }

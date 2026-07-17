@@ -61,6 +61,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
         }
     } else {
         val page = pages[pageIndex.value]
+        val pageBackgroundColor = parsePageBackgroundColor(page.appearance?.backgroundColor)
         val formRuntime = remember(project.id, page.id) { FormRuntimeState() }
         val runtimeContext = remember(page.id, page.stateVariables) { createPageRuntimeContext(page) }
         val containerIds = page.blocks
@@ -81,12 +82,12 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(pageBackgroundColor)
         ) {
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(pageBackgroundColor)
                     .verticalScroll(scroll)
             ) {
                 val canvasWidth = if (maxWidth.value > 1f) maxWidth else GRID_CANVAS_WIDTH
@@ -173,6 +174,17 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                 )
             }
         }
+    }
+}
+
+private fun parsePageBackgroundColor(raw: String?): Color {
+    val value = raw?.trim()
+    if (value.isNullOrBlank()) return Color.White
+
+    return try {
+        Color(android.graphics.Color.parseColor(value))
+    } catch (_: IllegalArgumentException) {
+        Color.White
     }
 }
 

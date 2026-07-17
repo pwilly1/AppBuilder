@@ -10,12 +10,17 @@ type Project = {
   id: string
   name: string
   pages: Page[]
+  dataCollections?: AppDataCollection[]
 }
 
 type Page = {
   id: string
   title?: string
   path?: string
+  appearance?: {
+    backgroundColor?: string
+  }
+  stateVariables?: PageStateVariable[]
   blocks: Block[]
 }
 
@@ -33,6 +38,7 @@ type Block = {
 
 `editorPlacement` is transitional compatibility data. New runtime behavior should use `layout.grid`, `render`, and `props`.
 `parentId` is ownership metadata for container children. Top-level blocks omit it.
+`Page.appearance.backgroundColor` stores an optional six-digit hex color for the full page surface. Web and Android preview normalize invalid or missing values back to white for older projects.
 
 Pages may define text `stateVariables` with stable IDs, names, and initial values. Text `value` and Hero `headline` may bind to those IDs through `block.bindings`. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an Input/Textarea block during a preview session. Runtime field references use stable block IDs, so changing a field label does not break the action. The runtime resolves the page value without mutating `props`; the static property remains the fallback for old projects and missing variables. Page parameters and collection-record bindings are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
 

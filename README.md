@@ -16,6 +16,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - One-click interactive demo with a temporary schema-backed sample project
 - Project dashboard with create/open/delete flows
 - Multi-page app projects
+- Per-page solid background colors with matching web and Android rendering
 - Visual editor with tabbed workspace tools for pages, blocks, and data, plus a drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks

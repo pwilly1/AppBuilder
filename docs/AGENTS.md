@@ -77,6 +77,7 @@ props.scaleY
 - Shared interactive behavior flows through `props.action`; Button can be static, navigate, submit, open URLs, or set page variables, while Icon and Image support the applicable tap actions.
 - Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, and Data List reads publicly readable collection records in web and Android preview.
 - Pages may define text `stateVariables`, Text/Hero blocks may resolve `bindings` from those stable variable IDs, and supported interactive blocks may update them through `setPageState` in web and Android. Set Page Variable can use a fixed value or a live Input/Textarea value referenced by block ID. Values are page-runtime state rather than persisted app data. Static props remain the fallback; broader page data and generated-app users are still planned.
+- Pages may also define `appearance.backgroundColor`; keep page-surface color behavior aligned across the Pages workspace, web canvas, web preview, and Android preview, with white fallback behavior preserved for older or malformed data.
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
 
 ## Current Block Inventory
@@ -129,6 +130,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/frontend/src/hooks/project/useProjectBlocks.ts` | Block selection, mutation, placement, and reorder flows |
 | `app-builder/frontend/src/hooks/project/useProjectPersistence.ts` | Load/save/autosave behavior plus auth/session checks |
 | `app-builder/frontend/src/hooks/project/projectUtils.ts` | Initial-project setup, normalization, path helpers, and remembered project ids |
+| `app-builder/frontend/src/shared/schema/pageAppearance.ts` | Shared page background-color normalization and default fallback |
 | `app-builder/frontend/src/layout/EditorLayout.tsx` | Editor shell and toolbar |
 | `app-builder/frontend/src/editor/PageRenderer.tsx` | Canvas rendering and interactions |
 | `app-builder/frontend/src/editor/DraggableBlock.tsx` | Block movement/resizing behavior |

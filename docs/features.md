@@ -39,6 +39,9 @@ The current editor includes:
 
 Projects support multiple pages:
 
+- each page can store a solid background color from the Pages workspace
+- page colors render consistently in the web editor, web preview, and Android preview
+
 - add page
 - select page
 - rename page

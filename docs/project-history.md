@@ -466,3 +466,18 @@ Representative areas:
 - `frontend/src/hooks/project/useProjectPersistence.ts`
 - `frontend/src/App.tsx`
 - `backend/test/demoProject.test.ts`
+
+## Phase 24: Page Appearance Foundation
+
+Date range: July 2026
+
+Pages gained an optional schema-backed appearance object with a portable six-digit background color. The Pages workspace exposes a color picker and presets, edits participate in normal undo/history behavior, and both the web canvas and Android Compose runtime use the same saved value with a white fallback for older or malformed projects.
+
+Representative areas:
+
+- `frontend/src/shared/schema/pageAppearance.ts`
+- `frontend/src/components/PagesPanel.tsx`
+- `frontend/src/editor/PageRenderer.tsx`
+- `frontend/src/hooks/project/useProjectPages.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`

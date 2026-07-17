@@ -15,6 +15,14 @@ import {
   resolveBlockAction,
 } from '../../frontend/src/shared/actions/blockActions.js'
 import type { Block, Page } from '../../frontend/src/shared/schema/types.js'
+import { normalizePageBackgroundColor } from '../../frontend/src/shared/schema/pageAppearance.js'
+
+test('page background colors normalize to portable six-digit hex values', () => {
+  assert.equal(normalizePageBackgroundColor('#EFF6FF'), '#eff6ff')
+  assert.equal(normalizePageBackgroundColor('  #fffbf5  '), '#fffbf5')
+  assert.equal(normalizePageBackgroundColor('red'), '#ffffff')
+  assert.equal(normalizePageBackgroundColor(null), '#ffffff')
+})
 
 test('page runtime context initializes valid text variables', () => {
   const page = {

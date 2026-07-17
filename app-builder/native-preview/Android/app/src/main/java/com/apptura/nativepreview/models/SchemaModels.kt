@@ -45,6 +45,11 @@ data class PageStateVariable(
 )
 
 @Serializable
+data class PageAppearance(
+    val backgroundColor: String? = null,
+)
+
+@Serializable
 data class GridPlacement(
     val colStart: Int,
     val rowStart: Int,
@@ -81,6 +86,7 @@ data class Page(
     val title: String? = null,
     val name: String? = null,
     val path: String? = null,
+    val appearance: PageAppearance? = null,
     val stateVariables: List<PageStateVariable> = emptyList(),
     val blocks: List<Block> = emptyList()
 )

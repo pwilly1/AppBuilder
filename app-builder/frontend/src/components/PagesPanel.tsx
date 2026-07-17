@@ -1,7 +1,9 @@
 // Copyright 2025 Preston Willis. All rights reserved.
 import { useMemo, useState } from 'react'
+import { DEFAULT_PAGE_BACKGROUND_COLOR, normalizePageBackgroundColor } from '../shared/schema/pageAppearance'
+import type { PageAppearance } from '../shared/schema/types'
 
-export type PageLite = { id: string; title?: string; path?: string }
+export type PageLite = { id: string; title?: string; path?: string; appearance?: PageAppearance }
 
 type Props = {
   pages: PageLite[]
@@ -10,13 +12,25 @@ type Props = {
   onAdd: () => void
   onRename: (id: string, title: string) => void
   onDelete: (id: string) => void
+  onBackgroundColorChange: (id: string, color: string) => void
 }
 
-export default function PagesPanel({ pages, selectedPageId, onSelect, onAdd, onRename, onDelete }: Props) {
+const PAGE_COLOR_PRESETS = ['#ffffff', '#fffbf5', '#eff6ff', '#f0fdf4', '#fff7ed', '#f8fafc']
+
+export default function PagesPanel({
+  pages,
+  selectedPageId,
+  onSelect,
+  onAdd,
+  onRename,
+  onDelete,
+  onBackgroundColorChange,
+}: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [tempTitle, setTempTitle] = useState<string>('')
 
   const selectedPage = useMemo(() => pages.find((page) => page.id === selectedPageId), [pages, selectedPageId])
+  const selectedBackgroundColor = normalizePageBackgroundColor(selectedPage?.appearance?.backgroundColor)
 
   function beginEdit(id: string, current: string | undefined) {
     setEditingId(id)
@@ -45,6 +59,47 @@ export default function PagesPanel({ pages, selectedPageId, onSelect, onAdd, onR
         <div className="mt-1 text-sm font-semibold text-slate-900">{selectedPage?.title || 'Nothing selected'}</div>
         <div className="mt-1 text-xs text-slate-500">{selectedPage?.path || 'No route path set yet'}</div>
       </div>
+
+      {selectedPage ? (
+        <div className="editor-rail-surface mt-3 px-3 py-3">
+          <div className="editor-kicker">Page appearance</div>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <label className="text-xs font-semibold text-slate-600" htmlFor="page-background-color">
+              Background color
+            </label>
+            <input
+              id="page-background-color"
+              type="color"
+              className="h-9 w-12 cursor-pointer rounded-lg border border-slate-200 bg-white p-1"
+              value={selectedBackgroundColor}
+              onChange={(event) => onBackgroundColorChange(selectedPage.id, event.currentTarget.value)}
+              aria-label="Page background color"
+            />
+          </div>
+          <div className="mt-3 grid grid-cols-6 gap-2" aria-label="Page background color presets">
+            {PAGE_COLOR_PRESETS.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className={`h-7 rounded-lg border ${selectedBackgroundColor === color ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200'}`}
+                style={{ backgroundColor: color }}
+                onClick={() => onBackgroundColorChange(selectedPage.id, color)}
+                aria-label={`Set page background to ${color}`}
+                title={color}
+              />
+            ))}
+          </div>
+          {selectedBackgroundColor !== DEFAULT_PAGE_BACKGROUND_COLOR ? (
+            <button
+              type="button"
+              className="mt-3 text-xs font-semibold text-blue-700 hover:text-blue-800"
+              onClick={() => onBackgroundColorChange(selectedPage.id, DEFAULT_PAGE_BACKGROUND_COLOR)}
+            >
+              Reset to white
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       <ul className="mt-4 space-y-2">
         {pages.map((page, index) => {

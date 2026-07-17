@@ -54,6 +54,7 @@ type Props = {
   selectPage?: (id: string) => void
   renamePage?: (id: string, title: string) => void
   deletePage?: (id: string) => void
+  setPageBackgroundColor?: (id: string, color: string) => void
   previewMode?: boolean
   onPreviewModeChange?: (previewMode: boolean) => void
 }
@@ -89,6 +90,7 @@ export default function EditorLayout(props: Props) {
     selectPage,
     renamePage,
     deletePage,
+    setPageBackgroundColor,
     previewMode = false,
     onPreviewModeChange,
   } = props as any
@@ -640,6 +642,7 @@ export default function EditorLayout(props: Props) {
                 onAdd={() => addPage?.()}
                 onRename={(id, title) => renamePage?.(id, title)}
                 onDelete={(id) => deletePage?.(id)}
+                onBackgroundColorChange={(id, color) => setPageBackgroundColor?.(id, color)}
               />
             </div>
 

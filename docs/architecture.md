@@ -107,6 +107,9 @@ type Page = {
   id: string
   title?: string
   path?: string
+  appearance?: {
+    backgroundColor?: string
+  }
   blocks: Block[]
 }
 ```
