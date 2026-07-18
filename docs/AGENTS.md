@@ -79,6 +79,7 @@ props.scaleY
 - Pages may define text `stateVariables`, Text/Hero blocks may resolve `bindings` from those stable variable IDs, and supported interactive blocks may update them through `setPageState` in web and Android. Set Page Variable can use a fixed value or a live Input/Textarea value referenced by block ID. Values are page-runtime state rather than persisted app data. Static props remain the fallback; broader page data and generated-app users are still planned.
 - Pages may also define `appearance.backgroundColor`; keep page-surface color behavior aligned across the Pages workspace, web canvas, web preview, and Android preview, with white fallback behavior preserved for older or malformed data.
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
+- The public `/editor/demo` route is now a four-screen `FieldReady` sample app that exercises containers, page backgrounds, navigation, checkbox/toggle state, and live page-variable binding with persistence intentionally disabled.
 
 ## Current Block Inventory
 
@@ -124,6 +125,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | File | Purpose |
 | --- | --- |
 | `app-builder/frontend/src/App.tsx` | Routing, auth state, project hook wiring |
+| `app-builder/frontend/src/demo/demoProject.ts` | One-click `FieldReady` demo fixture and demo-route schema contract |
 | `app-builder/frontend/src/hooks/useProject.ts` | Stable public project hook that composes the focused project hooks below |
 | `app-builder/frontend/src/hooks/project/useProjectHistory.ts` | Undo/redo snapshots and shared project change application |
 | `app-builder/frontend/src/hooks/project/useProjectPages.ts` | Selected-page state and page create/rename/delete flows |

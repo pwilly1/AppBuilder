@@ -17,10 +17,7 @@ export function makeAuthRoutes(ctrl: AuthController, requireAuth: RequestHandler
   // (optional) health check for debugging
   router.get('/health', (_, res) => res.json({ ok: true }));
 
-  // GET /auth/me - return current user info
-  router.get('/me', requireAuth, (req, res) => {
-    res.json({ user: (req as any).user || null });
-  });
+  router.get('/me', requireAuth, ctrl.me.bind(ctrl));
 
   
 

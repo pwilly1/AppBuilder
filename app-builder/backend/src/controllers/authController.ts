@@ -1,6 +1,7 @@
 import {AuthService} from '../services/AuthService.js';
 // © 2025 Preston Willis. All rights reserved.
-import type { Request, Response } from 'express'; 
+import type { Request, Response } from 'express';
+import type { AuthenticatedRequest } from './controllerUtils.js';
 
 
 export class AuthController{
@@ -8,6 +9,25 @@ export class AuthController{
 
     constructor(authService: AuthService){
         this.authService = authService;
+    }
+
+    public me(req: Request, res: Response) {
+        const authenticated = req as AuthenticatedRequest;
+        const user = authenticated.user;
+        if (!authenticated.userId || !user) {
+            res.status(401).json({ error: 'Missing authenticated user' });
+            return;
+        }
+
+        res.json({
+            user: {
+                id: authenticated.userId,
+                username: user.username,
+                email: user.email,
+                isGuest: Boolean(user.isGuest),
+                ...(user.createdAt ? { createdAt: user.createdAt } : {}),
+            },
+        });
     }
 
 

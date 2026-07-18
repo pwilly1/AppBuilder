@@ -13,7 +13,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 ## Current Features
 
 - JWT signup/login and protected project APIs
-- One-click interactive demo with a temporary schema-backed sample project
+- One-click interactive `FieldReady` demo with a temporary four-screen schema-backed sample project
 - Project dashboard with create/open/delete flows
 - Multi-page app projects
 - Per-page solid background colors with matching web and Android rendering

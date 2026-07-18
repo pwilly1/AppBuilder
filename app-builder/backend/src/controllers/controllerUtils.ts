@@ -6,7 +6,12 @@ import {
 
 export type AuthenticatedRequest = Request & {
   userId?: string;
-  user?: { isGuest?: boolean } | null;
+  user?: {
+    username: string;
+    email: string;
+    isGuest?: boolean;
+    createdAt?: Date | string;
+  } | null;
 };
 
 export function getUserId(req: Request): string {
