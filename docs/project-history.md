@@ -456,7 +456,7 @@ Representative areas:
 
 Date range: July 2026
 
-The landing page now opens a schema-backed sample project without requiring account creation. The demo uses the normal editor, preview, history, actions, and binding runtime, while persistence is explicitly disabled so reviewer changes remain temporary and never create backend projects. Direct `/editor/demo` links initialize the same fixture safely, and contract tests protect its grid bounds and stable schema references.
+The landing page now opens a schema-backed sample project without requiring account creation. The demo presents a polished four-screen `FieldReady` field-operations workflow with a route overview, interactive inspection checklist, live field-note state binding, and completion summary. It uses the normal editor, preview, history, actions, containers, and binding runtime, while persistence is explicitly disabled so reviewer changes remain temporary and never create backend projects. Direct `/editor/demo` links initialize the same fixture safely, and contract tests protect its grid bounds, non-overlapping top-level layout, container children, and stable schema references.
 
 Representative areas:
 

@@ -15,7 +15,14 @@ type Props = {
   onBackgroundColorChange: (id: string, color: string) => void
 }
 
-const PAGE_COLOR_PRESETS = ['#ffffff', '#fffbf5', '#eff6ff', '#f0fdf4', '#fff7ed', '#f8fafc']
+const PAGE_COLOR_PRESETS = [
+  { name: 'White', color: '#ffffff' },
+  { name: 'Gray', color: '#f3f4f6' },
+  { name: 'Red', color: '#fee2e2' },
+  { name: 'Yellow', color: '#fef3c7' },
+  { name: 'Green', color: '#dcfce7' },
+  { name: 'Blue', color: '#dbeafe' },
+]
 
 export default function PagesPanel({
   pages,
@@ -77,15 +84,15 @@ export default function PagesPanel({
             />
           </div>
           <div className="mt-3 grid grid-cols-6 gap-2" aria-label="Page background color presets">
-            {PAGE_COLOR_PRESETS.map((color) => (
+            {PAGE_COLOR_PRESETS.map(({ name, color }) => (
               <button
                 key={color}
                 type="button"
                 className={`h-7 rounded-lg border ${selectedBackgroundColor === color ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200'}`}
                 style={{ backgroundColor: color }}
                 onClick={() => onBackgroundColorChange(selectedPage.id, color)}
-                aria-label={`Set page background to ${color}`}
-                title={color}
+                aria-label={`Set page background to ${name}`}
+                title={`${name} (${color})`}
               />
             ))}
           </div>

@@ -146,9 +146,9 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
     defaultProps: {
       text: 'Badge',
       fontSize: 13,
-      backgroundColor: '#dbeafe',
-      textColor: '#1d4ed8',
-      borderColor: '#bfdbfe',
+      backgroundColor: '#f7f1e6',
+      textColor: '#0c1830',
+      borderColor: '#dbe3ef',
       borderRadius: 999,
       paddingX: 12,
       paddingY: 6,

@@ -35,9 +35,9 @@ import kotlinx.serialization.json.JsonPrimitive
 fun BadgeView(block: Block) {
     val text = propString(block, "text", "Badge")
     val fontSize = propFloat(block, "fontSize", 13f).coerceAtLeast(8f)
-    val backgroundColor = parsePrimitiveColor(propStringOrNull(block, "backgroundColor"), Color(0xFFDBEAFE))
-    val textColor = parsePrimitiveColor(propStringOrNull(block, "textColor"), Color(0xFF1D4ED8))
-    val borderColor = parsePrimitiveColor(propStringOrNull(block, "borderColor"), Color(0xFFBFDBFE))
+    val backgroundColor = parsePrimitiveColor(propStringOrNull(block, "backgroundColor"), Color(0xFFF7F1E6))
+    val textColor = parsePrimitiveColor(propStringOrNull(block, "textColor"), Color(0xFF0C1830))
+    val borderColor = parsePrimitiveColor(propStringOrNull(block, "borderColor"), Color(0xFFDBE3EF))
     val borderRadius = propFloat(block, "borderRadius", 999f).coerceAtLeast(0f)
     val paddingX = propFloat(block, "paddingX", 12f).coerceAtLeast(0f)
     val paddingY = propFloat(block, "paddingY", 6f).coerceAtLeast(0f)

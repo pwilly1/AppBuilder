@@ -181,7 +181,9 @@ Planned runtime work:
 Current demo support:
 
 - one-click reviewer entry without creating an account
-- editable in-memory sample project using the normal project schema and editor runtime
+- four-screen `FieldReady` workflow covering a daily route, inspection checklist, live field-note binding, and completion summary
+- polished use of existing atomic blocks, containers, navigation actions, page state, and page backgrounds
+- editable in-memory sample project using the normal project schema and the same web and Android-compatible runtime contract
 - clear temporary-mode messaging with persistence disabled
 
 Planned demo improvements:
