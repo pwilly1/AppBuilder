@@ -1,4 +1,4 @@
-// © 2025 Preston Willis. All rights reserved.
+// Copyright 2025 Preston Willis. All rights reserved.
 import React, { useMemo, useState } from 'react';
 import { signup, setToken } from '../api';
 
@@ -8,11 +8,19 @@ type Props = {
 };
 
 function isValidEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+  const normalized = value.trim();
+  return normalized.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized);
 }
 
 function isValidUsername(value: string) {
-  return value.trim().length >= 3;
+  const normalized = value.trim();
+  return normalized.length >= 3
+    && normalized.length <= 32
+    && /^[A-Za-z0-9_-]+$/.test(normalized);
+}
+
+function getPasswordByteLength(value: string) {
+  return new TextEncoder().encode(value).length;
 }
 
 export default function Signup({ onSignup, onSwitchMode }: Props) {
@@ -24,10 +32,10 @@ export default function Signup({ onSignup, onSwitchMode }: Props) {
   const [submitting, setSubmitting] = useState(false);
 
   const validationMessage = useMemo(() => {
-    if (!username && !email && !password) return '';
-    if (!isValidUsername(username)) return 'Username must be at least 3 characters.';
+    if (!isValidUsername(username)) return 'Use 3-32 letters, numbers, hyphens, or underscores.';
     if (!isValidEmail(email)) return 'Enter a valid email address.';
-    if (password.length < 6) return 'Password must be at least 6 characters.';
+    if (password.length < 8) return 'Password must be at least 8 characters.';
+    if (getPasswordByteLength(password) > 72) return 'Password must be no more than 72 bytes.';
     return '';
   }, [email, password, username]);
 
@@ -41,7 +49,7 @@ export default function Signup({ onSignup, onSwitchMode }: Props) {
     try {
       setSubmitting(true);
       setErr(null);
-      const res: any = await signup(username.trim(), email.trim(), password);
+      const res: any = await signup(username.trim(), email.trim().toLowerCase(), password);
       setToken(res.token);
       onSignup();
     } catch (error: any) {
@@ -62,6 +70,10 @@ export default function Signup({ onSignup, onSwitchMode }: Props) {
             className="field-input !bg-white !text-slate-900"
             placeholder="your-username"
             autoComplete="username"
+            minLength={3}
+            maxLength={32}
+            pattern="[A-Za-z0-9_-]+"
+            required
             value={username}
             onChange={(e) => {
               setUsername(e.target.value);
@@ -76,6 +88,8 @@ export default function Signup({ onSignup, onSwitchMode }: Props) {
             className="field-input !bg-white !text-slate-900"
             placeholder="you@business.com"
             autoComplete="email"
+            maxLength={254}
+            required
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
@@ -92,6 +106,9 @@ export default function Signup({ onSignup, onSwitchMode }: Props) {
               className="field-input !bg-white !pr-12 !text-slate-900"
               placeholder="Choose a secure password"
               autoComplete="new-password"
+              minLength={8}
+              maxLength={72}
+              required
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);

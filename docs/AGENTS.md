@@ -153,6 +153,8 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/backend/src/index.ts` | Express app setup, CORS, routes, Mongo connection |
 | `app-builder/backend/src/config/index.ts` | Env variable loading |
 | `app-builder/backend/src/routes/AuthRoutes.ts` | Auth endpoints |
+| `app-builder/backend/src/auth/AuthContracts.ts` | Shared auth validation, normalization, and controlled error contracts |
+| `app-builder/backend/src/middleware/authRateLimits.ts` | Auth endpoint rate limits and shared 429 response shape |
 | `app-builder/backend/src/routes/ProjectRoutes.ts` | Authenticated project CRUD routes |
 | `app-builder/backend/src/routes/AssetRoutes.ts` | Project image-upload route |
 | `app-builder/backend/src/routes/AppDataRoutes.ts` | Authenticated and public hosted app-data routes |

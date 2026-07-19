@@ -30,6 +30,8 @@ Missing, invalid, and expired tokens return `401`. Tokens expire according to `J
 
 Guest tokens are valid authentication tokens, but guest users cannot create projects, save projects, upload project images, or submit authenticated forms.
 
+All `/auth/*` responses currently set `Cache-Control: no-store`.
+
 ## Health Endpoints
 
 ### `GET /health`
@@ -50,6 +52,14 @@ Returns the same health shape. The Android preview currently uses this route.
 
 Creates a user and returns a JWT.
 
+Behavior notes:
+
+- Usernames are trimmed, normalized, and must be 3-32 characters containing only letters, numbers, hyphens, or underscores.
+- Emails are trimmed, lowercased, and must be valid addresses no longer than 254 characters.
+- Passwords must be at least 8 characters and no more than 72 UTF-8 bytes.
+- Username and email uniqueness checks are case-insensitive.
+- Repeated signup attempts are IP-rate-limited. After too many requests the route returns `429` with `{ "error": "Too many attempts. Please try again later." }`.
+
 Request:
 
 ```json
@@ -66,11 +76,22 @@ Success: `201`
 { "token": "<jwt>" }
 ```
 
-Common failure: `400` with `{ "error": "..." }`.
+Common failures:
+
+- `400` with a validation message such as invalid username, email, or password requirements
+- `400` with `{ "error": "Unable to create account with those details." }` when the username or email already exists
+- `429` when the signup rate limit is exceeded
 
 ### `POST /auth/login`
 
 Authenticates an existing user.
+
+Behavior notes:
+
+- Usernames are trimmed before lookup.
+- Username lookup is case-insensitive so older and newer accounts resolve through the same login path.
+- Invalid usernames and incorrect passwords both return the same `401` response to avoid revealing which part failed.
+- Login attempts are rate-limited by both IP address and normalized username. When the limit is exceeded the route returns `429` with `{ "error": "Too many attempts. Please try again later." }`.
 
 Request:
 
@@ -83,21 +104,36 @@ Request:
 
 Success: `200` with `{ "token": "<jwt>" }`.
 
-Invalid credentials return `401`.
+Invalid credentials return `401` with `{ "error": "Invalid username or password." }`.
+Unexpected backend failures return `500` with `{ "error": "Unable to sign in right now." }`.
 
 ### `GET /auth/createGuestSession`
 
 Creates a temporary guest user record and returns a guest JWT.
 
+This compatibility endpoint is still used by the Android preview to start guest-backed sessions.
+
 Success: `200` with `{ "token": "<jwt>" }`.
+
+Repeated guest-session requests are IP-rate-limited and return `429` after the limit is exceeded.
 
 ### `GET /auth/me`
 
-Requires authentication. Returns the authenticated user attached by the auth middleware.
+Requires authentication. Returns an allowlisted authenticated-user profile rather than the raw stored user document.
 
 ```json
-{ "user": { "...": "stored user fields" } }
+{
+  "user": {
+    "id": "user-123",
+    "username": "reviewer",
+    "email": "reviewer@example.com",
+    "isGuest": false,
+    "createdAt": "2026-07-18T12:00:00.000Z"
+  }
+}
 ```
+
+`passwordHash`, Mongo `_id`, and other internal fields are not returned.
 
 ## Project Endpoints
 

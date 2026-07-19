@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-// © 2025 Preston Willis. All rights reserved.
+// Copyright 2025 Preston Willis. All rights reserved.
 import { login, setToken } from '../api';
 
 type Props = {
@@ -8,7 +8,8 @@ type Props = {
 };
 
 function isValidUsername(value: string) {
-  return value.trim().length >= 3;
+  const normalized = value.trim();
+  return normalized.length >= 3 && normalized.length <= 254;
 }
 
 export default function Login({ onLogin, onSwitchMode }: Props) {
@@ -19,9 +20,8 @@ export default function Login({ onLogin, onSwitchMode }: Props) {
   const [submitting, setSubmitting] = useState(false);
 
   const validationMessage = useMemo(() => {
-    if (!username && !password) return '';
     if (!isValidUsername(username)) return 'Enter a valid username.';
-    if (!password.trim()) return 'Password is required.';
+    if (!password) return 'Password is required.';
     return '';
   }, [username, password]);
 
@@ -56,6 +56,9 @@ export default function Login({ onLogin, onSwitchMode }: Props) {
             className="field-input !bg-white !text-slate-900"
             placeholder="your-username"
             autoComplete="username"
+            minLength={3}
+            maxLength={254}
+            required
             value={username}
             onChange={(e) => {
               setUsername(e.target.value);
@@ -71,6 +74,7 @@ export default function Login({ onLogin, onSwitchMode }: Props) {
               className="field-input !bg-white !pr-12 !text-slate-900"
               placeholder="Enter your password"
               autoComplete="current-password"
+              required
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);

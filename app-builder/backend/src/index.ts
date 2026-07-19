@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import mongoose from 'mongoose';
 import { CORS_ORIGIN, JWT_SECRET, MONGO_URI, PORT } from './config/index.js';
 import { AppDataController } from './controllers/AppDataController.js';
@@ -31,7 +32,9 @@ const assetController = new AssetController(projects, new AssetStorageService())
 const appDataController = new AppDataController(projects, new EmailNotificationService());
 
 const app = express();
-app.use(express.json());
+app.set('trust proxy', 1);
+app.use(helmet());
+app.use(express.json({ limit: '64kb' }));
 
 const allowedOrigins = new Set([
   'http://localhost:5173',

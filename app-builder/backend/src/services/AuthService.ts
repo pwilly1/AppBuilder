@@ -1,47 +1,75 @@
 // © 2025 Preston Willis. All rights reserved.
 import bcrypt from 'bcryptjs';
+import { randomUUID } from 'node:crypto';
 import type { IUserRepository } from '../repositories/UserRepository.js';
 import { JwtService } from './JwtService.js';
+import {
+  AuthConflictError,
+  InvalidCredentialsError,
+  isDuplicateKeyError,
+  normalizeEmail,
+  normalizeUsernameLookup,
+  validateLoginCredentials,
+  validateSignupCredentials,
+} from '../auth/AuthContracts.js';
+
+const DUMMY_PASSWORD_HASH = '$2b$10$XLy3YIiss5J8SWiaprxwvOYVwL56SCK4pghiIH1cACzocB0kLTMK.';
 
 export class AuthService {
-      private users: IUserRepository;
-      private tokens: JwtService;
+  private readonly users: IUserRepository;
+  private readonly tokens: JwtService;
 
   constructor(users: IUserRepository, tokens: JwtService) {
     this.users = users;
     this.tokens = tokens;
   }
   
-  public async signup(username: string, email: string, password: string) {
-    const existing = await this.users.findByUsername(username);
-    if (existing) throw new Error('Username already taken');
+  public async signup(usernameValue: unknown, emailValue: unknown, passwordValue: unknown) {
+    const credentials = validateSignupCredentials(usernameValue, emailValue, passwordValue);
+    const [usernameMatch, emailMatch] = await Promise.all([
+      this.users.findByUsername(credentials.username),
+      this.users.findByEmail(credentials.email),
+    ]);
+    if (usernameMatch || emailMatch) throw new AuthConflictError();
 
-    const hash = await bcrypt.hash(password, 10);
-    // create a normal (non-guest) user
-    const user = await this.users.create({ username, email, passwordHash: hash, isGuest: false } as any);
-    return this.tokens.createToken(String(user.id));
+    const passwordHash = await bcrypt.hash(credentials.password, 10);
+    try {
+      const user = await this.users.create({
+        username: credentials.username,
+        usernameNormalized: credentials.usernameNormalized,
+        email: credentials.email,
+        emailNormalized: credentials.emailNormalized,
+        passwordHash,
+        isGuest: false,
+      });
+      return this.tokens.createToken(String(user.id));
+    } catch (error: unknown) {
+      if (isDuplicateKeyError(error)) throw new AuthConflictError();
+      throw error;
+    }
   }
-  // Will fix this later
-  public async guest(){
-    // create a transient guest user record and return a session token for it
-    const unique = `guest_${Date.now()}_${Math.floor(Math.random()*10000)}`;
+
+  public async guest() {
+    const unique = `guest_${randomUUID()}`;
     const username = unique;
     const email = `${unique}@guest.local`;
-    // create a random password hash so schema validation passes
-    const pw = Math.random().toString(36).slice(2);
-    const hash = await bcrypt.hash(pw, 8);
-    const user = await this.users.create({ username, email, passwordHash: hash, isGuest: true } as any);
-    // user may be a mongoose document; normalize id
-    const userId = (user as any).id ?? (user as any)._id?.toString?.();
-    return this.tokens.createToken(String(userId));
+    const passwordHash = await bcrypt.hash(randomUUID(), 10);
+    const user = await this.users.create({
+      username,
+      usernameNormalized: normalizeUsernameLookup(username),
+      email,
+      emailNormalized: normalizeEmail(email),
+      passwordHash,
+      isGuest: true,
+    });
+    return this.tokens.createToken(String(user.id));
   }
 
-  public async login(username: string, password: string) {
-    const user = await this.users.findByUsername(username);
-    if (!user) throw new Error('User not found');
-
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) throw new Error('Invalid credentials');
+  public async login(usernameValue: unknown, passwordValue: unknown) {
+    const credentials = validateLoginCredentials(usernameValue, passwordValue);
+    const user = await this.users.findByUsername(credentials.username);
+    const valid = await bcrypt.compare(credentials.password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+    if (!user || !valid) throw new InvalidCredentialsError();
 
     return this.tokens.createToken(String(user.id));
   }
