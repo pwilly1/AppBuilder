@@ -54,7 +54,7 @@ export default function DataCollectionsPanel({ collections, onChange }: Props) {
           <div>
             <div className="editor-section-title">App Data</div>
             <h3 className="mt-1 text-sm font-semibold text-slate-900">Collections</h3>
-            <p className="mt-1 text-xs leading-5 text-slate-500">Store records that forms create and Data Lists display.</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">Store records that forms create and app blocks can display.</p>
           </div>
           <button type="button" className="btn-sm shrink-0" onClick={addCollection}>New</button>
         </div>
@@ -188,7 +188,7 @@ export default function DataCollectionsPanel({ collections, onChange }: Props) {
                   <StepNumber>3</StepNumber>
                   <div>
                     <div className="text-xs font-semibold text-slate-900">Choose app access</div>
-                    <div className="text-[11px] text-slate-500">Control whether Data Lists can show these records.</div>
+                    <div className="text-[11px] text-slate-500">Control whether runtime blocks can show these records.</div>
                   </div>
                 </div>
                 <label className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 ${selectedCollection.publicRead ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
@@ -200,7 +200,7 @@ export default function DataCollectionsPanel({ collections, onChange }: Props) {
                   />
                   <span className="text-xs leading-5 text-slate-600">
                     <strong className="block text-slate-900">Show records inside the app</strong>
-                    Turn this on when a Data List should read this collection. Leave it off for private submission-only data.
+                    Turn this on when Text or Hero blocks should read this collection. Leave it off for private submission-only data.
                   </span>
                 </label>
               </div>

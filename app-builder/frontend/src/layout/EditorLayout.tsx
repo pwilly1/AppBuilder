@@ -721,6 +721,7 @@ export default function EditorLayout(props: Props) {
             <PageRenderer
               page={page}
               projectId={projectId}
+              dataCollections={project?.dataCollections || []}
               selectedBlockId={selectedBlock?.id}
               activeContainerId={activeContainerId}
               previewMode={previewMode}

@@ -370,16 +370,16 @@ Representative areas:
 
 Date range: July 2026
 
-Projects gained stable schema-backed data collections with typed field definitions and explicit public-read control. Submit Buttons can write grouped field values into a selected collection, while the new Data List block reads collection records across web and Android preview. Existing Form and source-block submission behavior remains compatible when no collection is selected. Focused backend contract tests now protect legacy action fallback and collection-source resolution.
+Projects gained stable schema-backed data collections with typed field definitions and explicit public-read control. Submit Buttons can write grouped field values into a selected collection, while Text and Hero can read the latest or one creator-selected record across web and Android preview. The initial dedicated Data List presentation block was later removed in favor of binding reusable display blocks directly to collection fields. Existing Form and source-block submission behavior remains compatible when no collection is selected. Focused backend contract tests protect legacy action fallback and collection-source resolution.
 
 Representative areas:
 
 - `frontend/src/components/DataCollectionsPanel.tsx`
-- `frontend/src/shared/blocks/DataListBlock.tsx`
+- `frontend/src/shared/runtime/useCollectionDataRuntime.ts`
 - `frontend/src/shared/schema/types.ts`
 - `backend/src/services/AppDataService.ts`
 - `backend/test/appDataContracts.test.ts`
-- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/DataListView.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
 
 ## Phase 19: Dynamic Page State And Text Bindings
 
@@ -481,3 +481,19 @@ Representative areas:
 - `frontend/src/hooks/project/useProjectPages.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`
+
+## Phase 25: Direct Collection Binding
+
+Date range: July 2026
+
+Text and Hero properties can now bind directly to stable project collection and field IDs. The app creator can display either the latest record or one specific record, while bindings created before selectors existed continue defaulting to latest. Web and Android resolve the same schema, deduplicate collection-and-selector requests at page scope, and preserve static block content during empty, loading, missing, permission, or error states. The backend exposes public latest-record and project/collection-scoped specific-record routes only for collections with public reads enabled.
+
+Representative areas:
+
+- `frontend/src/components/Inspector.tsx`
+- `frontend/src/shared/runtime/useCollectionDataRuntime.ts`
+- `frontend/src/shared/runtime/runtimeBindings.ts`
+- `backend/src/controllers/AppDataController.ts`
+- `backend/src/services/AppDataService.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`

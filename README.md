@@ -20,19 +20,18 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Visual editor with tabbed workspace tools for pages, blocks, and data, plus a drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
 - Inline editing for core text-like blocks
-- Page-scoped text variables can drive Text and Hero content through schema-backed bindings in web and Android preview
+- Page-scoped variables plus the latest or one creator-selected record from a collection can drive Text and Hero content through schema-backed bindings in web and Android preview
 - Button, Icon, and Image actions can update page-scoped text variables from fixed values or live Input/Textarea values in web and Android preview
-- Lightweight primitive blocks: Button, Shape, Badge, Icon, Image, Progress Bar, Form, Input, Textarea, Checkbox, Toggle, Container, and Data List
+- Lightweight primitive blocks: Button, Shape, Badge, Icon, Image, Progress Bar, Form, Input, Textarea, Checkbox, Toggle, and Container
 - Button supports no action, page navigation, hosted-data submission, safe external URLs, or page-variable updates through the shared block-action contract
 - Icon and Image can optionally run shared Navigate, Open URL, or Set Page Variable actions in web and Android preview
 - Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
 - Form blocks can collect live app-user submissions in web preview using nested Input, Textarea, Checkbox, and Toggle field blocks
 - Buttons configured with Submit Data explicitly select which same-page Input, Textarea, Checkbox, and Toggle fields they submit, either to their own source or to a selected project collection
 - Input, Textarea, Checkbox, and Toggle can act as live fields in web preview when nested inside a Form block or selected by a Submit Data button; otherwise they remain editor-time mockup controls
-- Project-level data collections define stable typed record sources with optional public-read access for runtime list blocks
-- Data List blocks can display records from a publicly readable collection in web and Android preview
+- Project-level data collections define stable typed record sources with optional public-read access for Text and Hero bindings
 - Container blocks can group supported atomic child blocks including Image, expose container styling in the inspector, and render in both web and Android preview
-- Dashboard project cards include an App Data drawer for reviewing collection, Contact Form, Form, and Submit Data button sources, their saved records, and CSV exports
+- Dashboard project cards link to a dedicated App Data page for navigating collection, Contact Form, Form, and Submit Data button sources, reviewing saved records, searching submissions, and exporting CSV files
 - Web preview mode with page navigation
 - Android native preview runtime connected to backend project data
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending

@@ -3,6 +3,8 @@ import {
   appDataRecordsToCsv,
   createAppDataRecord,
   findAppDataSource,
+  getAppDataRecord,
+  getLatestAppDataRecord,
   getAppDataCsvFileName,
   isPublicReadableCollection,
   isPublicSubmissionSource,
@@ -93,7 +95,7 @@ export class AppDataController {
     await this.submitPublic(getRouteParam(req, 'id'), getRouteParam(req, 'sourceId'), req, res, next);
   };
 
-  listPublicCollectionRecords = async (req: Request, res: Response, next: NextFunction) => {
+  getLatestPublicCollectionRecord = async (req: Request, res: Response, next: NextFunction) => {
     const id = getRouteParam(req, 'id');
     const collectionId = getRouteParam(req, 'collectionId');
     if (!id || !collectionId) return this.missingParams(res);
@@ -107,7 +109,33 @@ export class AppDataController {
         res.status(403).json({ error: 'This collection is not publicly readable' });
         return;
       }
-      res.json(await listAppDataRecords(project, project.ownerId, id, collectionId, { limit: 100 }));
+      res.json(await getLatestAppDataRecord(project, project.ownerId, id, collectionId));
+    } catch (error) {
+      this.handleAppDataError(error, res, next);
+    }
+  };
+
+  getPublicCollectionRecord = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const collectionId = getRouteParam(req, 'collectionId');
+    const recordId = getRouteParam(req, 'recordId');
+    if (!id || !collectionId || !recordId) return this.missingParams(res);
+    try {
+      const project = await this.projects.findById(id);
+      if (!project) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+      }
+      if (!isPublicReadableCollection(project, collectionId)) {
+        res.status(403).json({ error: 'This collection is not publicly readable' });
+        return;
+      }
+      const record = await getAppDataRecord(project, project.ownerId, id, collectionId, recordId);
+      if (!record) {
+        res.status(404).json({ error: 'Record not found' });
+        return;
+      }
+      res.json(record);
     } catch (error) {
       this.handleAppDataError(error, res, next);
     }

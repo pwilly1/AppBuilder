@@ -45,7 +45,7 @@ import com.apptura.nativepreview.models.Project
 import com.apptura.nativepreview.renderers.BlockRenderer
 import com.apptura.nativepreview.renderers.FormRuntimeState
 import com.apptura.nativepreview.renderers.RuntimeContext
-import com.apptura.nativepreview.renderers.createPageRuntimeContext
+import com.apptura.nativepreview.renderers.rememberPageRuntimeContext
 
 @Composable
 fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit = {}) {
@@ -63,7 +63,12 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
         val page = pages[pageIndex.value]
         val pageBackgroundColor = parsePageBackgroundColor(page.appearance?.backgroundColor)
         val formRuntime = remember(project.id, page.id) { FormRuntimeState() }
-        val runtimeContext = remember(page.id, page.stateVariables) { createPageRuntimeContext(page) }
+        val runtimeContext = rememberPageRuntimeContext(
+            page = page,
+            project = project,
+            projectId = project.id,
+            baseUrl = baseUrl,
+        )
         val containerIds = page.blocks
             .filter { it.type == "container" || it.type == "form" }
             .map { it.id }

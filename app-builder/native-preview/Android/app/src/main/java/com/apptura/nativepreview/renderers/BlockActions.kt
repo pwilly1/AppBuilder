@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import com.apptura.nativepreview.models.Block
+import com.apptura.nativepreview.models.CollectionRecordSelector
 import com.apptura.nativepreview.models.RuntimeValueRef
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonArray
@@ -90,11 +91,29 @@ private fun JsonObject.runtimeValue(key: String): RuntimeValueRef? {
             variableId = value.stringValue("variableId"),
             fallback = value.rawStringValue("fallback").ifBlank { null },
         )
+        "collection" -> RuntimeValueRef(
+            source = source,
+            collectionId = value.stringValue("collectionId"),
+            fieldId = value.stringValue("fieldId"),
+            record = value.collectionRecordSelector(),
+            fallback = value.rawStringValue("fallback").ifBlank { null },
+        )
         "formValue" -> RuntimeValueRef(
             source = source,
             fieldBlockId = value.stringValue("fieldBlockId"),
             fallback = value.rawStringValue("fallback").ifBlank { null },
         )
+        else -> null
+    }
+}
+
+private fun JsonObject.collectionRecordSelector(): CollectionRecordSelector? {
+    val value = get("record") as? JsonObject ?: return null
+    return when (val mode = value.stringValue("mode")) {
+        "latest" -> CollectionRecordSelector(mode = mode)
+        "specific" -> value.stringValue("recordId")
+            .takeIf(String::isNotBlank)
+            ?.let { CollectionRecordSelector(mode = mode, recordId = it) }
         else -> null
     }
 }

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode, type RefObject } from 'react'
 import { BlockRenderer } from '../shared/BlockRenderer'
 import type { Block, GridPlacement } from '../shared/schema/types'
-import { hasPageStateBinding, type RuntimeContext } from '../shared/runtime/runtimeBindings'
+import {
+  hasDynamicBinding,
+  type RuntimeContext,
+} from '../shared/runtime/runtimeBindings'
 import {
   clampRenderMetadataToPlacement,
   getPlacementRect,
@@ -75,8 +78,8 @@ export function DraggableBlock({
   children,
 }: DraggableProps) {
   const isInlineEditableType = block.type === 'hero' || block.type === 'text' || block.type === 'button'
-  const hasBoundTextContent = (block.type === 'hero' && hasPageStateBinding(block, 'headline'))
-    || (block.type === 'text' && hasPageStateBinding(block, 'value'))
+  const hasBoundTextContent = (block.type === 'hero' && hasDynamicBinding(block, 'headline'))
+    || (block.type === 'text' && hasDynamicBinding(block, 'value'))
   const supportsInlineEdit = isInlineEditableType && !hasBoundTextContent
   const usesContainerResize =
     isInlineEditableType ||

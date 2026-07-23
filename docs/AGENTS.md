@@ -75,8 +75,8 @@ props.scaleY
 - Image file uploads should use the backend asset upload path when storage is configured; saved blocks store the returned URL in `props.src`. Data URLs are only a local/unsaved fallback.
 - Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or explicitly selected by a same-page `button` using `submitData`; otherwise document them as editor-time mockup controls.
 - Shared interactive behavior flows through `props.action`; Button can be static, navigate, submit, open URLs, or set page variables, while Icon and Image support the applicable tap actions.
-- Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, and Data List reads publicly readable collection records in web and Android preview.
-- Pages may define text `stateVariables`, Text/Hero blocks may resolve `bindings` from those stable variable IDs, and supported interactive blocks may update them through `setPageState` in web and Android. Set Page Variable can use a fixed value or a live Input/Textarea value referenced by block ID. Values are page-runtime state rather than persisted app data. Static props remain the fallback; broader page data and generated-app users are still planned.
+- Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, while Text and Hero may read the latest or one creator-selected record from publicly readable collections in web and Android preview.
+- Pages may define text `stateVariables`, while Text/Hero bindings may resolve either a stable variable ID or a stable project collection/field ID in web and Android. Collection bindings read either the latest record or one specific record chosen by the app creator from a publicly readable collection; bindings without a selector default to latest. Set Page Variable can use a fixed value or a live Input/Textarea value referenced by block ID. Runtime values are not persisted app data, and static props remain the fallback. End-user record selection, generic page parameters, and generated-app users are still planned.
 - Pages may also define `appearance.backgroundColor`; keep page-surface color behavior aligned across the Pages workspace, web canvas, web preview, and Android preview, with white fallback behavior preserved for older or malformed data.
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
 - The public `/editor/demo` route is now a four-screen `FieldReady` sample app that exercises containers, page backgrounds, navigation, checkbox/toggle state, and live page-variable binding with persistence intentionally disabled.
@@ -99,7 +99,6 @@ Visible editor palette today:
 - Checkbox
 - Toggle
 - Container
-- Data List
 
 Business/demo-experiment blocks still present in code but not the preferred public-demo direction:
 
@@ -139,7 +138,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/frontend/src/editor/InlineBlockEditor.tsx` | Direct text editing behavior |
 | `app-builder/frontend/src/editor/Preview.tsx` | Web preview renderer |
 | `app-builder/frontend/src/components/DataCollectionsPanel.tsx` | Project-level collection editor and public-read settings |
-| `app-builder/frontend/src/shared/blocks/DataListBlock.tsx` | Web runtime collection-record list block |
+| `app-builder/frontend/src/shared/runtime/useCollectionDataRuntime.ts` | Web page-level loading for directly bound collections |
 | `app-builder/frontend/src/shared/schema/gridLayout.ts` | Grid math and collision logic |
 | `app-builder/frontend/src/shared/schema/registry.ts` | Block defaults and constraints |
 | `app-builder/frontend/src/shared/schema/contentScale.ts` | Shared content scale helper |
@@ -178,7 +177,6 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt` | Kotlin schema models |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/layout/GridLayout.kt` | Android grid math |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt` | Android page preview |
-| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/DataListView.kt` | Compose runtime collection-record list block |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/*View.kt` | Compose block renderers |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/BlockActions.kt` | Android shared block-action resolution and execution |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RenderScale.kt` | Android content scaling helper |

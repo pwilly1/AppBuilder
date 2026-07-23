@@ -67,19 +67,18 @@ The current visible block palette is:
 - Checkbox
 - Toggle
 - Container
-- Data List
 
 Hero, Text, Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
-Text-like blocks support canvas editing and inspector editing. Text `value` and Hero `headline` can also bind to page-scoped text variables while keeping their static props as fallbacks. Shape supports canvas placement/resizing and inspector-based visual styling. Button supports a static/no-action mode, page navigation, data submission, safe external URLs, or page-variable updates plus inspector-based styling for colors, padding, and corner radius.
+Text-like blocks support canvas editing and inspector editing. Text `value` and Hero `headline` can bind to page-scoped text variables or a field from the latest record or one creator-selected record in a collection while keeping their static props as fallbacks. Shape supports canvas placement/resizing and inspector-based visual styling. Button supports a static/no-action mode, page navigation, data submission, safe external URLs, or page-variable updates plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
 Icon and Image can optionally execute Navigate, Open URL, or Set Page Variable actions in web and Android preview.
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
-Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dashboard can review stored records for each saved Form source.
+Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dedicated App Data page can review stored records for each saved Form source.
 Button configured with Submit Data is a second schema-backed submission path. In web preview it submits the same-page Input, Textarea, Checkbox, and Toggle fields explicitly selected in the button inspector.
 Input and Textarea can also supply live values to Set Page Variable actions through stable block IDs. Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or selected by a Submit Data button. In web and Android preview, these controls collect runtime values and the button posts only its selected fields to the hosted app-data API. In the editor they still behave as mockup controls.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
-Project-level data collections define stable record sources and typed fields. Submit Data buttons can map selected field values into a collection, and Data List can display that collection in web and Android preview when public reads are enabled.
+Project-level data collections define stable record sources and typed fields. Submit Data buttons can map selected field values into a collection. When public reads are enabled, Text and Hero can directly display a field from either the latest record or one record selected by the app creator in web and Android preview.
 
 ### Grid Layout
 
@@ -264,8 +263,8 @@ Later AI features:
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
 - Container editing is intentionally limited to one level; nested containers are not supported.
-- Dynamic bindings currently cover page-scoped text variables only. Page parameters, page-owned collection-record sources, app-state actions, and generated-app user bindings are not implemented.
+- Dynamic bindings currently cover page-scoped text variables plus latest-record and creator-selected specific-record collection fields for Text/Hero. Generic page parameters, app-state actions, and generated-app user bindings are not implemented.
 - Page-variable values are runtime-only preview state. They reset when a page runtime is recreated and are not persisted as hosted app data.
-- Project collections and read-only collection lists are implemented, but record detail, update/delete actions, relationships, filtering, and generated-app user ownership are not.
+- Project collections, public collection lists, and creator-configured latest/specific Text/Hero bindings are implemented, but end-user record selection, record update/delete actions, relationships, filtering, and generated-app user ownership are not.
 - Export and app-store pipeline features are not implemented.
 - GenAI generation is planned, not currently implemented.

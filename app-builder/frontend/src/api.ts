@@ -188,8 +188,16 @@ export function listProjectAppDataRecords(projectId: string, sourceId: string) {
   return request(`/projects/${projectId}/app-data/sources/${sourceId}/records`) as Promise<ProjectAppDataRecord[]>;
 }
 
-export function listPublicCollectionRecords(projectId: string, collectionId: string) {
-  return request(`/public/projects/${projectId}/app-data/collections/${collectionId}/records`) as Promise<ProjectAppDataRecord[]>;
+export function getLatestPublicCollectionRecord(projectId: string, collectionId: string) {
+  return request(
+    `/public/projects/${projectId}/app-data/collections/${collectionId}/records/latest`
+  ) as Promise<ProjectAppDataRecord | null>;
+}
+
+export function getPublicCollectionRecord(projectId: string, collectionId: string, recordId: string) {
+  return request(
+    `/public/projects/${projectId}/app-data/collections/${collectionId}/records/${recordId}`
+  ) as Promise<ProjectAppDataRecord>;
 }
 
 export function exportProjectAppDataCsv(projectId: string, sourceId: string) {

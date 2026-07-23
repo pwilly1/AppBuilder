@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import Landing from './components/Landing'
 import Account from './pages/Account'
 import Dashboard from './pages/Dashboard'
+import ProjectData from './pages/ProjectData'
 
 import { BrowserRouter, Navigate, Routes, Route, useLocation, useNavigate, useParams } from 'react-router-dom'
 import useProject from './hooks/useProject'
@@ -137,7 +138,7 @@ function AppContent(props: any) {
     isDemoMode,
   } = props
   const isEditorRoute = location.pathname.startsWith('/editor')
-  const isDashboardRoute = location.pathname.startsWith('/dashboard')
+  const isDashboardRoute = location.pathname.startsWith('/dashboard') || /^\/app-data\/[^/]+\/?$/.test(location.pathname)
   const isDemoRoute = location.pathname === DEMO_PROJECT_ROUTE
   const editorElement = (
     <EditorScreen
@@ -234,7 +235,21 @@ function AppContent(props: any) {
             path="/dashboard"
             element={(
               <section className="col-span-3">
-                {authed ? <Dashboard onOpen={(proj: any) => openProject(proj, navigate)} /> : <Navigate to="/" replace />}
+                {authed ? (
+                  <Dashboard
+                    onOpen={(proj: any) => openProject(proj, navigate)}
+                    onViewData={(proj) => navigate(`/app-data/${proj.id}`)}
+                  />
+                ) : <Navigate to="/" replace />}
+              </section>
+            )}
+          />
+
+          <Route
+            path="/app-data/:projectId"
+            element={(
+              <section className="col-span-3">
+                {authed ? <ProjectData /> : <Navigate to="/" replace />}
               </section>
             )}
           />

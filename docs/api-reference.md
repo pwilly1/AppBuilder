@@ -295,9 +295,13 @@ For `contactForm` sources it preserves the older fixed payload and email-notific
 
 Success: `201` with the stored record.
 
-### `GET /public/projects/:id/app-data/collections/:collectionId/records`
+### `GET /public/projects/:id/app-data/collections/:collectionId/records/latest`
 
-Does not require authentication. Returns up to 100 collection records, newest first, only when that collection has `publicRead` enabled. This is the read endpoint used by Data List blocks in web and Android runtime. Returns `403` when public reads are disabled.
+Does not require authentication. Returns the newest record from the collection, or JSON `null` when the collection has no records. The collection must belong to the requested project and have `publicRead` enabled. Web and Android page runtimes use this endpoint for direct Text/Hero collection bindings. Disabled public reads return `403`.
+
+### `GET /public/projects/:id/app-data/collections/:collectionId/records/:recordId`
+
+Does not require authentication. Returns one specific record only when it belongs to the requested project and collection and that collection has `publicRead` enabled. Web and Android use this endpoint when a Text/Hero binding is configured by the app creator to display a specific record. Missing, deleted, malformed, or incorrectly scoped record IDs return `404`; disabled public reads return `403`.
 
 ## Project Data Shape
 

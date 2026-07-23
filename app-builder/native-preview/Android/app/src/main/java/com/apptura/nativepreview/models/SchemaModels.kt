@@ -28,10 +28,19 @@ data class Block(
 )
 
 @Serializable
+data class CollectionRecordSelector(
+    val mode: String = "latest",
+    val recordId: String? = null,
+)
+
+@Serializable
 data class RuntimeValueRef(
     val source: String,
     val value: String? = null,
     val variableId: String? = null,
+    val collectionId: String? = null,
+    val fieldId: String? = null,
+    val record: CollectionRecordSelector? = null,
     val fieldBlockId: String? = null,
     val fallback: String? = null,
 )
@@ -47,6 +56,23 @@ data class PageStateVariable(
 @Serializable
 data class PageAppearance(
     val backgroundColor: String? = null,
+)
+
+@Serializable
+data class AppDataCollectionField(
+    val id: String,
+    val key: String,
+    val label: String,
+    val type: String,
+    val required: Boolean = false,
+)
+
+@Serializable
+data class AppDataCollection(
+    val id: String,
+    val name: String,
+    val publicRead: Boolean = false,
+    val fields: List<AppDataCollectionField> = emptyList(),
 )
 
 @Serializable
@@ -96,6 +122,7 @@ data class Project(
     val schemaVersion: Int? = null,
     val id: String? = null,
     val name: String? = null,
+    val dataCollections: List<AppDataCollection> = emptyList(),
     val pages: List<Page> = emptyList()
 )
 
@@ -312,13 +339,26 @@ object ProjectLoader {
         )
     }
 
-    suspend fun listPublicCollectionRecords(
+    suspend fun getLatestPublicCollectionRecord(
         baseUrl: String,
         projectId: String,
         collectionId: String,
-    ): List<AppDataRecord> {
+    ): AppDataRecord? {
         val body = httpGet(
-            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records",
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records/latest",
+            token = null,
+        )
+        return json.decodeFromString(body)
+    }
+
+    suspend fun getPublicCollectionRecord(
+        baseUrl: String,
+        projectId: String,
+        collectionId: String,
+        recordId: String,
+    ): AppDataRecord {
+        val body = httpGet(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records/$recordId",
             token = null,
         )
         return json.decodeFromString(body)

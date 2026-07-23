@@ -1,3 +1,4 @@
+import { isValidObjectId } from 'mongoose';
 import { AppSubmissionModel, type AppSubmissionValue } from '../models/AppSubmission.js';
 
 type ProjectLike = {
@@ -258,6 +259,40 @@ export async function listAppDataRecords(
   return submissions.map((submission) => serializeAppDataRecord(submission));
 }
 
+export async function getLatestAppDataRecord(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  sourceId: string,
+) {
+  const records = await listAppDataRecords(project, ownerId, projectId, sourceId, { limit: 1 });
+  return records[0] ?? null;
+}
+
+export async function getAppDataRecord(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  sourceId: string,
+  recordId: string,
+) {
+  const source = findAppDataSource(project, sourceId);
+  if (!source) {
+    const error: any = new Error('App data source not found');
+    error.status = 404;
+    throw error;
+  }
+  if (!isValidObjectId(recordId)) return null;
+
+  const submission = await AppSubmissionModel.findOne({
+    _id: recordId,
+    ownerId,
+    projectId,
+    formBlockId: source.sourceId,
+  }).lean();
+  return submission ? serializeAppDataRecord(submission) : null;
+}
+
 export function appDataRecordsToCsv(source: AppDataSourceSummary | AppDataSourceMatch, records: SerializedAppDataRecord[]) {
   const fieldKeys = new Set(source.fields.map((field) => field.key));
   for (const record of records) {
@@ -363,14 +398,26 @@ function createFieldDefinition(block: BlockLike, usedKeys: Map<string, number>, 
   };
 }
 
-function sanitizeRecordData(fields: AppDataFieldDefinition[], body: unknown): Record<string, AppSubmissionValue> {
+export function sanitizeRecordData(fields: AppDataFieldDefinition[], body: unknown): Record<string, AppSubmissionValue> {
   const source = isRecord(body) ? body : {};
   const data: Record<string, AppSubmissionValue> = {};
 
   for (const field of fields) {
-    const raw = source[field.key] ?? source[field.blockId];
+    const hasFieldValue = Object.prototype.hasOwnProperty.call(source, field.key);
+    const hasBlockValue = Object.prototype.hasOwnProperty.call(source, field.blockId);
+    const hasSubmittedValue = hasFieldValue || hasBlockValue;
+    const raw = hasFieldValue ? source[field.key] : source[field.blockId];
 
     if (field.type === 'checkbox' || field.type === 'toggle' || field.type === 'boolean') {
+      if (!hasSubmittedValue) {
+        if (field.required) {
+          const error: any = new Error(`${field.label} is required`);
+          error.status = 400;
+          throw error;
+        }
+        continue;
+      }
+
       const value = coerceBoolean(raw);
       if (field.required && value !== true) {
         const error: any = new Error(`${field.label} is required`);
@@ -387,6 +434,7 @@ function sanitizeRecordData(fields: AppDataFieldDefinition[], body: unknown): Re
       error.status = 400;
       throw error;
     }
+    if (!value) continue;
     data[field.key] = value;
   }
 

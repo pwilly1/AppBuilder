@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  collectBoundCollectionRequests,
   createPageRuntimeContext,
+  getCollectionDataKey,
+  hasDynamicBinding,
   hasPageStateBinding,
   normalizeRuntimeValueRef,
   resolveActionRuntimeValue,
@@ -33,7 +36,7 @@ test('page runtime context initializes valid text variables', () => {
     ],
   } as unknown as Pick<Page, 'stateVariables'>
 
-  assert.deepEqual(createPageRuntimeContext(page), { pageState: { name: 'Guest' } })
+  assert.deepEqual(createPageRuntimeContext(page), { pageState: { name: 'Guest' }, collectionData: {} })
 })
 
 test('runtime references normalize supported sources and reject malformed values', () => {
@@ -50,13 +53,37 @@ test('runtime references normalize supported sources and reject malformed values
     source: 'formValue',
     fieldBlockId: 'input-1',
   })
+  assert.deepEqual(normalizeRuntimeValueRef({ source: 'collection', collectionId: 'tasks', fieldId: 'title' }), {
+    source: 'collection',
+    collectionId: 'tasks',
+    fieldId: 'title',
+    record: { mode: 'latest' },
+  })
+  assert.deepEqual(normalizeRuntimeValueRef({
+    source: 'collection',
+    collectionId: 'tasks',
+    fieldId: 'title',
+    record: { mode: 'specific', recordId: ' record-1 ' },
+  }), {
+    source: 'collection',
+    collectionId: 'tasks',
+    fieldId: 'title',
+    record: { mode: 'specific', recordId: 'record-1' },
+  })
   assert.equal(normalizeRuntimeValueRef({ source: 'pageState', variableId: '' }), null)
+  assert.equal(normalizeRuntimeValueRef({ source: 'collection', collectionId: 'tasks', fieldId: '' }), null)
+  assert.equal(normalizeRuntimeValueRef({
+    source: 'collection',
+    collectionId: 'tasks',
+    fieldId: 'title',
+    record: { mode: 'specific', recordId: '' },
+  }), null)
   assert.equal(normalizeRuntimeValueRef({ source: 'futureSource', id: 'value-1' }), null)
   assert.equal(normalizeRuntimeValueRef(null), null)
 })
 
 test('runtime values use live page state and safe fallbacks', () => {
-  const context = { pageState: { greeting: 'Welcome back' } }
+  const context = { pageState: { greeting: 'Welcome back' }, collectionData: {} }
 
   assert.equal(resolveRuntimeValue({ source: 'pageState', variableId: 'greeting' }, context, 'Hello'), 'Welcome back')
   assert.equal(
@@ -68,9 +95,44 @@ test('runtime values use live page state and safe fallbacks', () => {
   assert.equal(resolveRuntimeValue({ source: 'unknown' }, context, 'Static'), 'Static')
 })
 
+test('collection bindings resolve stable field ids and fall back until ready', () => {
+  const reference = { source: 'collection', collectionId: 'tasks', fieldId: 'field-title' } as const
+  const latestKey = getCollectionDataKey('tasks')
+
+  assert.equal(resolveRuntimeValue(reference, {
+    pageState: {},
+    collectionData: { [latestKey]: { status: 'loading' } },
+  }, 'Static title'), 'Static title')
+  assert.equal(resolveRuntimeValue(reference, {
+    pageState: {},
+    collectionData: {
+      [latestKey]: {
+        status: 'ready',
+        recordId: 'record-1',
+        values: { 'field-title': 'Inspect generator' },
+      },
+    },
+  }, 'Static title'), 'Inspect generator')
+
+  const specificReference = {
+    ...reference,
+    record: { mode: 'specific', recordId: 'record-2' },
+  } as const
+  assert.equal(resolveRuntimeValue(specificReference, {
+    pageState: {},
+    collectionData: {
+      [getCollectionDataKey('tasks', specificReference.record)]: {
+        status: 'ready',
+        recordId: 'record-2',
+        values: { 'field-title': 'Specific task' },
+      },
+    },
+  }, 'Static title'), 'Specific task')
+})
+
 test('action values resolve live form fields without changing display binding behavior', () => {
   const reference = { source: 'formValue', fieldBlockId: 'input-1', fallback: 'Fallback' } as const
-  const context = { pageState: {} }
+  const context = { pageState: {}, collectionData: {} }
 
   assert.equal(resolveRuntimeValue(reference, context, 'Static'), 'Fallback')
   assert.equal(resolveActionRuntimeValue(reference, context, (id) => id === 'input-1' ? 'Typed value' : undefined), 'Typed value')
@@ -87,12 +149,90 @@ test('block prop resolution is property-specific and does not mutate saved props
     },
   }
 
-  const resolved = resolveBlockProps(block, { pageState: { title: 'Runtime title' } })
+  const resolved = resolveBlockProps(block, { pageState: { title: 'Runtime title' }, collectionData: {} })
 
   assert.deepEqual(resolved, { value: 'Runtime title', fontSize: 18 })
   assert.deepEqual(block.props, { value: 'Static title', fontSize: 18 })
   assert.equal(hasPageStateBinding(block, 'value'), true)
+  assert.equal(hasDynamicBinding(block, 'value'), true)
   assert.equal(hasPageStateBinding(block, 'fontSize'), false)
+})
+
+test('collection prop resolution does not mutate saved block content', () => {
+  const block: Block = {
+    id: 'hero-1',
+    type: 'hero',
+    props: { headline: 'Static headline', headlineSize: 36 },
+    bindings: {
+      headline: { source: 'collection', collectionId: 'tasks', fieldId: 'field-title' },
+    },
+  }
+
+  const resolved = resolveBlockProps(block, {
+    pageState: {},
+    collectionData: {
+      [getCollectionDataKey('tasks')]: {
+        status: 'ready',
+        recordId: 'record-1',
+        values: { 'field-title': 'Runtime headline' },
+      },
+    },
+  })
+
+  assert.deepEqual(resolved, { headline: 'Runtime headline', headlineSize: 36 })
+  assert.deepEqual(block.props, { headline: 'Static headline', headlineSize: 36 })
+  assert.equal(hasDynamicBinding(block, 'headline'), true)
+})
+
+test('page runtime deduplicates identical selectors and separates different records', () => {
+  const page: Pick<Page, 'blocks'> = {
+    blocks: [
+      {
+        id: 'text-1',
+        type: 'text',
+        props: { value: 'Fallback' },
+        bindings: { value: { source: 'collection', collectionId: 'tasks', fieldId: 'field-title' } },
+      },
+      {
+        id: 'hero-1',
+        type: 'hero',
+        props: { headline: 'Fallback' },
+        bindings: { headline: { source: 'collection', collectionId: 'tasks', fieldId: 'field-status' } },
+      },
+      {
+        id: 'text-2',
+        type: 'text',
+        props: { value: 'Fallback' },
+        bindings: {
+          value: {
+            source: 'collection',
+            collectionId: 'tasks',
+            fieldId: 'field-title',
+            record: { mode: 'specific', recordId: 'record-1' },
+          },
+        },
+      },
+      {
+        id: 'text-3',
+        type: 'text',
+        props: { value: 'Fallback' },
+        bindings: {
+          value: {
+            source: 'collection',
+            collectionId: 'tasks',
+            fieldId: 'field-title',
+            record: { mode: 'specific', recordId: 'record-2' },
+          },
+        },
+      },
+    ],
+  }
+
+  assert.deepEqual(collectBoundCollectionRequests(page), [
+    { key: 'tasks::latest', collectionId: 'tasks', record: { mode: 'latest' } },
+    { key: 'tasks::specific:record-1', collectionId: 'tasks', record: { mode: 'specific', recordId: 'record-1' } },
+    { key: 'tasks::specific:record-2', collectionId: 'tasks', record: { mode: 'specific', recordId: 'record-2' } },
+  ])
 })
 
 test('block actions normalize each supported action contract', () => {

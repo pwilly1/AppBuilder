@@ -1,5 +1,5 @@
 // © 2025 Preston Willis. All rights reserved.
-import type { Page, Block, BlockGridConstraints, GridPlacement } from '../shared/schema/types'
+import type { AppDataCollection, Page, Block, BlockGridConstraints, GridPlacement } from '../shared/schema/types'
 import {
   clampSpan,
   collidesWithBlocks,
@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import { DraggableBlock } from './DraggableBlock'
 import { BlockRenderer } from '../shared/BlockRenderer'
 import { createPageRuntimeContext, type RuntimeContext } from '../shared/runtime/runtimeBindings'
+import { useCollectionDataRuntime } from '../shared/runtime/useCollectionDataRuntime'
 import { BLOCK_DRAG_DATA_TYPE, getActiveDraggedBlock, getDraggedBlockFromDataTransfer } from './blockDrag'
 import { collectAllFieldValues, collectFieldValues, FormRuntimeProvider, type FormValue } from '../shared/blocks/formRuntime'
 import {
@@ -32,6 +33,7 @@ import {
 import { normalizePageBackgroundColor } from '../shared/schema/pageAppearance'
 
 const DEFAULT_PHONE_GRID_ROWS = GRID_DEFAULT_ROW_COUNT
+const EMPTY_DATA_COLLECTIONS: AppDataCollection[] = []
 
 type GridPreview = {
   blockId: string
@@ -62,6 +64,7 @@ type ContainerChildrenLayerProps = {
 export function PageRenderer({
   page,
   projectId,
+  dataCollections,
   selectedBlockId,
   activeContainerId,
   previewMode,
@@ -76,6 +79,7 @@ export function PageRenderer({
 }: {
   page: Page
   projectId?: string
+  dataCollections?: AppDataCollection[]
   selectedBlockId?: string
   activeContainerId?: string | null
   previewMode?: boolean
@@ -104,7 +108,13 @@ export function PageRenderer({
     [pageStateVariables],
   )
   const [pageState, setPageState] = useState<Record<string, string>>(() => initialPageState)
-  const runtimeContext = useMemo<RuntimeContext>(() => ({ pageState }), [pageState])
+  const collectionData = useCollectionDataRuntime({
+    page,
+    projectId,
+    dataCollections: dataCollections || EMPTY_DATA_COLLECTIONS,
+    enabled: Boolean(previewMode),
+  })
+  const runtimeContext = useMemo<RuntimeContext>(() => ({ pageState, collectionData }), [collectionData, pageState])
   const pageStateVariableIds = useMemo(
     () => new Set((pageStateVariables || []).map((variable) => variable.id)),
     [pageStateVariables],

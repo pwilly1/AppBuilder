@@ -13,7 +13,8 @@ export function makeAppDataRoutes(controller: AppDataController, requireAuth: Re
 
 export function makePublicAppDataRoutes(controller: AppDataController) {
   const router = Router();
-  router.get('/projects/:id/app-data/collections/:collectionId/records', controller.listPublicCollectionRecords);
+  router.get('/projects/:id/app-data/collections/:collectionId/records/latest', controller.getLatestPublicCollectionRecord);
+  router.get('/projects/:id/app-data/collections/:collectionId/records/:recordId', controller.getPublicCollectionRecord);
   router.post('/projects/:id/forms/:blockId/submissions', controller.submitPublicLegacy);
   router.post('/projects/:id/app-data/sources/:sourceId/records', controller.submitPublicRecord);
   return router;

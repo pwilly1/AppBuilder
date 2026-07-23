@@ -1,164 +1,76 @@
-# Dynamic Data Binding Architecture
+# Dynamic Data Binding
 
-This document is the implementation reference for dynamic values, runtime state, and future data-driven pages in Apptura. Read it before changing block bindings, page data, generated-app users, state actions, or runtime data resolution.
+## Purpose
 
-## Status
+Dynamic binding lets a block display runtime data without replacing its saved design-time content. It is the presentation half of Apptura's data system:
 
-This architecture is partially implemented. The first local page-state slice exists, while page data sources, generated-app users, and record mutation remain future work.
+- actions change or submit values
+- bindings read values and display them
+- static block props remain the visual fallback
 
-Apptura currently supports:
+The implementation intentionally starts small. Text `value` and Hero `headline` can currently read either a page variable or a field from the latest record or one creator-selected record in a project collection. The same saved schema is resolved by web preview and Android preview.
 
-- static values in `block.props`
-- schema-backed Navigate, Submit Data, Open URL, and Set Page State actions
-- grouped form values and hosted app-data submission
-- project-level typed data collections
-- read-only Data List rendering for publicly readable collections
-- page-scoped text variables with stable IDs and editor preview values
-- property-level `pageState` bindings for Text `value` and Hero `headline`
-- fixed or live Input/Textarea assignment to page variables from Button, Icon, and Image actions
-- matching static fallback resolution in web and Android preview
+## Current Status
 
-Apptura does not yet have:
+Implemented:
 
-- app state actions
-- page parameters
-- page data-source resolution
-- generated-app user accounts or a `currentUser` runtime
+- page-scoped text variables
+- `setPageState` actions with static or Input/Textarea values
+- direct Text/Hero bindings to project collections
+- latest-record and creator-selected specific-record collection selection
+- page-level collection request deduplication
+- loading, empty, missing, permission, and error fallback to static content
+- matching web and Android schema/runtime behavior
+
+Not implemented:
+
+- end-user-selected records and record selection passed through navigation
+- current-user records
+- filters, sorting, or arbitrary collection queries
+- generated-app user authentication and ownership rules
 - record update/delete actions
-- conditional expressions or a visual workflow engine
+- formulas, conditional visibility, or a general expression language
 
-Do not document those future capabilities as implemented until they exist across the required runtimes.
+## Core Rules
 
-## Product Goal
+1. `props` store the block's normal static content and appearance.
+2. `bindings` optionally replace individual prop values at runtime.
+3. `actions` represent events and side effects; they are not bindings.
+4. Bindings use stable IDs instead of labels or display names.
+5. A page runtime loads shared data once; individual blocks do not fetch records.
+6. Static props remain usable when runtime data cannot be resolved.
+7. Every persisted binding source must behave consistently in web and Android.
 
-Allow a generated app to display and update information that depends on runtime context rather than only static editor values.
-
-Target examples:
-
-- A heading displays the signed-in app user's name.
-- A profile page displays fields from that user's profile record.
-- Text entered on one page is displayed on another page.
-- A page displays a record selected elsewhere in the app.
-- A form updates an existing record instead of only creating a submission.
-
-This system turns blocks into data-driven views without making each block responsible for querying the backend.
-
-## Core Decisions
-
-### Keep properties, bindings, and actions separate
-
-Each concept has one responsibility:
-
-| Concept | Responsibility | Example |
-| --- | --- | --- |
-| Property | Static content or presentation | `fontSize: 24` |
-| Binding | Supplies a runtime value to a property | Text comes from `profile.displayName` |
-| Action | Performs work after an event | Navigate, submit, or update state |
-| Runtime context | Holds values currently available to the page | Page data, parameters, state, form values |
-
-A binding is not an action. Reading a name and displaying it must not execute a workflow.
-
-### Pages own data loading
-
-Blocks must not independently query collections or locate the current user's record.
-
-Instead, a page declares named data sources:
-
-```text
-profile = current user's Profile record
-```
-
-Blocks then bind to the resolved page data:
-
-```text
-Hero text  -> profile.displayName
-Text       -> profile.bio
-Image src  -> profile.avatarUrl
-```
-
-This avoids duplicate requests, centralizes loading and error handling, simplifies the inspector, and makes web/Android behavior easier to keep consistent.
-
-### Use stable IDs in saved schema
-
-Saved bindings should reference stable page-data and collection-field IDs. User-facing names are labels and may change without breaking existing projects.
-
-Avoid storing a free-form path such as `profiles.full_name` as the only reference. A renamed collection, page variable, or field would silently break it.
-
-### Keep runtime implementations platform-specific but schema-compatible
-
-The web preview and Android runtime may use different internal code, but they must consume the same saved binding JSON and produce equivalent outcomes.
-
-DOM measurement, React-only context, or browser-only APIs must not become part of the persisted contract.
-
-## Proposed Schema
-
-The exact names may be adjusted during implementation, but the responsibilities should remain stable.
-
-### Page data sources
-
-A page declares the records or values it needs:
-
-```ts
-type PageDataSource = {
-  id: string
-  name: string
-  kind: 'collectionRecord' | 'currentUserProfile'
-  collectionId: string
-  recordId?: RuntimeValueRef
-}
-```
-
-Notes:
-
-- `id` is the stable schema reference.
-- `name` is the editor-facing label, such as `Profile`.
-- `collectionRecord` resolves a record using a runtime record ID.
-- `currentUserProfile` must wait for generated-app authentication and backend ownership rules.
-- Query lists, filters, sorting, and relationships are later extensions, not part of the first milestone.
+## Saved Schema
 
 ### Runtime value references
 
-Bindings and future action inputs use one shared value-reference model:
-
 ```ts
 type RuntimeValueRef =
+  | { source: 'static'; value: string }
+  | { source: 'pageState'; variableId: string; fallback?: string }
   | {
-      source: 'static'
-      value: string
-    }
-  | {
-      source: 'pageData'
-      dataSourceId: string
+      source: 'collection'
+      collectionId: string
       fieldId: string
-      fallback?: unknown
+      record?:
+        | { mode: 'latest' }
+        | { mode: 'specific'; recordId: string }
+      fallback?: string
     }
-  | {
-      source: 'pageParameter'
-      parameterId: string
-      fallback?: unknown
-    }
-  | {
-      source: 'pageState'
-      variableId: string
-      fallback?: unknown
-    }
-  | {
-      source: 'appState'
-      variableId: string
-      fallback?: unknown
-    }
-  | {
-      source: 'formValue'
-      fieldBlockId: string
-      fallback?: unknown
-    }
+  | { source: 'formValue'; fieldBlockId: string; fallback?: string }
 ```
 
-Do not implement every source at once. A shared type allows sources to be added deliberately without creating separate binding formats.
+The sources have distinct responsibilities:
 
-### Block bindings
+- `static` stores a fixed action value.
+- `pageState` reads a page-scoped runtime variable.
+- `collection` reads a field from the latest record or one creator-selected record in a project collection.
+- `formValue` reads a live Input/Textarea value for an action.
 
-Bindings are optional and property-specific:
+`formValue` is currently an action-value source, not a display binding exposed for Text/Hero.
+
+### Block property bindings
 
 ```ts
 type BlockBindings = Record<string, RuntimeValueRef>
@@ -168,97 +80,168 @@ type Block = {
   type: BlockType
   props: Record<string, unknown>
   bindings?: BlockBindings
-  // Existing layout fields remain unchanged.
 }
 ```
 
-Example:
+Example Text block:
 
 ```json
 {
+  "id": "welcome-text",
   "type": "text",
   "props": {
-    "text": "Guest",
+    "value": "No recent updates",
     "fontSize": 18
   },
   "bindings": {
-    "text": {
-      "source": "pageData",
-      "dataSourceId": "profile-source-id",
-      "fieldId": "display-name-field-id",
-      "fallback": "Guest"
+    "value": {
+      "source": "collection",
+      "collectionId": "updates",
+      "fieldId": "update-title",
+      "record": { "mode": "latest" }
     }
   }
 }
 ```
 
-`props.text` remains the static/default editor value. When the binding resolves successfully, its value replaces that property at render time. The saved `props` object must not be mutated by resolution.
+The runtime may replace `props.value`, but it never mutates the saved prop. If collection data is unavailable, the block still displays `No recent updates`.
 
-## Runtime Model
+### Page variables
 
-Each rendered page receives a runtime context containing only currently available values:
+```ts
+type PageStateVariable = {
+  id: string
+  name: string
+  type: 'text'
+  initialValue: string
+}
+```
+
+Page variables are local runtime state. They reset when the page runtime is recreated and are not records in hosted app data.
+
+### Project collections
+
+```ts
+type AppDataCollection = {
+  id: string
+  name: string
+  publicRead: boolean
+  fields: Array<{
+    id: string
+    key: string
+    label: string
+    type: 'text' | 'number' | 'boolean' | 'email' | 'date'
+    required?: boolean
+  }>
+}
+```
+
+Bindings save `collection.id` and `field.id`. Stored records use each field's `key`, so the runtime maps record keys back to stable field IDs before resolving block properties.
+
+## Runtime Context
+
+The page owns runtime data shared by its blocks:
 
 ```ts
 type RuntimeContext = {
-  pageData: Record<string, RuntimeDataState>
-  pageParameters: Record<string, unknown>
-  pageState: Record<string, unknown>
-  appState: Record<string, unknown>
-  formValues: Record<string, unknown>
-  currentAppUser?: AppUserIdentity
+  pageState: Record<string, string>
+  collectionData: Record<string, RuntimeDataState>
 }
 
 type RuntimeDataState =
   | { status: 'loading' }
-  | { status: 'ready'; value: unknown }
+  | { status: 'ready'; recordId: string; values: Record<string, string> }
   | { status: 'empty' }
   | { status: 'error'; message: string }
 ```
 
-The binding resolver receives a `RuntimeValueRef`, the expected property type, and the runtime context. It returns a resolved value or the configured fallback.
-
-Resolution must be:
-
-- pure and deterministic
-- safe for missing sources and fields
-- type-aware
-- unable to mutate project or runtime state
-- implemented with matching behavior in web and Android
-
-## Page Lifecycle
-
-The intended flow is:
+The lifecycle is:
 
 ```text
 Open page
-  -> read page parameters
-  -> initialize page state
-  -> resolve page data sources once
-  -> expose loading/ready/empty/error states
-  -> resolve block property bindings
-  -> render blocks
+  -> initialize page variables
+  -> scan block bindings for collection IDs
+  -> deduplicate collection-and-selector requests
+  -> request each latest or specific record once
+  -> map record keys to stable field IDs
+  -> expose collection states in RuntimeContext
+  -> resolve each block property
 ```
 
-When a relevant parameter or state variable changes, only affected page data and bindings should be recomputed. Blocks must not make their own network requests during normal rendering.
+This design prevents ten blocks bound to one collection from making ten network requests. The blocks are pure consumers of the page context.
 
-## Navigation And Data
+## Record Selection
 
-Static navigation remains valid:
+The app creator chooses one of two selectors in the Inspector:
 
 ```text
-Button with Navigate action -> fixed destination page
+selected collection -> latest submitted record -> selected field
+selected collection -> specific saved record -> selected field
 ```
 
-Dynamic navigation may later pass page parameters:
+Web and Android call:
 
 ```text
-Navigate to Profile page
-  parameter profileRecordId = selected record ID
+GET /public/projects/:projectId/app-data/collections/:collectionId/records/latest
+GET /public/projects/:projectId/app-data/collections/:collectionId/records/:recordId
 ```
 
-The destination page uses that parameter to resolve its declared `profile` page-data source. Multiple list rows can therefore reuse one detail page instead of requiring one hard-coded page per database record.
+The latest endpoint returns:
 
-Passing data during navigation is an extension of the Navigate action. Displaying the resulting data remains a binding responsibility.
+- the newest record when one exists
+- JSON `null` for an empty collection
+- `403` when `publicRead` is disabled
+- `404` when the project or collection does not exist
+
+The specific-record endpoint returns the selected record or `404` when it no longer exists in that project and collection. Both endpoints return `403` when public reads are disabled. The specific record is chosen by the app creator while configuring the block; the generated-app user does not choose it at runtime.
+
+These selectors cover fixed profiles, highlighted records, recent announcements, latest status, and similar first-version use cases. They are not a complete querying system.
+
+Future selectors should extend the binding contract explicitly rather than reintroducing a separate page-source model. Likely selectors are:
+
+```text
+latest
+record selected by a generated-app user
+current user's record
+first matching filter
+```
+
+Those selectors require separate product and authorization work.
+
+## Resolution And Fallback
+
+For a collection binding, the runtime uses the dynamic value only when:
+
+- the collection exists
+- public reads are enabled
+- a record exists
+- the configured field still exists
+- the record contains a value for that field
+
+Otherwise it uses `fallback` when explicitly present, then the original static prop.
+
+This applies during loading as well. Text should not disappear or resize unpredictably while a request is in progress.
+
+## Editor Experience
+
+Text and Hero expose this Inspector flow:
+
+```text
+Value source
+  Static content
+  Page variable
+  Collection data
+
+Collection data
+  Collection: Tasks
+  Record: Latest record | Specific record
+  Specific record: Inspection #1042
+  Field: Title
+```
+
+The UI displays collection, record, and field labels, while the schema saves stable IDs. The creator-only record picker loads records through the authenticated owner API. Runtime rendering still reads through the public collection endpoints, so the Inspector tells the creator to enable `Show records inside the app` when the selected collection is private.
+
+Bound text-like blocks disable inline editing because their displayed value is runtime-controlled. Their static fallback remains editable in the Inspector.
 
 ## Actions
 
@@ -271,146 +254,83 @@ openUrl
 setPageState
 ```
 
-`setPageState` targets a stable page-variable ID and receives a `RuntimeValueRef`. The editor currently exposes a fixed text value or a live Input/Textarea value. Field references use stable block IDs rather than labels or submission keys. The value updates bound blocks immediately and resets when that page runtime is recreated; it is not written to hosted app data.
+`setPageState` targets a stable variable ID. Its value may be static or come from a live Input/Textarea block.
 
-`submitData` stores an explicit list of selected field block IDs on the button action. It does not require fields to point back to the button. When the button targets a project collection, each selected field also stores its target collection key.
+`submitData` explicitly lists the field block IDs it submits. When it targets a project collection, those values are stored under the collection's stable field keys.
 
-Likely future actions are:
+Bindings do not submit or mutate data. A future `createRecord`, `updateRecord`, or `deleteRecord` capability belongs in the action system.
 
-```text
-setAppState
-createRecord
-updateRecord
-deleteRecord
-```
+## Record Selection Boundary
 
-Future action values should use `RuntimeValueRef` so an update can use static values, form input, page state, or page data without inventing another expression format.
+End-user record selection and record-aware navigation can be designed later using an explicit page-parameter contract. Creator-selected specific records do not provide that runtime behavior.
 
-Do not build arbitrary action chains, conditions, loops, or a general expression language in the first binding milestone.
+## Security Boundary
 
-## Generated-App Users And Security
+`publicRead` is required because web preview and Android preview currently make anonymous collection-read requests. A binding is presentation configuration, not authorization.
 
-Builder accounts and generated-app user accounts are separate identities. The current Apptura login authenticates the person building an app; it must not automatically become the `currentUser` inside every generated app.
+Builder authentication and generated-app user authentication are separate concerns. Before Apptura supports private current-user data, it needs:
 
-Before `currentUserProfile` is implemented, Apptura needs:
-
-- generated-app user signup/login/session behavior
+- generated-app signup/login/session behavior
 - a stable app-user ID
-- record ownership fields such as `ownerUserId`
-- backend authorization for every record read and write
-- explicit collection access rules
+- record ownership metadata
+- backend read/write policies for every collection operation
+- tests proving users cannot access another user's records
 
-Bindings are presentation configuration, not authorization. A hidden block or missing binding must never be the mechanism that protects private data.
+Client-side hidden fields, missing blocks, or guessed IDs must never be treated as access control.
 
-## Editor Experience
+## Web And Android Parity
 
-The inspector should not expose raw JSON paths or require users to understand runtime internals.
+Both runtimes must:
 
-Recommended property control:
+- decode the same `RuntimeValueRef`
+- scan the same page bindings
+- deduplicate collection-and-selector requests
+- call the matching latest-record or specific-record route
+- map stored field keys to stable field IDs
+- render boolean values consistently as `Yes` or `No`
+- preserve static fallback for loading, empty, missing, and error states
+- ignore unknown future sources safely instead of crashing
 
-```text
-Text value
-  ( ) Static text
-  ( ) From data
+## Compatibility
 
-From data
-  Page data -> Profile -> Display name
+- Projects without `bindings` continue rendering static props.
+- `bindings` are optional and additive.
+- Collection bindings without a `record` selector continue reading the latest record.
+- Renaming collection or field labels does not break saved IDs.
+- Deleting a collection or field produces fallback content rather than a runtime crash.
+- Malformed and unsupported references normalize to no binding.
+- This slice does not change schema version because the fields are optional and old runtimes already ignore unknown JSON keys.
 
-Preview value
-  Preston
-```
+## Test Requirements
 
-The editor must provide:
+Shared contract tests cover:
 
-- source and field pickers using names, not IDs
-- data-type compatibility filtering
-- sample/preview data
-- a visible fallback setting
-- warnings for deleted or unavailable references
-- clear loading, empty, and error previews
+- supported reference normalization
+- malformed reference rejection
+- latest and specific selector normalization
+- distinct cache keys for different records in the same collection
+- stable field-ID resolution
+- static fallback while loading
+- no mutation of saved block props
+- deduplication of repeated collection bindings on one page
 
-The saved schema still stores stable IDs behind these labels.
+Release checks also require:
 
-## First Implementation Milestone
-
-Progress on the smallest complete vertical slice:
-
-- Completed: shared binding and page-state reference schema types.
-- Completed: pure binding-resolution helpers in web and Android.
-- Completed: page-scoped text variables with initial preview values.
-- Completed: property binding controls for Text and Hero text.
-- Completed: matching web and Android rendering with static-property fallback.
-- Completed: missing-variable warnings and safe missing-reference behavior.
-- Completed: schema-backed `setPageState` actions with fixed and Input/Textarea values in web and Android.
-- Completed: backward-compatible static `props` rendering.
-- Completed: focused automated resolver and action-contract tests.
-- Remaining: page parameters.
-
-Do not include generated-app authentication, collection queries, record mutation, conditional visibility, or visual workflow chains in this milestone.
-
-After this slice is stable, add page-owned collection-record sources. Add current-user profile sources only after the app-user identity and authorization model exists.
-
-## Compatibility And Migration
-
-- Existing projects without `bindings` render exactly as they do today.
-- Bindings are optional and additive.
-- Static props remain valid fallbacks.
-- Unknown binding sources or deleted fields resolve safely to fallback/empty state; they must not crash a runtime.
-- Schema normalization should preserve valid future-safe data and remove malformed references deliberately.
-- Any schema-version change must be reflected in web migration, backend validation, Android models, and documentation.
-
-## Testing Requirements
-
-### Shared behavior
-
-- Resolves each supported source correctly.
-- Uses fallback for missing source, field, or incompatible type.
-- Does not mutate the project schema.
-- Survives malformed or unknown binding JSON.
-- Preserves static props when no binding exists.
-
-### Web editor and preview
-
-- Binding controls persist stable IDs.
-- Renaming a source or field label does not break a binding.
-- Editor sample data matches preview resolution.
-- Page changes reset page-scoped values according to the documented lifecycle.
-
-### Android
-
-- Kotlin models decode bound and unbound projects.
-- Resolver behavior matches web for ready, empty, missing, and fallback values.
-- Unsupported future sources fail safely rather than crashing.
-
-### Security
-
-- Private records cannot be read by changing client-side IDs.
-- App users cannot read or modify records owned by another user.
-- Public-read collections remain the only anonymous collection-read path until broader policies are implemented.
-
-## Deferred Capabilities
-
-The following are intentionally deferred:
-
-- arbitrary expressions and formulas
-- conditions and conditional visibility
-- computed fields
-- collection list queries with filters and sorting
-- relational joins
-- reusable workflow/action chains
-- offline synchronization of bound records
-- generated-app user authentication
-- record update/delete UI
-
-They should build on the same value-reference and page-data model rather than bypassing it.
+- frontend TypeScript/Vite build
+- backend TypeScript build and test suite
+- Android Kotlin compile
+- manual Text and Hero binding checks in web preview
+- manual parity check in Android preview
+- specific-record deletion fallback verification
+- `403` verification when public reads are disabled
+- empty-collection fallback verification
 
 ## Decision Summary
 
-1. Build dynamic data binding because it is required for useful personalized apps.
-2. Do not turn bindings into actions.
-3. Let pages load named data once; blocks only consume it.
-4. Store stable IDs, not only field names or free-form paths.
-5. Start with Text/Hero and local page/app runtime values.
-6. Treat generated-app identity and backend authorization as prerequisites for current-user data.
-7. Require web/Android parity for every persisted binding source.
-8. Delay a general visual programming language until the smaller binding system is proven.
+1. Text and Hero can display hosted collection data directly.
+2. The creator can choose the latest record or one specific record; generated-app users cannot select records yet.
+3. Pages coordinate data loading; blocks do not fetch independently.
+4. Bindings store stable collection and field IDs.
+5. Static content remains the fallback and design-time representation.
+6. Web and Android implement the same persisted contract.
+7. End-user-selected, current-user, filtered, and sorted record selectors remain later milestones.

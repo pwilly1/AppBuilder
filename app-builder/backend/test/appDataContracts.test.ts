@@ -6,6 +6,7 @@ import {
   isPublicReadableCollection,
   isPublicSubmissionSource,
   resolveAppDataWriteSource,
+  sanitizeRecordData,
 } from '../src/services/AppDataService.js'
 import { normalizeBlockAction } from '../../frontend/src/shared/actions/blockActions.js'
 import { migrateProjectToGridLayout } from '../../frontend/src/shared/schema/gridMigration.js'
@@ -94,6 +95,32 @@ test('collection sources replace duplicate button sources in listings', () => {
 test('public submissions require a block-backed source', () => {
   assert.equal(isPublicSubmissionSource(project, 'button-collection'), true)
   assert.equal(isPublicSubmissionSource(project, collection.id), false)
+})
+
+test('record sanitization omits optional fields that were not submitted', () => {
+  const fields = [
+    { blockId: 'input-1', type: 'input' as const, key: 'field_1', label: 'Field 1', required: false },
+    { blockId: 'input-2', type: 'input' as const, key: 'field_2', label: 'Field 2', required: false },
+    { blockId: 'toggle-1', type: 'toggle' as const, key: 'enabled', label: 'Enabled', required: false },
+  ]
+
+  assert.deepEqual(sanitizeRecordData(fields, {
+    field_1: '  first value  ',
+    field_2: '   ',
+    enabled: false,
+  }), {
+    field_1: 'first value',
+    enabled: false,
+  })
+  assert.deepEqual(sanitizeRecordData(fields, { field_2: 'second value' }), {
+    field_2: 'second value',
+  })
+})
+
+test('record sanitization still rejects missing required fields', () => {
+  assert.throws(() => sanitizeRecordData([
+    { blockId: 'email-1', type: 'email', key: 'email', label: 'Email', required: true },
+  ], {}), /Email is required/)
 })
 
 test('unified submit buttons are app-data sources while static buttons are not', () => {

@@ -110,11 +110,12 @@ type Page = {
   appearance?: {
     backgroundColor?: string
   }
+  stateVariables?: PageStateVariable[]
   blocks: Block[]
 }
 ```
 
-Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Buttons configured with Submit Data can target a collection while selecting same-page fields explicitly; each selection can map to a collection field through `targetFieldKey`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Data List blocks read those records through the public collection endpoint only when `publicRead` is enabled.
+Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Buttons configured with Submit Data can target a collection while selecting same-page fields explicitly; each selection can map to a collection field through `targetFieldKey`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Text and Hero collection bindings read either the latest record or one creator-selected specific record, and both selectors require `publicRead`.
 
 A block has:
 
@@ -124,6 +125,7 @@ type Block = {
   type: BlockType
   parentId?: string
   props: Record<string, any>
+  bindings?: BlockBindings
   layout?: BlockRuntimeLayout
   render?: BlockRenderMetadata
   editorPlacement?: BlockEditorPlacement
@@ -254,7 +256,6 @@ Behavior notes:
 - Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, opacity, and optional tap actions across web and Android preview.
 - Form is a schema-backed submission surface with shared parent/child layout rules across web and Android preview.
 - Button with `submitData` is a schema-backed submission trigger that reads explicit same-page field references in both web and Android preview, then posts them to its own source or a configured project collection.
-- Data List is a schema-backed read primitive that displays records from a publicly readable project collection across web and Android preview.
 - Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or selected by a Submit Data button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
@@ -273,9 +274,9 @@ Button supports no action, navigation, submission, URL, and page-variable action
 
 ### Dynamic Data Binding Foundation
 
-The first dynamic binding slice is implemented. Pages can define stable text state variables with initial preview values, and Text/Hero blocks can bind their content properties to those variables. Button, Icon, and Image can set those values at runtime. Web and Android resolve the same binding/action JSON and fall back to the block's static property when a reference is missing. Existing projects without bindings remain unchanged.
+The page-state and first collection-binding slices are implemented. Pages can define stable text state variables, and Text/Hero can bind content either to a variable or directly to a project collection field. A collection binding selects either the latest record or one specific record chosen by the app creator. Each page runtime finds all referenced collection-and-selector pairs, deduplicates them, and loads each requested record once; blocks only resolve values from the resulting context. Web and Android use the same schema and fall back to static properties for missing, loading, empty, permission-denied, or failed data. Existing bindings without a selector continue using the latest record.
 
-App-state actions, page parameters, collection-record page sources, and generated-app users are not implemented. Page-state values currently reset when the page runtime is recreated and are not persisted as hosted app data. The approved direction keeps static properties, runtime bindings, and event actions separate. Pages will eventually declare and resolve named data sources once, while blocks bind individual properties to values exposed by that page context. Blocks must not become independent database query clients.
+End-user-selected records, app-state actions, generic page parameters, generated-app users, filters/sorting, and private per-user record access are not implemented. Page-state values reset when the page runtime is recreated and are not persisted as hosted app data. The architecture keeps static properties, runtime bindings, and event actions separate; blocks must not become independent database query clients.
 
 The full proposed schema, lifecycle, security prerequisites, phased rollout, and web/Android parity requirements are documented in [Dynamic Data Binding Architecture](dynamic-data-binding.md). That document is the source of truth for future binding, state, generated-app user, and data-driven page work.
 

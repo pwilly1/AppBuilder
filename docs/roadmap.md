@@ -155,17 +155,17 @@ These are important to the long-term product vision but should wait until the ed
 | Completed | Apptura-hosted app-data source listing, record viewing, CSV export, and web/Android submission. |
 | Completed | App-level data collections with typed field definitions and stable IDs. |
 | Later | Richer app-level relational data collections. |
-| Completed | Read-only Data List block across web and Android. |
 | Completed | Page-scoped text variables and Text/Hero bindings with matching web/Android resolution and editor sample values. |
 | Completed | Schema-backed Set Page Variable actions on Button, Icon, and Image across web and Android. |
 | Completed | Input/Textarea runtime values as stable-ID sources for Set Page Variable actions. |
 | Planned | Page parameters and app-state actions. |
-| Planned | Page-owned collection-record data sources and loading/error states. |
-| Later | Data-bound record detail and update/delete blocks. |
+| Completed | Direct Text/Hero bindings to either the latest record or one creator-selected specific record in a publicly readable collection, with safe fallback in web and Android. |
+| Planned | Record selectors driven by generated-app users, current-user identity, filters, and sorting. |
+| Later | Record update/delete actions and broader property bindings. |
 | Later | Generated app user accounts. |
 | In Progress | Access rules; collection public-read control exists, broader ownership rules remain. |
 
-Implementation must follow [Dynamic Data Binding Architecture](dynamic-data-binding.md): pages resolve named data once, blocks bind to that context, and current-user bindings wait for generated-app identity and authorization.
+Implementation must follow [Dynamic Data Binding Architecture](dynamic-data-binding.md): pages resolve referenced collection data once, blocks bind to that context, and current-user bindings wait for generated-app identity and authorization.
 
 ### 9. Offline-First Runtime
 

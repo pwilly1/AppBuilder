@@ -3,10 +3,21 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import type { AppDataCollection, Block, PageStateVariable, SubmitDataFieldRef } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
-import { uploadProjectImage } from '../api';
+import { listProjectAppDataRecords, uploadProjectImage, type ProjectAppDataRecord } from '../api';
 import { normalizeBlockAction, resolveBlockAction } from '../shared/actions/blockActions';
 
 type PageLite = { id: string; title?: string; path?: string };
+
+type TextBindingDraft =
+  | { source: 'static' }
+  | { source: 'pageState'; variableId: string }
+  | {
+      source: 'collection';
+      collectionId: string;
+      fieldId: string;
+      recordMode: 'latest' | 'specific';
+      recordId: string;
+    };
 
 type InspectorProps = {
   block?: Block | null;
@@ -100,7 +111,11 @@ export default function Inspector({
   const previewedPropsRef = React.useRef<Record<string, any> | null>(null);
   const [imageUploadError, setImageUploadError] = React.useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = React.useState(false);
-  const [pageStateBindingId, setPageStateBindingId] = React.useState(() => getPageStateBindingId(block));
+  const [textBinding, setTextBinding] = React.useState<TextBindingDraft>(() => getTextBindingDraft(block));
+  const [bindingRecords, setBindingRecords] = React.useState<ProjectAppDataRecord[]>([]);
+  const [bindingRecordsLoading, setBindingRecordsLoading] = React.useState(false);
+  const [bindingRecordsError, setBindingRecordsError] = React.useState<string | null>(null);
+  const [textBindingError, setTextBindingError] = React.useState<string | null>(null);
   const actionType = watch('action.type') as string | undefined;
   const actionValueSource = watch('action.value.source') as string | undefined;
   const selectedActionFieldBlockId = watch('action.value.fieldBlockId') as string | undefined;
@@ -135,9 +150,44 @@ export default function Inspector({
       return;
     }
     reset(getInspectorDefaultProps(block));
-    setPageStateBindingId(getPageStateBindingId(block));
+    setTextBinding(getTextBindingDraft(block));
     setImageUploadError(null);
+    setTextBindingError(null);
   }, [block, reset]);
+
+  const bindingCollectionId = textBinding.source === 'collection' ? textBinding.collectionId : '';
+  const bindingRecordMode = textBinding.source === 'collection' ? textBinding.recordMode : 'latest';
+
+  React.useEffect(() => {
+    setBindingRecords([]);
+    setBindingRecordsError(null);
+    if (bindingRecordMode !== 'specific' || !bindingCollectionId) {
+      setBindingRecordsLoading(false);
+      return;
+    }
+    if (!projectId) {
+      setBindingRecordsLoading(false);
+      setBindingRecordsError('Save the project before choosing a specific record.');
+      return;
+    }
+
+    let active = true;
+    setBindingRecordsLoading(true);
+    void listProjectAppDataRecords(projectId, bindingCollectionId)
+      .then((records) => {
+        if (active) setBindingRecords(records || []);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setBindingRecordsError(error instanceof Error ? error.message : 'Could not load collection records.');
+        }
+      })
+      .finally(() => {
+        if (active) setBindingRecordsLoading(false);
+      });
+
+    return () => { active = false; };
+  }, [bindingCollectionId, bindingRecordMode, projectId]);
 
   if (!block) {
     return (
@@ -150,6 +200,11 @@ export default function Inspector({
   }
 
   const submit = (vals: any) => {
+    if (textBinding.source === 'collection' && textBinding.recordMode === 'specific' && !textBinding.recordId) {
+      setTextBindingError('Choose a specific record before saving this binding.');
+      return;
+    }
+    setTextBindingError(null);
     const props = { ...(block.props as Record<string, any>), ...vals } as any;
     if (props.fontSize) props.fontSize = Number(props.fontSize);
     if (props.headlineSize) props.headlineSize = Number(props.headlineSize);
@@ -183,8 +238,17 @@ export default function Inspector({
     const bindingProperty = getBindableTextProperty(block);
     if (bindingProperty) {
       const bindings = { ...(block.bindings || {}) };
-      if (pageStateBindingId) {
-        bindings[bindingProperty] = { source: 'pageState', variableId: pageStateBindingId };
+      if (textBinding.source === 'pageState' && textBinding.variableId) {
+        bindings[bindingProperty] = { source: 'pageState', variableId: textBinding.variableId };
+      } else if (textBinding.source === 'collection' && textBinding.collectionId && textBinding.fieldId) {
+        bindings[bindingProperty] = {
+          source: 'collection',
+          collectionId: textBinding.collectionId,
+          fieldId: textBinding.fieldId,
+          record: textBinding.recordMode === 'specific'
+            ? { mode: 'specific', recordId: textBinding.recordId }
+            : { mode: 'latest' },
+        };
       } else {
         delete bindings[bindingProperty];
       }
@@ -244,7 +308,7 @@ export default function Inspector({
                   <option key={collection.id} value={collection.id}>{collection.name}</option>
                 ))}
               </select>
-              <p className="text-xs text-slate-500">Choose a collection when these records should also power Data List blocks.</p>
+              <p className="text-xs text-slate-500">Choose a collection when these records should be reusable by data-bound Text or Hero blocks.</p>
             </div>
             <div className="grid gap-2">
               <FieldLabel>Fields to submit</FieldLabel>
@@ -463,25 +527,179 @@ export default function Inspector({
   }
 
   function renderTextBindingControls(propertyLabel: 'text' | 'headline') {
-    const selectedVariable = pageStateVariables.find((variable) => variable.id === pageStateBindingId);
-    const hasMissingVariable = Boolean(pageStateBindingId && !selectedVariable);
+    const selectedVariable = textBinding.source === 'pageState'
+      ? pageStateVariables.find((variable) => variable.id === textBinding.variableId)
+      : undefined;
+    const selectedCollection = textBinding.source === 'collection'
+      ? dataCollections.find((collection) => collection.id === textBinding.collectionId)
+      : undefined;
+    const selectedField = textBinding.source === 'collection'
+      ? selectedCollection?.fields.find((field) => field.id === textBinding.fieldId)
+      : undefined;
+    const selectedRecord = textBinding.source === 'collection' && textBinding.recordMode === 'specific'
+      ? bindingRecords.find((record) => record.id === textBinding.recordId)
+      : undefined;
+    const hasMissingVariable = textBinding.source === 'pageState' && Boolean(textBinding.variableId && !selectedVariable);
+    const hasMissingCollection = textBinding.source === 'collection' && Boolean(textBinding.collectionId && !selectedCollection);
+    const hasMissingField = textBinding.source === 'collection' && Boolean(textBinding.fieldId && !selectedField);
+    const hasMissingRecord = textBinding.source === 'collection'
+      && textBinding.recordMode === 'specific'
+      && Boolean(textBinding.recordId)
+      && !bindingRecordsLoading
+      && !bindingRecordsError
+      && !selectedRecord;
 
     return (
-      <FormSection title="Data binding" description={`Choose whether this ${propertyLabel} uses static content or a page text variable.`}>
+      <FormSection title="Data binding" description={`Choose where this ${propertyLabel} gets its value at runtime.`}>
         <div className="grid gap-2">
           <FieldLabel>Value source</FieldLabel>
           <select
             className="inspector-input"
-            value={pageStateBindingId}
-            onChange={(event) => setPageStateBindingId(event.target.value)}
+            value={textBinding.source}
+            onChange={(event) => {
+              const source = event.target.value;
+              if (source === 'pageState') {
+                setTextBinding({ source, variableId: pageStateVariables[0]?.id || '' });
+                setTextBindingError(null);
+              } else if (source === 'collection') {
+                const collection = dataCollections[0];
+                setTextBinding({
+                  source,
+                  collectionId: collection?.id || '',
+                  fieldId: collection?.fields[0]?.id || '',
+                  recordMode: 'latest',
+                  recordId: '',
+                });
+                setTextBindingError(null);
+              } else {
+                setTextBinding({ source: 'static' });
+                setTextBindingError(null);
+              }
+            }}
           >
-            <option value="">Static content</option>
-            {hasMissingVariable ? <option value={pageStateBindingId}>Missing page variable</option> : null}
-            {pageStateVariables.map((variable) => (
-              <option key={variable.id} value={variable.id}>{variable.name || 'Unnamed variable'}</option>
-            ))}
+            <option value="static">Static content</option>
+            <option value="pageState">Page variable</option>
+            <option value="collection">Collection data</option>
           </select>
         </div>
+        {textBinding.source === 'pageState' ? (
+          <div className="grid gap-2">
+            <FieldLabel>Page variable</FieldLabel>
+            <select
+              className="inspector-input"
+              value={textBinding.variableId}
+              onChange={(event) => setTextBinding({ source: 'pageState', variableId: event.target.value })}
+            >
+              <option value="">Select a variable...</option>
+              {hasMissingVariable ? <option value={textBinding.variableId}>Missing page variable</option> : null}
+              {pageStateVariables.map((variable) => (
+                <option key={variable.id} value={variable.id}>{variable.name || 'Unnamed variable'}</option>
+              ))}
+            </select>
+          </div>
+        ) : null}
+        {textBinding.source === 'collection' ? (
+          <>
+            <div className="grid gap-2">
+              <FieldLabel>Collection</FieldLabel>
+              <select
+                className="inspector-input"
+                value={textBinding.collectionId}
+                onChange={(event) => {
+                  const collectionId = event.target.value;
+                  const collection = dataCollections.find((candidate) => candidate.id === collectionId);
+                  setTextBinding({
+                    source: 'collection',
+                    collectionId,
+                    fieldId: collection?.fields[0]?.id || '',
+                    recordMode: 'latest',
+                    recordId: '',
+                  });
+                  setTextBindingError(null);
+                }}
+              >
+                <option value="">Select a collection...</option>
+                {hasMissingCollection ? <option value={textBinding.collectionId}>Missing collection</option> : null}
+                {dataCollections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>{collection.name || 'Unnamed collection'}</option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Record</FieldLabel>
+              <select
+                className="inspector-input"
+                value={textBinding.recordMode}
+                onChange={(event) => {
+                  const recordMode = event.target.value === 'specific' ? 'specific' : 'latest';
+                  setTextBinding({
+                    ...textBinding,
+                    recordMode,
+                    recordId: recordMode === 'specific' ? textBinding.recordId : '',
+                  });
+                  setTextBindingError(null);
+                }}
+                disabled={!selectedCollection}
+              >
+                <option value="latest">Latest record</option>
+                <option value="specific">Specific record</option>
+              </select>
+            </div>
+            {textBinding.recordMode === 'specific' ? (
+              <div className="grid gap-2">
+                <FieldLabel>Specific record</FieldLabel>
+                <select
+                  className="inspector-input"
+                  value={textBinding.recordId}
+                  onChange={(event) => {
+                    setTextBinding({ ...textBinding, recordId: event.target.value });
+                    setTextBindingError(null);
+                  }}
+                  disabled={!selectedCollection || bindingRecordsLoading || Boolean(bindingRecordsError)}
+                >
+                  <option value="">{bindingRecordsLoading ? 'Loading records...' : 'Select a record...'}</option>
+                  {hasMissingRecord ? <option value={textBinding.recordId}>Missing record ({textBinding.recordId})</option> : null}
+                  {bindingRecords.map((record) => (
+                    <option key={record.id} value={record.id}>
+                      {formatBindingRecordOption(record, selectedCollection)}
+                    </option>
+                  ))}
+                </select>
+                {!bindingRecordsLoading && !bindingRecordsError && bindingRecords.length === 0 ? (
+                  <p className="text-xs text-slate-500">This collection does not have any records yet.</p>
+                ) : null}
+                {bindingRecordsError ? <p className="text-xs font-medium text-red-600">{bindingRecordsError}</p> : null}
+                {hasMissingRecord ? (
+                  <p className="text-xs font-medium text-red-600">The saved record no longer exists. Choose another record.</p>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="grid gap-2">
+              <FieldLabel>Collection field</FieldLabel>
+              <select
+                className="inspector-input"
+                value={textBinding.fieldId}
+                onChange={(event) => setTextBinding({
+                  ...textBinding,
+                  fieldId: event.target.value,
+                })}
+                disabled={!selectedCollection}
+              >
+                <option value="">Select a field...</option>
+                {hasMissingField ? <option value={textBinding.fieldId}>Missing collection field</option> : null}
+                {(selectedCollection?.fields || []).map((field) => (
+                  <option key={field.id} value={field.id}>{field.label || field.key}</option>
+                ))}
+              </select>
+            </div>
+            {selectedCollection && !selectedCollection.publicRead ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                Enable public reads for this collection before testing the binding in web or Android preview.
+              </p>
+            ) : null}
+            {textBindingError ? <p className="text-xs font-medium text-red-600">{textBindingError}</p> : null}
+          </>
+        ) : null}
         {selectedVariable ? (
           <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
             Preview value: <strong>{selectedVariable.initialValue || '(empty)'}</strong>
@@ -490,8 +708,17 @@ export default function Inspector({
         {hasMissingVariable ? (
           <p className="text-xs font-medium text-red-600">The saved variable no longer exists. Choose another variable or switch to static content.</p>
         ) : null}
-        {pageStateVariables.length === 0 ? (
+        {textBinding.source === 'collection' && (hasMissingCollection || hasMissingField) ? (
+          <p className="text-xs font-medium text-red-600">The saved collection or field no longer exists. Choose another value or switch to static content.</p>
+        ) : null}
+        {textBinding.source === 'pageState' && pageStateVariables.length === 0 ? (
           <p className="text-xs text-slate-500">Create a text variable in Page Data on the left before adding a binding.</p>
+        ) : null}
+        {textBinding.source === 'collection' && dataCollections.length === 0 ? (
+          <p className="text-xs text-slate-500">Create a collection in the Data workspace before adding this binding.</p>
+        ) : null}
+        {textBinding.source === 'collection' && selectedCollection && !selectedCollection.publicRead ? (
+          <p className="text-xs text-amber-700">Turn on "Show records inside the app" for this collection before previewing live data.</p>
         ) : null}
       </FormSection>
     );
@@ -845,53 +1072,6 @@ export default function Inspector({
               <div className="grid gap-2">
                 <FieldLabel>Outer padding (px)</FieldLabel>
                 <TextInput type="number" min={0} className="max-w-[120px]" {...register('contentPadding')} />
-              </div>
-            </FormSection>
-          </>
-        )}
-
-        {block.type === 'dataList' && (
-          <>
-            <FormSection title="Data source" description="Display records from a project collection in web and Android preview.">
-              <div className="grid gap-2">
-                <FieldLabel>Collection</FieldLabel>
-                <select className="inspector-input" {...register('collectionId')}>
-                  <option value="">Select a collection...</option>
-                  {dataCollections.map((collection) => (
-                    <option key={collection.id} value={collection.id}>{collection.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>List title</FieldLabel>
-                <TextInput {...register('title')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Fields to display</FieldLabel>
-                <TextInput placeholder="name, email" {...register('displayFieldKeys')} />
-                <p className="text-xs text-slate-500">Comma-separated field keys. Leave blank to show every stored field.</p>
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Empty message</FieldLabel>
-                <TextInput {...register('emptyMessage')} />
-              </div>
-            </FormSection>
-            <FormSection title="List style">
-              <div className="grid gap-2">
-                <FieldLabel>Background color</FieldLabel>
-                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Text color</FieldLabel>
-                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Border color</FieldLabel>
-                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Corner radius (px)</FieldLabel>
-                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
               </div>
             </FormSection>
           </>
@@ -1476,11 +1656,46 @@ function getBindableTextProperty(block?: Block | null): 'value' | 'headline' | n
   return null;
 }
 
-function getPageStateBindingId(block?: Block | null): string {
+function getTextBindingDraft(block?: Block | null): TextBindingDraft {
   const property = getBindableTextProperty(block);
-  if (!property) return '';
+  if (!property) return { source: 'static' };
   const reference = block?.bindings?.[property];
-  return reference?.source === 'pageState' ? reference.variableId : '';
+  if (reference?.source === 'pageState') {
+    return { source: 'pageState', variableId: reference.variableId };
+  }
+  if (reference?.source === 'collection') {
+    const specificRecordId = reference.record?.mode === 'specific' ? reference.record.recordId : '';
+    return {
+      source: 'collection',
+      collectionId: reference.collectionId,
+      fieldId: reference.fieldId,
+      recordMode: specificRecordId ? 'specific' : 'latest',
+      recordId: specificRecordId,
+    };
+  }
+  return { source: 'static' };
+}
+
+function formatBindingRecordOption(record: ProjectAppDataRecord, collection?: AppDataCollection) {
+  const field = collection?.fields.find((candidate) => {
+    const value = record.data[candidate.key];
+    return typeof value === 'boolean' || (typeof value === 'string' && value.trim().length > 0);
+  });
+  const value = field ? record.data[field.key] : undefined;
+  const displayValue = typeof value === 'boolean'
+    ? (value ? 'Yes' : 'No')
+    : typeof value === 'string'
+      ? value.trim()
+      : '';
+  const summary = displayValue
+    ? `${field?.label || field?.key}: ${truncateRecordValue(displayValue)}`
+    : `Record ${record.id.slice(-6)}`;
+  const submittedAt = new Date(record.submittedAt);
+  return Number.isNaN(submittedAt.getTime()) ? summary : `${summary} - ${submittedAt.toLocaleString()}`;
+}
+
+function truncateRecordValue(value: string) {
+  return value.length > 48 ? `${value.slice(0, 45)}...` : value;
 }
 
 

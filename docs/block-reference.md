@@ -40,7 +40,7 @@ type Block = {
 `parentId` is ownership metadata for container children. Top-level blocks omit it.
 `Page.appearance.backgroundColor` stores an optional six-digit hex color for the full page surface. Web and Android preview normalize invalid or missing values back to white for older projects.
 
-Pages may define text `stateVariables` with stable IDs, names, and initial values. Text `value` and Hero `headline` may bind to those IDs through `block.bindings`. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an Input/Textarea block during a preview session. Runtime field references use stable block IDs, so changing a field label does not break the action. The runtime resolves the page value without mutating `props`; the static property remains the fallback for old projects and missing variables. Page parameters and collection-record bindings are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
+Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest record or one specific record; bindings without a selector default to latest for compatibility. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an Input/Textarea block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
 
 ## Layout Contract
 
@@ -114,8 +114,8 @@ The grid remains the collision and placement boundary. Render width, height, and
 
 | Type | Main props | Default grid span | Runtime notes |
 | --- | --- | --- | --- |
-| `hero` | `headline`, `headlineSize`, optional `bindings.headline` | 16 x 6 | Inline editable while static; supports page-text binding and content scaling |
-| `text` | `value`, `fontSize`, optional `bindings.value` | 8 x 4 | Inline editable while static; supports page-text binding, content scaling, and row auto-growth |
+| `hero` | `headline`, `headlineSize`, optional `bindings.headline` | 16 x 6 | Inline editable while static; supports page-state or latest/specific collection binding and content scaling |
+| `text` | `value`, `fontSize`, optional `bindings.value` | 8 x 4 | Inline editable while static; supports page-state or latest/specific collection binding, content scaling, and row auto-growth |
 | `button` | `label`, optional `action`, submission/source settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, submission, URL, page-state updates, inline editing, and content scaling |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
@@ -128,7 +128,6 @@ The grid remains the collision and placement boundary. Render width, height, and
 | `input` | label/fieldKey/value/placeholder/type/required/font/colors/radius | 8 x 3 | Functional text field inside a `form` or when selected by a Submit Data button; visual mockup elsewhere |
 | `textarea` | label/fieldKey/value/placeholder/rows/required/font/colors/radius | 8 x 4 | Functional text field inside a `form` or when selected by a Submit Data button; visual mockup elsewhere |
 | `image` | `src`, `alt`, `fit`, focus, background/border/radius/opacity, optional `action` | 8 x 6 | Atomic image block; supports pasted/uploaded assets plus navigation or safe URL taps |
-| `dataList` | `collectionId`, title/empty message, display field keys, colors/radius | 12 x 8 | Read-only collection list; requires the collection's public-read setting in web and Android preview |
 | `servicesList` | `title`, `items` | 16 x 6 | Existing business block; hidden from the preferred palette |
 | `contactForm` | labels, field visibility, destination email | 16 x 8 | Functional submission block |
 | `imageGallery` | `title`, `columns`, `images` | 16 x 6 | Existing business block; hidden from the preferred palette |

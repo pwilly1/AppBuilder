@@ -16,7 +16,6 @@ export type BlockType =
   | 'input'
   | 'textarea'
   | 'image'
-  | 'dataList'
   | 'servicesList'
   | 'contactForm'
   | 'imageGallery';
@@ -64,9 +63,20 @@ export type PageAppearance = {
   backgroundColor?: string;
 };
 
+export type CollectionRecordSelector =
+  | { mode: 'latest' }
+  | { mode: 'specific'; recordId: string };
+
 export type RuntimeValueRef =
   | { source: 'static'; value: string }
   | { source: 'pageState'; variableId: string; fallback?: string }
+  | {
+      source: 'collection';
+      collectionId: string;
+      fieldId: string;
+      record?: CollectionRecordSelector;
+      fallback?: string;
+    }
   | { source: 'formValue'; fieldBlockId: string; fallback?: string };
 
 export type BlockBindings = Record<string, RuntimeValueRef>;
