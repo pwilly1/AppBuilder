@@ -26,6 +26,25 @@ export function normalizeBlockAction(value: unknown): BlockAction | null {
       value: normalizeRuntimeValueRef(action.value) ?? { source: 'static', value: '' },
     }
   }
+  if (action.type === 'signUpAppUser') {
+    const displayNameFieldBlockId = readString(action.displayNameFieldBlockId)
+    return {
+      type: 'signUpAppUser',
+      ...(displayNameFieldBlockId ? { displayNameFieldBlockId } : {}),
+      emailFieldBlockId: readString(action.emailFieldBlockId),
+      passwordFieldBlockId: readString(action.passwordFieldBlockId),
+    }
+  }
+  if (action.type === 'loginAppUser') {
+    return {
+      type: 'loginAppUser',
+      emailFieldBlockId: readString(action.emailFieldBlockId),
+      passwordFieldBlockId: readString(action.passwordFieldBlockId),
+    }
+  }
+  if (action.type === 'logoutAppUser') {
+    return { type: 'logoutAppUser' }
+  }
   return null
 }
 
@@ -45,7 +64,11 @@ export function isActionConfigured(action: BlockAction | null | undefined): bool
       && (!action.collectionId || action.fields.every((field) => Boolean(field.targetFieldKey)))
   }
   if (action.type === 'openUrl') return isSupportedExternalUrl(action.url)
-  return Boolean(action.variableId.trim())
+  if (action.type === 'setPageState') return Boolean(action.variableId.trim())
+  if (action.type === 'signUpAppUser' || action.type === 'loginAppUser') {
+    return Boolean(action.emailFieldBlockId.trim() && action.passwordFieldBlockId.trim())
+  }
+  return action.type === 'logoutAppUser'
 }
 
 export function isSupportedExternalUrl(value: string): boolean {

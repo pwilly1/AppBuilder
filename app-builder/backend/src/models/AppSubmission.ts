@@ -5,6 +5,7 @@ export type AppSubmissionValue = string | boolean;
 export interface AppSubmission extends Document {
   ownerId: string;
   projectId: string;
+  appUserId?: string;
   formBlockId: string;
   pageId: string;
   data: Record<string, AppSubmissionValue>;
@@ -15,6 +16,7 @@ const AppSubmissionSchema = new Schema<AppSubmission>(
   {
     ownerId: { type: String, required: true, index: true },
     projectId: { type: String, required: true, index: true },
+    appUserId: { type: String, index: true },
     formBlockId: { type: String, required: true, index: true },
     pageId: { type: String, required: true, index: true },
     data: { type: Schema.Types.Mixed, default: {} },

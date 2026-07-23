@@ -49,29 +49,37 @@ export function ButtonBlock({
   const [errorMessage, setErrorMessage] = useState('')
   const safeScale = Math.max(0.1, Number(contentScale) || 1)
   const isSubmitAction = action?.type === 'submitData'
+  const isAppAuthAction = action?.type === 'signUpAppUser'
+    || action?.type === 'loginAppUser'
+    || action?.type === 'logoutAppUser'
+  const showsStatus = isSubmitAction || isAppAuthAction
   const configured = isActionConfigured(action)
-  const canSubmit = Boolean(projectId && blockId && configured)
-  const canRun = Boolean(previewMode && action && configured && (!isSubmitAction || canSubmit))
+  const hasRequiredRuntimeIds = isSubmitAction
+    ? Boolean(projectId && blockId)
+    : !isAppAuthAction || Boolean(projectId)
+  const canRun = Boolean(previewMode && action && configured && hasRequiredRuntimeIds)
 
   async function runAction() {
     if (!canRun || !action || status === 'submitting') return
-    if (!isSubmitAction) {
-      await executeWebBlockAction(action, { onNavigate, runtimeContext, onSetPageState, formRuntime })
-      return
+    if (showsStatus) {
+      setStatus('submitting')
+      setErrorMessage('')
     }
-
-    setStatus('submitting')
-    setErrorMessage('')
     try {
       await executeWebBlockAction(action, {
         projectId,
-        sourceBlockId: blockId,
+        sourceBlockId: isSubmitAction ? blockId : undefined,
         formRuntime,
+        onNavigate,
+        runtimeContext,
+        onSetPageState,
       })
-      setStatus('success')
+      if (showsStatus) setStatus('success')
     } catch (error: unknown) {
-      setStatus('error')
-      setErrorMessage(error instanceof Error ? error.message : 'Submission failed.')
+      if (showsStatus) {
+        setStatus('error')
+        setErrorMessage(error instanceof Error ? error.message : 'Action failed.')
+      }
     }
   }
 
@@ -110,14 +118,30 @@ export function ButtonBlock({
           whiteSpace: 'nowrap',
         }}
       >
-        {status === 'submitting' ? 'Submitting...' : label || 'Button'}
+        {status === 'submitting' ? getActionPendingMessage(action) : label || 'Button'}
       </button>
-      {previewMode && isSubmitAction && status === 'success' ? (
-        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#047857' }}>{successMessage}</div>
+      {previewMode && showsStatus && status === 'success' ? (
+        <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#047857' }}>
+          {getActionSuccessMessage(action, successMessage)}
+        </div>
       ) : null}
-      {previewMode && isSubmitAction && status === 'error' ? (
+      {previewMode && showsStatus && status === 'error' ? (
         <div style={{ marginTop: 6, fontSize: 12, fontWeight: 700, color: '#dc2626' }}>{errorMessage}</div>
       ) : null}
     </div>
   )
+}
+
+function getActionSuccessMessage(action: BlockAction | null | undefined, submitMessage: string) {
+  if (action?.type === 'signUpAppUser') return 'Account created.'
+  if (action?.type === 'loginAppUser') return 'Signed in.'
+  if (action?.type === 'logoutAppUser') return 'Signed out.'
+  return submitMessage
+}
+
+function getActionPendingMessage(action: BlockAction | null | undefined) {
+  if (action?.type === 'signUpAppUser') return 'Creating account...'
+  if (action?.type === 'loginAppUser') return 'Signing in...'
+  if (action?.type === 'logoutAppUser') return 'Signing out...'
+  return 'Submitting...'
 }

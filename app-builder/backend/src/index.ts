@@ -1,32 +1,47 @@
 import express from 'express';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
-import { CORS_ORIGIN, JWT_SECRET, MONGO_URI, PORT } from './config/index.js';
+import { APP_USER_JWT_SECRET, CORS_ORIGIN, JWT_SECRET, MONGO_URI, PORT } from './config/index.js';
 import { AppDataController } from './controllers/AppDataController.js';
+import { AppUserController } from './controllers/AppUserController.js';
 import { AssetController } from './controllers/AssetController.js';
 import { AuthController } from './controllers/authController.js';
 import { ProjectController } from './controllers/ProjectController.js';
 import { createRequireAuth } from './middleware/auth.js';
+import { createOptionalAppUser, createRequireAppUser } from './middleware/appUserAuth.js';
+import { MongoAppUserRepository } from './repositories/AppUserRepository.js';
 import { MongoProjectRepository } from './repositories/MongoProjectRepository.js';
 import { MongoUserRepository } from './repositories/UserRepository.js';
 import { makeAppDataRoutes, makePublicAppDataRoutes } from './routes/AppDataRoutes.js';
+import { makePublicAppUserRoutes } from './routes/AppUserRoutes.js';
 import { makeAssetRoutes } from './routes/AssetRoutes.js';
 import { makeAuthRoutes } from './routes/AuthRoutes.js';
 import { makeProjectRoutes } from './routes/ProjectRoutes.js';
 import { AssetStorageService } from './services/AssetStorageService.js';
 import { AuthService } from './services/AuthService.js';
+import { AppUserAuthService } from './services/AppUserAuthService.js';
+import { AppUserTokenService, type AppUserTokenExpiry } from './services/AppUserTokenService.js';
 import { EmailNotificationService } from './services/EmailNotificationService.js';
 import { JwtService, type TokenExpiry } from './services/JwtService.js';
 import { ProjectManager } from './services/ProjectManager.js';
 
 const userRepository = new MongoUserRepository();
+const appUserRepository = new MongoAppUserRepository();
 const projectRepository = new MongoProjectRepository();
 const tokenExpiry = process.env.JWT_EXPIRES_IN?.trim() as TokenExpiry | undefined;
 const tokens = new JwtService(JWT_SECRET, tokenExpiry);
+const appUserTokenExpiry = process.env.APP_USER_JWT_EXPIRES_IN?.trim() as AppUserTokenExpiry | undefined;
+const appUserTokens = new AppUserTokenService(APP_USER_JWT_SECRET, appUserTokenExpiry);
 const projects = new ProjectManager(projectRepository, userRepository);
 const requireAuth = createRequireAuth(tokens, userRepository);
+const requireAppUser = createRequireAppUser(appUserTokens, appUserRepository);
+const optionalAppUser = createOptionalAppUser(appUserTokens, appUserRepository);
 
 const authController = new AuthController(new AuthService(userRepository, tokens));
+const appUserController = new AppUserController(
+  projects,
+  new AppUserAuthService(appUserRepository, appUserTokens),
+);
 const projectController = new ProjectController(projects);
 const assetController = new AssetController(projects, new AssetStorageService());
 const appDataController = new AppDataController(projects, new EmailNotificationService());
@@ -49,7 +64,7 @@ app.use((req, res, next) => {
   }
   res.header('Vary', 'Origin');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Apptura-App-User-Token');
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
     return;
@@ -61,7 +76,8 @@ app.use('/auth', makeAuthRoutes(authController, requireAuth));
 app.use('/projects', makeAssetRoutes(assetController, requireAuth));
 app.use('/projects', makeAppDataRoutes(appDataController, requireAuth));
 app.use('/projects', makeProjectRoutes(projectController, requireAuth));
-app.use('/public', makePublicAppDataRoutes(appDataController));
+app.use('/public', makePublicAppUserRoutes(appUserController, requireAppUser));
+app.use('/public', makePublicAppDataRoutes(appDataController, optionalAppUser));
 
 app.get('/', (_req, res) => res.send(' API running'));
 app.get('/health', (_req, res) => res.json({ ok: true }));

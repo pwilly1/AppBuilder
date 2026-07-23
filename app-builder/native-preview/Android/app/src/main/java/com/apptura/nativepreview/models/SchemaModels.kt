@@ -133,6 +133,31 @@ private data class TokenResponse(val token: String)
 private data class LoginRequest(val username: String, val password: String)
 
 @Serializable
+private data class AppUserSignupRequest(
+    val displayName: String = "",
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+private data class AppUserLoginRequest(val email: String, val password: String)
+
+@Serializable
+data class RuntimeAppUser(
+    val id: String,
+    val projectId: String,
+    val displayName: String = "",
+    val email: String,
+    val createdAt: String? = null,
+)
+
+@Serializable
+data class AppUserAuthResponse(
+    val token: String,
+    val user: RuntimeAppUser,
+)
+
+@Serializable
 data class PublicFormSubmissionRequest(
     val name: String? = null,
     val email: String? = null,
@@ -370,16 +395,46 @@ object ProjectLoader {
             && (block.props["editable"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() == true
     }
 
+    suspend fun signupRuntimeAppUser(
+        baseUrl: String,
+        projectId: String,
+        displayName: String,
+        email: String,
+        password: String,
+    ): AppUserAuthResponse {
+        val body = httpPostJson(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-auth/signup",
+            json.encodeToString(AppUserSignupRequest(displayName, email, password)),
+            token = null,
+        )
+        return json.decodeFromString(body)
+    }
+
+    suspend fun loginRuntimeAppUser(
+        baseUrl: String,
+        projectId: String,
+        email: String,
+        password: String,
+    ): AppUserAuthResponse {
+        val body = httpPostJson(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-auth/login",
+            json.encodeToString(AppUserLoginRequest(email, password)),
+            token = null,
+        )
+        return json.decodeFromString(body)
+    }
+
     suspend fun submitPublicAppDataRecord(
         baseUrl: String,
         projectId: String,
         sourceId: String,
-        values: Map<String, JsonPrimitive>
+        values: Map<String, JsonPrimitive>,
+        appUserToken: String? = null,
     ) {
         httpPostJson(
             normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/sources/$sourceId/records",
             JsonObject(values).toString(),
-            token = null
+            token = appUserToken,
         )
     }
 
@@ -448,7 +503,10 @@ object ProjectLoader {
                 readTimeout = 20_000
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("Content-Type", "application/json; charset=utf-8")
-                if (!token.isNullOrBlank()) setRequestProperty("Authorization", "Bearer $token")
+                if (!token.isNullOrBlank()) {
+                    setRequestProperty("Authorization", "Bearer $token")
+                    setRequestProperty("X-Apptura-App-User-Token", token)
+                }
             }
 
             try {

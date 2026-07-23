@@ -13,6 +13,22 @@ function apiUrl(path: string) {
   return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
+function appUserTokenKey(projectId: string) {
+  return `apptura_app_user_token:${projectId}`;
+}
+
+export function getAppUserToken(projectId: string): string | null {
+  return localStorage.getItem(appUserTokenKey(projectId));
+}
+
+export function setAppUserToken(projectId: string, token: string) {
+  localStorage.setItem(appUserTokenKey(projectId), token);
+}
+
+export function clearAppUserToken(projectId: string) {
+  localStorage.removeItem(appUserTokenKey(projectId));
+}
+
 async function request(path: string, options: RequestInit = {}) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -78,6 +94,30 @@ async function multipartRequest(path: string, formData: FormData) {
   return res.json().catch(() => null);
 }
 
+async function runtimeRequest(projectId: string, path: string, options: RequestInit = {}) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options.headers as Record<string, string> || {}),
+  };
+  const token = getAppUserToken(projectId);
+  if (token) headers['X-Apptura-App-User-Token'] = token;
+
+  const res = await fetch(apiUrl(path), {
+    ...options,
+    headers,
+    credentials: 'same-origin',
+  });
+  if (!res.ok) {
+    if (res.status === 401 && token) clearAppUserToken(projectId);
+    const body = await res.json().catch(() => ({}));
+    const err: any = new Error(body.error || res.statusText);
+    err.status = res.status;
+    err.body = body;
+    throw err;
+  }
+  return res.json().catch(() => null);
+}
+
 export function signup(username: string, email: string, password: string) {
   return request('/auth/signup', { method: 'POST', body: JSON.stringify({ username, email, password }) });
 }
@@ -131,6 +171,7 @@ export function uploadProjectImage(projectId: string, file: File) {
 
 export type ProjectFormSubmission = {
   id: string;
+  appUserId?: string;
   sourceId?: string;
   blockId: string;
   formBlockId?: string;
@@ -161,12 +202,59 @@ export type ProjectAppDataSource = {
 
 export type ProjectAppDataRecord = ProjectFormSubmission;
 
+export type RuntimeAppUser = {
+  id: string;
+  projectId: string;
+  displayName: string;
+  email: string;
+  createdAt?: string;
+};
+
+export type RuntimeAppUserAuthResult = {
+  token: string;
+  user: RuntimeAppUser;
+};
+
+export async function signupRuntimeAppUser(
+  projectId: string,
+  credentials: { displayName?: string; email: string; password: string },
+) {
+  const result = await runtimeRequest(projectId, `/public/projects/${projectId}/app-auth/signup`, {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  }) as RuntimeAppUserAuthResult;
+  setAppUserToken(projectId, result.token);
+  return result;
+}
+
+export async function loginRuntimeAppUser(
+  projectId: string,
+  credentials: { email: string; password: string },
+) {
+  const result = await runtimeRequest(projectId, `/public/projects/${projectId}/app-auth/login`, {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  }) as RuntimeAppUserAuthResult;
+  setAppUserToken(projectId, result.token);
+  return result;
+}
+
+export function getRuntimeAppUser(projectId: string) {
+  return runtimeRequest(projectId, `/public/projects/${projectId}/app-auth/me`) as Promise<{
+    user: RuntimeAppUser;
+  }>;
+}
+
+export function logoutRuntimeAppUser(projectId: string) {
+  clearAppUserToken(projectId);
+}
+
 export function submitPublicAppDataRecord(
   projectId: string,
   sourceId: string,
   data: Record<string, string | boolean | undefined>
 ) {
-  return request(`/public/projects/${projectId}/app-data/sources/${sourceId}/records`, {
+  return runtimeRequest(projectId, `/public/projects/${projectId}/app-data/sources/${sourceId}/records`, {
     method: 'POST',
     body: JSON.stringify(data),
   });

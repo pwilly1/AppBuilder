@@ -27,7 +27,7 @@ Not implemented:
 - end-user-selected records and record selection passed through navigation
 - current-user records
 - filters, sorting, or arbitrary collection queries
-- generated-app user authentication and ownership rules
+- private current-user reads and complete ownership rules
 - record update/delete actions
 - formulas, conditional visibility, or a general expression language
 
@@ -270,11 +270,13 @@ End-user record selection and record-aware navigation can be designed later usin
 
 Builder authentication and generated-app user authentication are separate concerns. Before Apptura supports private current-user data, it needs:
 
-- generated-app signup/login/session behavior
-- a stable app-user ID
-- record ownership metadata
+- generated-app signup/login/session behavior - implemented
+- a stable project-scoped app-user ID - implemented
+- record ownership metadata - implemented for authenticated submissions
 - backend read/write policies for every collection operation
 - tests proving users cannot access another user's records
+
+Generated-app authentication currently uses `signUpAppUser`, `loginAppUser`, and `logoutAppUser` Button actions. The actions read editable Text fields by stable block ID. Builder JWTs and generated-app JWTs use separate payload contracts, and production may configure a separate `APP_USER_JWT_SECRET`. Identity alone does not make collection reads private; current-user selectors must wait for enforced backend ownership policies.
 
 Client-side hidden fields, missing blocks, or guessed IDs must never be treated as access control.
 

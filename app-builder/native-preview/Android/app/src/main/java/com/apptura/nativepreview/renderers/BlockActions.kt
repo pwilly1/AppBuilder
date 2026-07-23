@@ -17,6 +17,16 @@ sealed interface BlockAction {
     data class SubmitData(val fields: List<SubmitDataFieldRef>, val collectionId: String? = null) : BlockAction
     data class OpenUrl(val url: String) : BlockAction
     data class SetPageState(val variableId: String, val value: RuntimeValueRef) : BlockAction
+    data class SignUpAppUser(
+        val displayNameFieldBlockId: String? = null,
+        val emailFieldBlockId: String,
+        val passwordFieldBlockId: String,
+    ) : BlockAction
+    data class LoginAppUser(
+        val emailFieldBlockId: String,
+        val passwordFieldBlockId: String,
+    ) : BlockAction
+    data object LogoutAppUser : BlockAction
 }
 
 fun resolveBlockAction(block: Block): BlockAction? {
@@ -32,6 +42,16 @@ fun resolveBlockAction(block: Block): BlockAction? {
             variableId = action.stringValue("variableId"),
             value = action.runtimeValue("value") ?: RuntimeValueRef(source = "static", value = ""),
         )
+        "signUpAppUser" -> return BlockAction.SignUpAppUser(
+            displayNameFieldBlockId = action.stringValue("displayNameFieldBlockId").ifBlank { null },
+            emailFieldBlockId = action.stringValue("emailFieldBlockId"),
+            passwordFieldBlockId = action.stringValue("passwordFieldBlockId"),
+        )
+        "loginAppUser" -> return BlockAction.LoginAppUser(
+            emailFieldBlockId = action.stringValue("emailFieldBlockId"),
+            passwordFieldBlockId = action.stringValue("passwordFieldBlockId"),
+        )
+        "logoutAppUser" -> return BlockAction.LogoutAppUser
     }
 
     return null
@@ -41,6 +61,11 @@ fun isTapActionConfigured(action: BlockAction?): Boolean = when (action) {
     is BlockAction.Navigate -> action.targetPageId.isNotBlank()
     is BlockAction.OpenUrl -> isSupportedExternalUrl(action.url)
     is BlockAction.SetPageState -> action.variableId.isNotBlank()
+    is BlockAction.SignUpAppUser -> action.emailFieldBlockId.isNotBlank()
+        && action.passwordFieldBlockId.isNotBlank()
+    is BlockAction.LoginAppUser -> action.emailFieldBlockId.isNotBlank()
+        && action.passwordFieldBlockId.isNotBlank()
+    BlockAction.LogoutAppUser -> true
     else -> false
 }
 
@@ -70,6 +95,9 @@ fun executeBlockTapAction(
                 )
             }
         }
+        is BlockAction.SignUpAppUser,
+        is BlockAction.LoginAppUser,
+        BlockAction.LogoutAppUser -> Unit
     }
 }
 

@@ -1,4 +1,9 @@
-import { submitPublicAppDataRecord } from '../../api'
+import {
+  loginRuntimeAppUser,
+  logoutRuntimeAppUser,
+  signupRuntimeAppUser,
+  submitPublicAppDataRecord,
+} from '../../api'
 import type { FormRuntimeContextValue } from '../blocks/formRuntime'
 import type { BlockAction } from '../schema/types'
 import { isSupportedExternalUrl } from './blockActions'
@@ -40,7 +45,40 @@ export async function executeWebBlockAction(action: BlockAction, context: WebAct
     return
   }
 
+  if (
+    action.type === 'signUpAppUser'
+    || action.type === 'loginAppUser'
+    || action.type === 'logoutAppUser'
+  ) {
+    if (!context.projectId) throw new Error('Save the project before using app accounts.')
+    if (action.type === 'logoutAppUser') {
+      logoutRuntimeAppUser(context.projectId)
+      return
+    }
+
+    const email = readFieldString(context, action.emailFieldBlockId)
+    const password = readFieldString(context, action.passwordFieldBlockId, false)
+    if (!email || !password) throw new Error('Enter an email and password.')
+
+    if (action.type === 'loginAppUser') {
+      await loginRuntimeAppUser(context.projectId, { email, password })
+      return
+    }
+
+    const displayName = action.displayNameFieldBlockId
+      ? readFieldString(context, action.displayNameFieldBlockId)
+      : ''
+    await signupRuntimeAppUser(context.projectId, { displayName, email, password })
+    return
+  }
+
   if (!context.projectId || !context.sourceBlockId) throw new Error('Save the project before submitting data.')
   const values = context.formRuntime?.getFieldValues(action.fields) || {}
   await submitPublicAppDataRecord(context.projectId, context.sourceBlockId, values)
+}
+
+function readFieldString(context: WebActionContext, fieldBlockId: string, trim = true): string {
+  const value = context.formRuntime?.getFieldValue(fieldBlockId)
+  if (typeof value !== 'string') return ''
+  return trim ? value.trim() : value
 }

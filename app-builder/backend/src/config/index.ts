@@ -18,6 +18,7 @@ if (!jwtSecret) {
   throw new Error('JWT_SECRET is required');
 }
 export const JWT_SECRET = jwtSecret;
+export const APP_USER_JWT_SECRET = process.env.APP_USER_JWT_SECRET?.trim() || JWT_SECRET;
 export const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim() || '';
 export const EMAIL_FROM = process.env.EMAIL_FROM?.trim() || '';
 export const CORS_ORIGIN = process.env.CORS_ORIGIN?.trim() || '';

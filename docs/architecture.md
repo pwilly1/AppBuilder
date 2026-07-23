@@ -266,15 +266,18 @@ navigate   -> targetPageId
 submitData -> fields[] containing fieldBlockId and optional targetFieldKey
 openUrl    -> HTTPS or HTTP URL
 setPageState -> variableId plus RuntimeValueRef
+signUpAppUser -> optional display-name field plus email/password field IDs
+loginAppUser  -> email/password field IDs
+logoutAppUser -> no additional configuration
 ```
 
-Button supports no action, navigation, submission, URL, and page-variable actions; Icon and Image support their applicable tap actions. `setPageState` can assign a fixed text value or the current value of an editable Text block referenced by stable block ID. A Submit Data button remains the app-data source identity. Web and Android have separate executors over the same action JSON.
+Button supports no action, navigation, submission, generated-app authentication, URL, and page-variable actions; Icon and Image support their applicable tap actions. Generated-app accounts are stored separately from builder accounts and scoped by project ID. Web stores one runtime token per project in local storage; Android stores the matching token in app preferences. `setPageState` can assign a fixed text value or the current value of an editable Text block referenced by stable block ID. A Submit Data button remains the app-data source identity. Web and Android have separate executors over the same action JSON.
 
 ### Dynamic Data Binding Foundation
 
 The page-state and first collection-binding slices are implemented. Pages can define stable text state variables, and Text/Hero can bind content either to a variable or directly to a project collection field. A collection binding selects either the latest record or one specific record chosen by the app creator. Each page runtime finds all referenced collection-and-selector pairs, deduplicates them, and loads each requested record once; blocks only resolve values from the resulting context. Web and Android use the same schema and fall back to static properties for missing, loading, empty, permission-denied, or failed data. Existing bindings without a selector continue using the latest record.
 
-End-user-selected records, app-state actions, generic page parameters, generated-app users, filters/sorting, and private per-user record access are not implemented. Page-state values reset when the page runtime is recreated and are not persisted as hosted app data. The architecture keeps static properties, runtime bindings, and event actions separate; blocks must not become independent database query clients.
+Generated-app identity is now implemented as a foundation: signup, login, logout, stable app-user IDs, project-scoped runtime JWTs, and optional ownership metadata on authenticated submissions. Current-user bindings, private per-user record queries, profile/password recovery, end-user-selected records, app-state actions, generic page parameters, and filters/sorting are not implemented. Page-state values reset when the page runtime is recreated and are not persisted as hosted app data. The architecture keeps static properties, runtime bindings, and event actions separate; blocks must not become independent database query clients.
 
 The full proposed schema, lifecycle, security prerequisites, phased rollout, and web/Android parity requirements are documented in [Dynamic Data Binding Architecture](dynamic-data-binding.md). That document is the source of truth for future binding, state, generated-app user, and data-driven page work.
 
@@ -309,6 +312,7 @@ The backend provides:
 - project routes under `/projects`
 - project image upload under `/projects/:id/assets/images`
 - public project routes under `/public`
+- project-scoped generated-app account routes under `/public/projects/:id/app-auth`
 - MongoDB persistence through Mongoose
 - JWT session validation
 - schema-backed `form` and Submit Data button storage plus app-data source listing, record retrieval, and CSV export
@@ -322,6 +326,7 @@ Important files:
 | `src/index.ts` | Express app setup, CORS, routes, MongoDB connection |
 | `src/config/index.ts` | Environment variables |
 | `src/routes/AuthRoutes.ts` | Signup/login/token endpoints |
+| `src/routes/AppUserRoutes.ts` | Generated-app signup/login/session endpoints |
 | `src/routes/ProjectRoutes.ts` | Authenticated project CRUD routes |
 | `src/routes/AssetRoutes.ts` | Authenticated project image-upload route |
 | `src/routes/AppDataRoutes.ts` | Authenticated and public hosted app-data routes |
@@ -334,6 +339,8 @@ Important files:
 | `src/services/AssetStorageService.ts` | Azure Blob Storage upload logic for project image assets |
 | `src/services/ProjectManager.ts` | Typed project ownership and mutation rules |
 | `src/services/AuthService.ts` | Authentication logic |
+| `src/services/AppUserAuthService.ts` | Project-scoped generated-app account behavior |
+| `src/services/AppUserTokenService.ts` | Generated-app JWT creation and project-scoped validation |
 | `src/services/JwtService.ts` | JWT creation and validated payload decoding |
 
 ## Android Preview Responsibilities

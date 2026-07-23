@@ -20,6 +20,7 @@ import {
   handleControllerError,
   type AuthenticatedRequest,
 } from './controllerUtils.js';
+import type { AppUserAuthenticatedRequest } from '../middleware/appUserAuth.js';
 
 export class AppDataController {
   constructor(
@@ -160,7 +161,13 @@ export class AppDataController {
         res.status(404).json({ error: 'App data source not found' });
         return;
       }
-      await this.createAndRespond(project, sourceId, req.body, res);
+      await this.createAndRespond(
+        project,
+        sourceId,
+        req.body,
+        res,
+        (req as AppUserAuthenticatedRequest).appUserId,
+      );
     } catch (error) {
       this.handleAppDataError(error, res, next);
     }
@@ -191,13 +198,19 @@ export class AppDataController {
     sourceId: string,
     body: unknown,
     res: Response,
+    appUserId?: string,
   ) {
     const source = findAppDataSource(project, sourceId);
     if (!source) {
       res.status(404).json({ error: 'App data source not found' });
       return;
     }
-    const record = await createAppDataRecord(project, sourceId, body || {});
+    const record = await createAppDataRecord(
+      project,
+      sourceId,
+      body || {},
+      appUserId ? { appUserId } : {},
+    );
     if (source.type === 'contactForm' && source.block) {
       try {
         const formTitle = typeof source.block.props?.title === 'string' ? source.block.props.title : undefined;

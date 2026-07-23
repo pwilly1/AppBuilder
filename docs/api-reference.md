@@ -135,6 +135,36 @@ Requires authentication. Returns an allowlisted authenticated-user profile rathe
 
 `passwordHash`, Mongo `_id`, and other internal fields are not returned.
 
+## Generated-App User Endpoints
+
+Generated-app users are separate from Apptura builder accounts. Their email uniqueness, records, and JWT claims are scoped to one project. These routes set `Cache-Control: no-store`.
+
+### `POST /public/projects/:id/app-auth/signup`
+
+Creates an app-user account for one project and returns a project-scoped runtime token.
+
+```json
+{
+  "displayName": "Example User",
+  "email": "user@example.com",
+  "password": "example-password"
+}
+```
+
+Success: `201` with `{ "token": "<jwt>", "user": { ... } }`. Duplicate email in the same project returns `409`. The same email may register in a different project.
+
+### `POST /public/projects/:id/app-auth/login`
+
+Authenticates an app user for one project. Success: `200` with the same token/user shape. Invalid email, password, or project combination returns the same `401` response.
+
+### `GET /public/projects/:id/app-auth/me`
+
+Requires the generated-app JWT in `Authorization: Bearer <token>` or `X-Apptura-App-User-Token: <token>`. The web and Android runtimes use the dedicated header so builder and app-user sessions cannot be confused. Returns the allowlisted app-user profile.
+
+### `POST /public/projects/:id/app-auth/logout`
+
+Requires the generated-app JWT and returns `204`. Tokens are stateless, so web and Android end the session by deleting their project-scoped local token.
+
 ## Project Endpoints
 
 All `/projects` routes require authentication and enforce project ownership when loading a specific project.
@@ -289,7 +319,7 @@ Requires authentication and project ownership. Returns the same source records a
 
 ### `POST /public/projects/:id/app-data/sources/:sourceId/records`
 
-Does not require authentication. This is the canonical public runtime endpoint used by the current web preview for schema-backed app-data submission.
+Allows anonymous submissions and accepts an optional generated-app JWT. This is the canonical runtime endpoint used by web and Android for schema-backed app-data submission. Authenticated records include an `appUserId` derived from the verified token; clients cannot set ownership through the request body.
 
 For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and Submit Data `button` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppSubmission`.
 

@@ -116,7 +116,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 | --- | --- | --- | --- |
 | `hero` | `headline`, `headlineSize`, optional `bindings.headline` | 16 x 6 | Inline editable while static; supports page-state or latest/specific collection binding and content scaling |
 | `text` | `value`, `fontSize`, optional `bindings.value`; optional `editable`, `textInputMode`, `inputType`, `fieldLabel`, `fieldKey`, `required`, placeholder and field styling | 8 x 4 | Display-only by default; can become a single-line or multiline runtime field while preserving binding, submission, and stable-ID behavior |
-| `button` | `label`, optional `action`, submission/source settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, submission, URL, page-state updates, inline editing, and content scaling |
+| `button` | `label`, optional `action`, submission/source/auth settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, submission, generated-app signup/login/logout, URL, page-state updates, inline editing, and content scaling |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
 | `shape` | `shapeType`, fill/border/radius/opacity | 6 x 4 | Shape type is chosen before insertion |
@@ -132,7 +132,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 
 The exact defaults and constraints must be read from the registry rather than duplicated in feature logic.
 
-Actions use a discriminated schema object in `props.action`. The `button` block may omit the action for static presentation or use `navigate`, `submitData`, `openUrl`, or `setPageState`. A `submitData` action owns an explicit `fields` list of stable block IDs and may include a stable project `collectionId`; collection writes map fields through optional `targetFieldKey` values. `setPageState` stores a target variable ID and a `RuntimeValueRef`; its current value sources are `static` and `formValue` for editable Text blocks. Only HTTP and HTTPS links are executable.
+Actions use a discriminated schema object in `props.action`. The `button` block may omit the action for static presentation or use `navigate`, `submitData`, `signUpAppUser`, `loginAppUser`, `logoutAppUser`, `openUrl`, or `setPageState`. Signup/login actions reference editable Text email/password fields by stable block ID, plus an optional display-name field for signup. Runtime account tokens are stored per project outside the saved schema. A `submitData` action owns an explicit `fields` list of stable block IDs and may include a stable project `collectionId`; collection writes map fields through optional `targetFieldKey` values. `setPageState` stores a target variable ID and a `RuntimeValueRef`; its current value sources are `static` and `formValue` for editable Text blocks. Only HTTP and HTTPS links are executable.
 
 ## Container Hierarchy Contract
 

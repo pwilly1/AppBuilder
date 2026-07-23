@@ -47,7 +47,15 @@ export type BlockAction =
   | { type: 'navigate'; targetPageId: string }
   | { type: 'submitData'; fields: SubmitDataFieldRef[]; collectionId?: string }
   | { type: 'openUrl'; url: string }
-  | { type: 'setPageState'; variableId: string; value: RuntimeValueRef };
+  | { type: 'setPageState'; variableId: string; value: RuntimeValueRef }
+  | {
+      type: 'signUpAppUser';
+      displayNameFieldBlockId?: string;
+      emailFieldBlockId: string;
+      passwordFieldBlockId: string;
+    }
+  | { type: 'loginAppUser'; emailFieldBlockId: string; passwordFieldBlockId: string }
+  | { type: 'logoutAppUser' };
 
 export type PageStateVariable = {
   id: string;

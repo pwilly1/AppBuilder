@@ -513,3 +513,22 @@ Representative areas:
 - `backend/src/services/ProjectSchemaMigration.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/TextView.kt`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`
+
+## Phase 27: Generated-App Identity Foundation
+
+Date range: July 2026
+
+Generated apps gained accounts that are separate from Apptura builder users. App-user email uniqueness and JWT claims are scoped to one project, and Button actions can sign up, log in, or log out using editable Text fields referenced by stable block ID. Web stores runtime sessions per project in local storage, Android uses project-keyed app preferences, and both attach the runtime token to hosted-data submissions. Authenticated records persist the server-derived app-user ID as ownership metadata without changing existing anonymous submission behavior.
+
+This phase establishes identity but does not yet expose private current-user queries, user profile editing, password recovery, or collection ownership policies.
+
+Representative areas:
+
+- `backend/src/models/AppUser.ts`
+- `backend/src/services/AppUserAuthService.ts`
+- `backend/src/services/AppUserTokenService.ts`
+- `backend/src/routes/AppUserRoutes.ts`
+- `frontend/src/shared/actions/webActionExecutor.ts`
+- `frontend/src/components/Inspector.tsx`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeAppUserSessionStore.kt`

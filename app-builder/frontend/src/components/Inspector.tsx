@@ -270,6 +270,9 @@ export default function Inspector({
             <option value="">No action</option>
             <option value="navigate">Navigate to page</option>
             {allowSubmit ? <option value="submitData">Submit data</option> : null}
+            {allowSubmit ? <option value="signUpAppUser">Sign up app user</option> : null}
+            {allowSubmit ? <option value="loginAppUser">Log in app user</option> : null}
+            {allowSubmit ? <option value="logoutAppUser">Log out app user</option> : null}
             <option value="openUrl">Open URL</option>
             <option value="setPageState">Set page variable</option>
           </select>
@@ -370,6 +373,60 @@ export default function Inspector({
               <TextInput {...register('successMessage')} />
             </div>
           </>
+        ) : null}
+        {allowSubmit && (actionType === 'signUpAppUser' || actionType === 'loginAppUser') ? (
+          <>
+            {actionType === 'signUpAppUser' ? (
+              <div className="grid gap-2">
+                <FieldLabel>Display name field (optional)</FieldLabel>
+                <select className="inspector-input" {...register('action.displayNameFieldBlockId')}>
+                  <option value="">No display name</option>
+                  {stateValueFieldBlocks.map((field) => (
+                    <option key={field.id} value={field.id}>
+                      {getSubmissionFieldLabel(field)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+            <div className="grid gap-2">
+              <FieldLabel>Email field</FieldLabel>
+              <select className="inspector-input" {...register('action.emailFieldBlockId')}>
+                <option value="">Select an editable Text block...</option>
+                {stateValueFieldBlocks.map((field) => (
+                  <option key={field.id} value={field.id}>
+                    {getSubmissionFieldLabel(field)}
+                    {field.props.inputType === 'email' ? ' (email)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Password field</FieldLabel>
+              <select className="inspector-input" {...register('action.passwordFieldBlockId')}>
+                <option value="">Select an editable Text block...</option>
+                {stateValueFieldBlocks.map((field) => (
+                  <option key={field.id} value={field.id}>
+                    {getSubmissionFieldLabel(field)}
+                    {field.props.inputType === 'password' ? ' (password)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs leading-5 text-slate-500">
+              App users are separate from Apptura builder accounts. Use editable Text blocks for these fields and set the password field keyboard type to Password.
+            </p>
+            {stateValueFieldBlocks.length === 0 ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                Add editable Text blocks for email and password first.
+              </p>
+            ) : null}
+          </>
+        ) : null}
+        {allowSubmit && actionType === 'logoutAppUser' ? (
+          <p className="text-xs leading-5 text-slate-500">
+            This clears the current generated-app user session for this project.
+          </p>
         ) : null}
         {actionType === 'setPageState' ? (
           <>

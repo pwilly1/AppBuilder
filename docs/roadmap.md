@@ -26,6 +26,7 @@ This roadmap tracks completed foundations, current priorities, and future work.
 | Completed | Web preview | Preview mode renders project pages without editor controls. |
 | Completed | Android preview foundation | Kotlin/Compose app can load backend projects and render schema data. |
 | Completed | Shared action foundation | Button, Icon, and Image consume applicable schema-backed Navigate, Submit Data, Open URL, and Set Page Variable actions across web and Android. |
+| Completed | Generated-app identity foundation | Project-scoped app-user signup/login/logout, separate runtime JWTs, and authenticated submission ownership work in web and Android preview. |
 | Completed | Azure deployment | Frontend and backend are deployed with GitHub Actions. |
 
 ## Current Priorities
@@ -159,10 +160,10 @@ These are important to the long-term product vision but should wait until the ed
 | Completed | Editable Text runtime values as stable-ID sources for Set Page Variable and Submit Data actions. |
 | Planned | Page parameters and app-state actions. |
 | Completed | Direct Text/Hero bindings to either the latest record or one creator-selected specific record in a publicly readable collection, with safe fallback in web and Android. |
-| Planned | Record selectors driven by generated-app users, current-user identity, filters, and sorting. |
+| Planned | Record selectors driven by current-user identity, filters, and sorting. |
 | Later | Record update/delete actions and broader property bindings. |
-| Later | Generated app user accounts. |
-| In Progress | Access rules; collection public-read control exists, broader ownership rules remain. |
+| In Progress | Generated app user accounts; signup/login/logout and stable identity are complete, while profiles and password recovery remain. |
+| In Progress | Access rules; collection public-read control and submission ownership metadata exist, broader ownership enforcement remains. |
 
 Implementation must follow [Dynamic Data Binding Architecture](dynamic-data-binding.md): pages resolve referenced collection data once, blocks bind to that context, and current-user bindings wait for generated-app identity and authorization.
 

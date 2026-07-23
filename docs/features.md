@@ -68,7 +68,7 @@ The current visible block palette is:
 
 Hero, Text, Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
-Text-like blocks support canvas editing and inspector editing. Text `value` and Hero `headline` can bind to page-scoped text variables or a field from the latest record or one creator-selected record in a collection while keeping their static props as fallbacks. Shape supports canvas placement/resizing and inspector-based visual styling. Button supports a static/no-action mode, page navigation, data submission, safe external URLs, or page-variable updates plus inspector-based styling for colors, padding, and corner radius.
+Text-like blocks support canvas editing and inspector editing. Text `value` and Hero `headline` can bind to page-scoped text variables or a field from the latest record or one creator-selected record in a collection while keeping their static props as fallbacks. Shape supports canvas placement/resizing and inspector-based visual styling. Button supports a static/no-action mode, page navigation, data submission, generated-app signup/login/logout, safe external URLs, or page-variable updates plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
 Icon and Image can optionally execute Navigate, Open URL, or Set Page Variable actions in web and Android preview.
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
@@ -259,8 +259,9 @@ Later AI features:
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
 - Container editing is intentionally limited to one level; nested containers are not supported.
-- Dynamic bindings currently cover page-scoped text variables plus latest-record and creator-selected specific-record collection fields for Text/Hero. Generic page parameters, app-state actions, and generated-app user bindings are not implemented.
+- Generated-app identity currently covers project-scoped signup/login/logout and ownership metadata on authenticated submissions. Current-user display bindings, private user-scoped reads, profile editing, password recovery, and collection access policies are not implemented.
+- Dynamic bindings currently cover page-scoped text variables plus latest-record and creator-selected specific-record collection fields for Text/Hero. Generic page parameters, app-state actions, and current-user bindings are not implemented.
 - Page-variable values are runtime-only preview state. They reset when a page runtime is recreated and are not persisted as hosted app data.
-- Project collections, public collection lists, and creator-configured latest/specific Text/Hero bindings are implemented, but end-user record selection, record update/delete actions, relationships, filtering, and generated-app user ownership are not.
+- Project collections, public collection lists, creator-configured latest/specific Text/Hero bindings, and submission ownership metadata are implemented, but end-user record selection, record update/delete actions, relationships, filtering, and ownership enforcement are not.
 - Export and app-store pipeline features are not implemented.
 - GenAI generation is planned, not currently implemented.

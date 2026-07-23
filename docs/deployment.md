@@ -97,12 +97,16 @@ Configure these in Azure App Service application settings:
 ```text
 MONGO_URI=mongodb+srv://...
 JWT_SECRET=...
+APP_USER_JWT_SECRET=...
+APP_USER_JWT_EXPIRES_IN=7d
 CORS_ORIGIN=https://delightful-desert-04350a50f.7.azurestaticapps.net
 PORT=8080 or Azure-provided port behavior
 AZURE_STORAGE_CONNECTION_STRING=...
 AZURE_STORAGE_CONTAINER_NAME=apptura-assets
 AZURE_STORAGE_PUBLIC_BASE_URL=https://...
 ```
+
+`APP_USER_JWT_SECRET` should be a different long random value in production. The backend falls back to `JWT_SECRET` for compatibility, but generated-app tokens still use a distinct payload type and cannot be accepted as builder sessions.
 
 Optional:
 

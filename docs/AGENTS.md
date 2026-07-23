@@ -76,7 +76,7 @@ props.scaleY
 - Text is display-only unless `props.editable === true`. Editable Text, Checkbox, and Toggle become live fields when nested inside a `form` block or explicitly selected by a same-page `button` using `submitData`.
 - Shared interactive behavior flows through `props.action`; Button can be static, navigate, submit, open URLs, or set page variables, while Icon and Image support the applicable tap actions.
 - Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, while Text and Hero may read the latest or one creator-selected record from publicly readable collections in web and Android preview.
-- Pages may define text `stateVariables`, while Text/Hero bindings may resolve either a stable variable ID or a stable project collection/field ID in web and Android. Collection bindings read either the latest record or one specific record chosen by the app creator from a publicly readable collection; bindings without a selector default to latest. Set Page Variable can use a fixed value or a live editable-Text value referenced by block ID. Runtime values are not persisted app data, and static props remain the fallback. End-user record selection, generic page parameters, and generated-app users are still planned.
+- Pages may define text `stateVariables`, while Text/Hero bindings may resolve either a stable variable ID or a stable project collection/field ID in web and Android. Collection bindings read either the latest record or one specific record chosen by the app creator from a publicly readable collection; bindings without a selector default to latest. Set Page Variable can use a fixed value or a live editable-Text value referenced by block ID. Generated-app users now have project-scoped signup/login/logout Button actions and separate runtime JWT sessions; authenticated submissions store optional app-user ownership. Current-user bindings, private per-user queries, profile editing, and password recovery remain planned.
 - Pages may also define `appearance.backgroundColor`; keep page-surface color behavior aligned across the Pages workspace, web canvas, web preview, and Android preview, with white fallback behavior preserved for older or malformed data.
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
 - The public `/editor/demo` route is now a four-screen `FieldReady` sample app that exercises containers, page backgrounds, navigation, checkbox/toggle state, and live page-variable binding with persistence intentionally disabled.
@@ -164,6 +164,8 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/backend/src/services/AppSubmissionService.ts` | Legacy form-submission compatibility aliases |
 | `app-builder/backend/src/services/AssetStorageService.ts` | Azure Blob Storage upload helper for project images |
 | `app-builder/backend/src/services/AuthService.ts` | Auth behavior |
+| `app-builder/backend/src/services/AppUserAuthService.ts` | Generated-app account signup/login behavior |
+| `app-builder/backend/src/services/AppUserTokenService.ts` | Project-scoped generated-app JWT contract |
 | `app-builder/backend/src/services/ProjectManager.ts` | Typed project ownership and mutation behavior |
 | `app-builder/backend/src/services/JwtService.ts` | JWT creation and validation helper |
 

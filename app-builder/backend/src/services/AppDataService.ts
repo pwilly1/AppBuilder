@@ -70,6 +70,7 @@ export type AppDataSourceSummary = {
 
 export type SerializedAppDataRecord = {
   id: string;
+  appUserId?: string;
   sourceId: string;
   blockId: string;
   formBlockId: string;
@@ -172,7 +173,12 @@ export async function listAppDataSources(project: ProjectLike, ownerId: string, 
   );
 }
 
-export async function createAppDataRecord(project: ProjectLike, sourceId: string, body: unknown) {
+export async function createAppDataRecord(
+  project: ProjectLike,
+  sourceId: string,
+  body: unknown,
+  options: { appUserId?: string } = {},
+) {
   const requestedSource = findAppDataSource(project, sourceId);
   if (!requestedSource) {
     const error: any = new Error('App data source not found');
@@ -209,6 +215,7 @@ export async function createAppDataRecord(project: ProjectLike, sourceId: string
   const submission = await AppSubmissionModel.create({
     ownerId,
     projectId: String(project.id || project._id),
+    ...(options.appUserId ? { appUserId: options.appUserId } : {}),
     formBlockId: source.sourceId,
     pageId: requestedSource.pageId || source.pageId || 'collection',
     data,
@@ -456,6 +463,9 @@ function serializeAppDataRecord(submission: any): SerializedAppDataRecord {
   const id = String(submission.id || submission._id);
   return {
     id,
+    ...(typeof submission.appUserId === 'string' && submission.appUserId
+      ? { appUserId: submission.appUserId }
+      : {}),
     sourceId: submission.formBlockId,
     blockId: submission.formBlockId,
     formBlockId: submission.formBlockId,

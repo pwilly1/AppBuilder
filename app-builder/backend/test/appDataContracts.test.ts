@@ -106,6 +106,31 @@ test('public submissions require a block-backed source', () => {
   assert.equal(isPublicSubmissionSource(project, collection.id), false)
 })
 
+test('generated-app auth actions preserve stable field references during normalization', () => {
+  assert.deepEqual(normalizeBlockAction({
+    type: 'signUpAppUser',
+    displayNameFieldBlockId: ' name-field ',
+    emailFieldBlockId: ' email-field ',
+    passwordFieldBlockId: ' password-field ',
+  }), {
+    type: 'signUpAppUser',
+    displayNameFieldBlockId: 'name-field',
+    emailFieldBlockId: 'email-field',
+    passwordFieldBlockId: 'password-field',
+  })
+
+  assert.deepEqual(normalizeBlockAction({
+    type: 'loginAppUser',
+    emailFieldBlockId: ' email-field ',
+    passwordFieldBlockId: ' password-field ',
+  }), {
+    type: 'loginAppUser',
+    emailFieldBlockId: 'email-field',
+    passwordFieldBlockId: 'password-field',
+  })
+  assert.deepEqual(normalizeBlockAction({ type: 'logoutAppUser' }), { type: 'logoutAppUser' })
+})
+
 test('record sanitization omits optional fields that were not submitted', () => {
   const fields = [
     { blockId: 'text-field-1', type: 'text' as const, key: 'field_1', label: 'Field 1', required: false },

@@ -13,6 +13,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 ## Current Features
 
 - JWT signup/login and protected project APIs
+- Separate project-scoped generated-app user signup/login sessions in web and Android preview
 - One-click interactive `FieldReady` demo with a temporary four-screen schema-backed sample project
 - Project dashboard with create/open/delete flows
 - Multi-page app projects
@@ -23,7 +24,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Page-scoped variables plus the latest or one creator-selected record from a collection can drive Text and Hero content through schema-backed bindings in web and Android preview
 - Button, Icon, and Image actions can update page-scoped text variables from fixed values or live editable-Text values in web and Android preview
 - Lightweight primitive blocks: Text, Button, Shape, Badge, Icon, Image, Progress Bar, Form, Checkbox, Toggle, and Container
-- Button supports no action, page navigation, hosted-data submission, safe external URLs, or page-variable updates through the shared block-action contract
+- Button supports no action, page navigation, hosted-data submission, generated-app signup/login/logout, safe external URLs, or page-variable updates through the shared block-action contract
 - Icon and Image can optionally run shared Navigate, Open URL, or Set Page Variable actions in web and Android preview
 - Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
 - Text blocks can remain display-only or become single-line/multiline app inputs while preserving the same block identity, bindings, and styling model
@@ -69,7 +70,7 @@ docs/                Architecture, deployment, features, roadmap, project histor
 - [API Reference](docs/api-reference.md) - backend routes, authentication, payloads, and response behavior
 - [Block and Schema Reference](docs/block-reference.md) - project schema, grid contract, block inventory, and migration behavior
 - [Container and Template System](docs/container-template-system.md) - current container/template design and implementation direction
-- [Dynamic Data Binding](docs/dynamic-data-binding.md) - approved architecture for page data, runtime values, bindings, and future generated-app users
+- [Dynamic Data Binding](docs/dynamic-data-binding.md) - architecture for page data, runtime values, bindings, generated-app identity, and future private user data
 - [How to Add a Block](docs/how-to-add-a-block.md) - end-to-end web and Android block implementation workflow
 - [Features](docs/features.md) - current capabilities, planned product areas, known feature limits
 - [Roadmap](docs/roadmap.md) - priorities, milestones, and next work
