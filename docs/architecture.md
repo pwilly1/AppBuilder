@@ -74,8 +74,8 @@ This keeps large image bytes out of the MongoDB project document. Pasted remote 
 1. A saved schema-backed submission source renders in web preview as either a top-level Form block with child fields or a Button configured with Submit Data and explicit same-page field selections.
 2. Each participating field resolves a submission key from `props.fieldKey`, its label, or its block ID.
 3. Submit Data button flows resolve the stable field block IDs stored in the button's `action.fields` list.
-4. Preview submission posts JSON to `POST /public/projects/:id/forms/:blockId/submissions`.
-5. The backend locates the owning Form or Submit Data button source, validates required fields, and stores the sanitized payload in MongoDB through `AppSubmission`.
+4. Preview submission posts JSON to `POST /public/projects/:id/app-data/sources/:sourceId/records`; the older `/forms/:blockId/submissions` route remains an alias.
+5. The backend locates the owning Form or Submit Data button source, validates required fields, and stores the sanitized payload in MongoDB through `AppDataRecord`.
 6. The dashboard can load app-data sources through `GET /projects/:id/app-data/sources`, fetch source records through `GET /projects/:id/app-data/sources/:sourceId/records`, and export them through the matching CSV route.
 
 Legacy `contactForm` blocks still use the older fixed submission shape and optional email notifications. The `form` and `button` with `submitData` are the primary schema-backed paths for flexible app-user data capture.
@@ -115,7 +115,9 @@ type Page = {
 }
 ```
 
-Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Buttons configured with Submit Data can target a collection while selecting same-page fields explicitly; each selection can map to a collection field through `targetFieldKey`. Collection records remain stored in `AppSubmission` for this milestone, keyed by the collection ID. Text and Hero collection bindings read either the latest record or one creator-selected specific record, and both selectors require `publicRead`.
+Project-level app-data collections have stable IDs, names, public-read settings, and typed field definitions. Buttons configured with Submit Data can target a collection while selecting same-page fields explicitly; each selection can map to a collection field through `targetFieldKey`. Records use the canonical `AppDataRecord` contract: `collectionId`, optional `ownerAppUserId`, optional source block/page metadata, `data`, `createdAt`, and `updatedAt`. Text and Hero collection bindings read either the latest record or one creator-selected specific record, and both selectors require `publicRead`.
+
+`AppDataRecord` intentionally uses the existing MongoDB `appsubmissions` collection. Reads accept documents written by the former `AppSubmission` model, and API responses retain `appUserId`, `formBlockId`, `pageId`, and `submittedAt` aliases while clients migrate. Editing a legacy record upgrades its canonical fields in place. This is one persistence system with a compatibility boundary, not two record stores.
 
 A block has:
 
@@ -333,7 +335,7 @@ Important files:
 | `src/controllers/ProjectController.ts` | Project HTTP request/response handling |
 | `src/controllers/AssetController.ts` | Image-upload HTTP request/response handling |
 | `src/controllers/AppDataController.ts` | App-data HTTP request/response handling |
-| `src/models/AppSubmission.ts` | Stored schema-backed form submission records |
+| `src/models/AppDataRecord.ts` | Canonical mutable hosted app-data records plus legacy document compatibility |
 | `src/services/AppDataService.ts` | App-data source lookup, validation, persistence, queries, and CSV formatting |
 | `src/services/AppSubmissionService.ts` | Compatibility aliases for older form-submission terminology |
 | `src/services/AssetStorageService.ts` | Azure Blob Storage upload logic for project image assets |

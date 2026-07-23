@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import {
   appDataRecordsToCsv,
   createAppDataRecord,
+  deleteAppDataRecord,
   findAppDataSource,
   getAppDataRecord,
   getLatestAppDataRecord,
@@ -10,6 +11,8 @@ import {
   isPublicSubmissionSource,
   listAppDataRecords,
   listAppDataSources,
+  serializePublicAppDataRecord,
+  updateAppDataRecord,
 } from '../services/AppDataService.js';
 import { EmailNotificationService } from '../services/EmailNotificationService.js';
 import { ProjectManager } from '../services/ProjectManager.js';
@@ -110,10 +113,41 @@ export class AppDataController {
         res.status(403).json({ error: 'This collection is not publicly readable' });
         return;
       }
-      res.json(await getLatestAppDataRecord(project, project.ownerId, id, collectionId));
+      const record = await getLatestAppDataRecord(project, project.ownerId, id, collectionId);
+      res.json(record ? serializePublicAppDataRecord(record) : null);
     } catch (error) {
       this.handleAppDataError(error, res, next);
     }
+  };
+
+  updateRecord = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const sourceId = getRouteParam(req, 'sourceId');
+    const recordId = getRouteParam(req, 'recordId');
+    if (!id || !sourceId || !recordId) return this.missingParams(res);
+    await this.withOwnedProject(req, res, next, id, async (project, userId) => {
+      const record = await updateAppDataRecord(project, userId, id, sourceId, recordId, req.body);
+      if (!record) {
+        res.status(404).json({ error: 'Record not found' });
+        return;
+      }
+      res.json(serializePublicAppDataRecord(record));
+    });
+  };
+
+  deleteRecord = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const sourceId = getRouteParam(req, 'sourceId');
+    const recordId = getRouteParam(req, 'recordId');
+    if (!id || !sourceId || !recordId) return this.missingParams(res);
+    await this.withOwnedProject(req, res, next, id, async (project, userId) => {
+      const deleted = await deleteAppDataRecord(project, userId, id, sourceId, recordId);
+      if (!deleted) {
+        res.status(404).json({ error: 'Record not found' });
+        return;
+      }
+      res.status(204).send();
+    });
   };
 
   getPublicCollectionRecord = async (req: Request, res: Response, next: NextFunction) => {
@@ -209,7 +243,7 @@ export class AppDataController {
       project,
       sourceId,
       body || {},
-      appUserId ? { appUserId } : {},
+      appUserId ? { ownerAppUserId: appUserId } : {},
     );
     if (source.type === 'contactForm' && source.block) {
       try {

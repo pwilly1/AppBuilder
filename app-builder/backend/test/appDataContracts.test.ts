@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
+  appDataRecordSourceFilter,
   collectAppDataSourceMatches,
   findAppDataSource,
   isPublicReadableCollection,
   isPublicSubmissionSource,
   resolveAppDataWriteSource,
   sanitizeRecordData,
+  serializeAppDataRecord,
+  serializePublicAppDataRecord,
 } from '../src/services/AppDataService.js'
 import { normalizeBlockAction } from '../../frontend/src/shared/actions/blockActions.js'
 import { migrateProjectToGridLayout } from '../../frontend/src/shared/schema/gridMigration.js'
@@ -155,6 +158,76 @@ test('record sanitization still rejects missing required fields', () => {
   assert.throws(() => sanitizeRecordData([
     { blockId: 'email-1', type: 'email', key: 'email', label: 'Email', required: true },
   ], {}), /Email is required/)
+})
+
+test('canonical app-data records keep compatibility aliases in API responses', () => {
+  const createdAt = new Date('2026-07-23T12:00:00.000Z')
+  const updatedAt = new Date('2026-07-23T12:05:00.000Z')
+  const record = serializeAppDataRecord({
+    _id: 'record-1',
+    collectionId: 'collection-1',
+    ownerAppUserId: 'app-user-1',
+    sourceBlockId: 'button-1',
+    sourcePageId: 'page-1',
+    data: { title: 'First task' },
+    createdAt,
+    updatedAt,
+  })
+
+  assert.equal(record.collectionId, 'collection-1')
+  assert.equal(record.ownerAppUserId, 'app-user-1')
+  assert.equal(record.sourceBlockId, 'button-1')
+  assert.equal(record.sourcePageId, 'page-1')
+  assert.equal(record.createdAt, createdAt)
+  assert.equal(record.updatedAt, updatedAt)
+  assert.equal(record.sourceId, 'collection-1')
+  assert.equal(record.formBlockId, 'collection-1')
+  assert.equal(record.appUserId, 'app-user-1')
+  assert.equal(record.pageId, 'page-1')
+  assert.equal(record.submittedAt, createdAt)
+})
+
+test('legacy submission documents serialize as canonical app-data records', () => {
+  const submittedAt = new Date('2026-07-22T12:00:00.000Z')
+  const record = serializeAppDataRecord({
+    _id: 'legacy-record',
+    appUserId: 'legacy-app-user',
+    formBlockId: 'collection-1',
+    pageId: 'page-1',
+    data: { title: 'Legacy task' },
+    submittedAt,
+  })
+
+  assert.equal(record.collectionId, 'collection-1')
+  assert.equal(record.ownerAppUserId, 'legacy-app-user')
+  assert.equal(record.sourcePageId, 'page-1')
+  assert.equal(record.createdAt, submittedAt)
+  assert.equal(record.updatedAt, submittedAt)
+  assert.equal(record.submittedAt, submittedAt)
+})
+
+test('record source filters prefer canonical ids and fall back only for legacy documents', () => {
+  assert.deepEqual(appDataRecordSourceFilter('collection-1'), {
+    $or: [
+      { collectionId: 'collection-1' },
+      { collectionId: { $exists: false }, formBlockId: 'collection-1' },
+    ],
+  })
+})
+
+test('public collection records omit generated-app ownership metadata', () => {
+  const record = serializeAppDataRecord({
+    _id: 'record-1',
+    collectionId: 'collection-1',
+    ownerAppUserId: 'app-user-1',
+    data: { title: 'Public task' },
+    createdAt: new Date('2026-07-23T12:00:00.000Z'),
+  })
+  const publicRecord = serializePublicAppDataRecord(record)
+
+  assert.equal('ownerAppUserId' in publicRecord, false)
+  assert.equal('appUserId' in publicRecord, false)
+  assert.equal(publicRecord.data.title, 'Public task')
 })
 
 test('unified submit buttons are app-data sources while static buttons are not', () => {

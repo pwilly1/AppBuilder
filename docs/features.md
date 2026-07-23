@@ -101,6 +101,7 @@ Current layout capabilities:
 - Projects are saved to MongoDB through the backend.
 - Project CRUD is available through authenticated API routes.
 - Saved projects can review Contact Form, Form, and Submit Data button app-data sources from the dashboard, inspect stored records, and export source data as CSV.
+- Hosted records use a mutable collection-oriented model with created/updated timestamps and optional generated-app-user ownership. Builder-owned APIs can update and delete records; generated-app mutation remains disabled until collection access policies are defined.
 
 ### Deployment
 

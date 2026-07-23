@@ -1,5 +1,9 @@
-import { isValidObjectId } from 'mongoose';
-import { AppSubmissionModel, type AppSubmissionValue } from '../models/AppSubmission.js';
+import { isValidObjectId, type FilterQuery } from 'mongoose';
+import {
+  AppDataRecordModel,
+  type AppDataRecord,
+  type AppDataRecordValue,
+} from '../models/AppDataRecord.js';
 
 type ProjectLike = {
   id?: string;
@@ -70,14 +74,27 @@ export type AppDataSourceSummary = {
 
 export type SerializedAppDataRecord = {
   id: string;
+  collectionId: string;
+  ownerAppUserId?: string;
+  sourceBlockId?: string;
+  sourcePageId?: string;
+  data: Record<string, AppDataRecordValue | undefined>;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Compatibility aliases retained for existing web, Android, and API consumers.
   appUserId?: string;
   sourceId: string;
   blockId: string;
   formBlockId: string;
   pageId: string;
-  data: Record<string, AppSubmissionValue | undefined>;
   submittedAt: Date;
 };
+
+export type PublicSerializedAppDataRecord = Omit<
+  SerializedAppDataRecord,
+  'ownerAppUserId' | 'appUserId'
+>;
 
 export function findAppDataSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
   const collection = (project.dataCollections || []).find((entry) => entry.id === sourceId);
@@ -168,7 +185,11 @@ export async function listAppDataSources(project: ProjectLike, ownerId: string, 
       pageId: source.pageId,
       pageTitle: source.pageTitle,
       fields: source.fields,
-      recordCount: await AppSubmissionModel.countDocuments({ ownerId, projectId, formBlockId: source.sourceId }),
+      recordCount: await AppDataRecordModel.countDocuments({
+        ownerId,
+        projectId,
+        ...appDataRecordSourceFilter(source.sourceId),
+      }),
     })),
   );
 }
@@ -177,7 +198,7 @@ export async function createAppDataRecord(
   project: ProjectLike,
   sourceId: string,
   body: unknown,
-  options: { appUserId?: string } = {},
+  options: { ownerAppUserId?: string } = {},
 ) {
   const requestedSource = findAppDataSource(project, sourceId);
   if (!requestedSource) {
@@ -212,16 +233,17 @@ export async function createAppDataRecord(
     throw error;
   }
 
-  const submission = await AppSubmissionModel.create({
+  const record = await AppDataRecordModel.create({
     ownerId,
     projectId: String(project.id || project._id),
-    ...(options.appUserId ? { appUserId: options.appUserId } : {}),
-    formBlockId: source.sourceId,
-    pageId: requestedSource.pageId || source.pageId || 'collection',
+    collectionId: source.sourceId,
+    ...(options.ownerAppUserId ? { ownerAppUserId: options.ownerAppUserId } : {}),
+    ...(requestedSource.block?.id ? { sourceBlockId: requestedSource.block.id } : {}),
+    sourcePageId: requestedSource.pageId || source.pageId || 'collection',
     data,
   });
 
-  return serializeAppDataRecord(submission);
+  return serializeAppDataRecord(record);
 }
 
 export function resolveAppDataWriteSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
@@ -249,19 +271,22 @@ export async function listAppDataRecords(
   sourceId: string,
   options: { limit?: number } = {},
 ) {
-  const source = findAppDataSource(project, sourceId);
+  const source = resolveAppDataWriteSource(project, sourceId);
   if (!source) {
     const error: any = new Error('App data source not found');
     error.status = 404;
     throw error;
   }
 
-  let query = AppSubmissionModel.find({ ownerId, projectId, formBlockId: sourceId })
-    .sort({ submittedAt: -1 });
+  let query = AppDataRecordModel.find({
+    ownerId,
+    projectId,
+    ...appDataRecordSourceFilter(source.sourceId),
+  }).sort({ createdAt: -1, submittedAt: -1 });
   if (options.limit) query = query.limit(Math.max(1, options.limit));
-  const submissions = await query.lean();
+  const records = await query.lean();
 
-  return submissions.map((submission) => serializeAppDataRecord(submission));
+  return records.map((record) => serializeAppDataRecord(record));
 }
 
 export async function getLatestAppDataRecord(
@@ -281,7 +306,7 @@ export async function getAppDataRecord(
   sourceId: string,
   recordId: string,
 ) {
-  const source = findAppDataSource(project, sourceId);
+  const source = resolveAppDataWriteSource(project, sourceId);
   if (!source) {
     const error: any = new Error('App data source not found');
     error.status = 404;
@@ -289,13 +314,95 @@ export async function getAppDataRecord(
   }
   if (!isValidObjectId(recordId)) return null;
 
-  const submission = await AppSubmissionModel.findOne({
+  const record = await AppDataRecordModel.findOne({
     _id: recordId,
     ownerId,
     projectId,
-    formBlockId: source.sourceId,
+    ...appDataRecordSourceFilter(source.sourceId),
   }).lean();
-  return submission ? serializeAppDataRecord(submission) : null;
+  return record ? serializeAppDataRecord(record) : null;
+}
+
+export async function updateAppDataRecord(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  sourceId: string,
+  recordId: string,
+  body: unknown,
+) {
+  const source = resolveAppDataWriteSource(project, sourceId);
+  if (!source) {
+    throw createServiceError('App data source not found', 404);
+  }
+  if (!isValidObjectId(recordId)) return null;
+  if (!isRecord(body)) {
+    throw createServiceError('Record data must be an object', 400);
+  }
+
+  const recordFilter = {
+    _id: recordId,
+    ownerId,
+    projectId,
+    ...appDataRecordSourceFilter(source.sourceId),
+  };
+  const existing = await AppDataRecordModel.findOne(recordFilter).lean();
+  if (!existing) return null;
+
+  const data = sanitizeRecordData(source.fields, {
+    ...(isRecord(existing.data) ? existing.data : {}),
+    ...body,
+  });
+  assertHasValue(data);
+
+  const createdAt = resolveRecordDate(existing.createdAt, existing.submittedAt, existing._id);
+  const ownerAppUserId = readNonEmptyString(existing.ownerAppUserId)
+    || readNonEmptyString(existing.appUserId);
+  const sourceBlockId = readNonEmptyString(existing.sourceBlockId);
+  const sourcePageId = readNonEmptyString(existing.sourcePageId)
+    || readNonEmptyString(existing.pageId)
+    || source.pageId
+    || 'collection';
+
+  const updated = await AppDataRecordModel.findOneAndUpdate(
+    recordFilter,
+    {
+      $set: {
+        collectionId: source.sourceId,
+        ...(ownerAppUserId ? { ownerAppUserId } : {}),
+        ...(sourceBlockId ? { sourceBlockId } : {}),
+        sourcePageId,
+        data,
+        createdAt,
+        updatedAt: new Date(),
+      },
+    },
+    { new: true },
+  ).lean();
+
+  return updated ? serializeAppDataRecord(updated) : null;
+}
+
+export async function deleteAppDataRecord(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  sourceId: string,
+  recordId: string,
+) {
+  const source = resolveAppDataWriteSource(project, sourceId);
+  if (!source) {
+    throw createServiceError('App data source not found', 404);
+  }
+  if (!isValidObjectId(recordId)) return false;
+
+  const deleted = await AppDataRecordModel.findOneAndDelete({
+    _id: recordId,
+    ownerId,
+    projectId,
+    ...appDataRecordSourceFilter(source.sourceId),
+  }).lean();
+  return Boolean(deleted);
 }
 
 export function appDataRecordsToCsv(source: AppDataSourceSummary | AppDataSourceMatch, records: SerializedAppDataRecord[]) {
@@ -403,9 +510,9 @@ function createFieldDefinition(block: BlockLike, usedKeys: Map<string, number>, 
   };
 }
 
-export function sanitizeRecordData(fields: AppDataFieldDefinition[], body: unknown): Record<string, AppSubmissionValue> {
+export function sanitizeRecordData(fields: AppDataFieldDefinition[], body: unknown): Record<string, AppDataRecordValue> {
   const source = isRecord(body) ? body : {};
-  const data: Record<string, AppSubmissionValue> = {};
+  const data: Record<string, AppDataRecordValue> = {};
 
   for (const field of fields) {
     const hasFieldValue = Object.prototype.hasOwnProperty.call(source, field.key);
@@ -446,7 +553,7 @@ export function sanitizeRecordData(fields: AppDataFieldDefinition[], body: unkno
   return data;
 }
 
-function assertHasValue(data: Record<string, AppSubmissionValue | undefined>) {
+function assertHasValue(data: Record<string, AppDataRecordValue | undefined>) {
   const hasValue = Object.values(data).some((value) => {
     if (typeof value === 'boolean') return value;
     return typeof value === 'string' && value.trim().length > 0;
@@ -459,19 +566,75 @@ function assertHasValue(data: Record<string, AppSubmissionValue | undefined>) {
   }
 }
 
-function serializeAppDataRecord(submission: any): SerializedAppDataRecord {
-  const id = String(submission.id || submission._id);
+type StoredAppDataRecordLike = {
+  id?: unknown;
+  _id?: unknown;
+  collectionId?: unknown;
+  ownerAppUserId?: unknown;
+  sourceBlockId?: unknown;
+  sourcePageId?: unknown;
+  data?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  appUserId?: unknown;
+  formBlockId?: unknown;
+  pageId?: unknown;
+  submittedAt?: unknown;
+};
+
+export function serializeAppDataRecord(record: StoredAppDataRecordLike): SerializedAppDataRecord {
+  const id = String(record.id || record._id);
+  const collectionId = readNonEmptyString(record.collectionId)
+    || readNonEmptyString(record.formBlockId);
+  if (!collectionId) {
+    throw createServiceError('Stored app-data record has no collection identifier', 500);
+  }
+
+  const ownerAppUserId = readNonEmptyString(record.ownerAppUserId)
+    || readNonEmptyString(record.appUserId);
+  const sourceBlockId = readNonEmptyString(record.sourceBlockId);
+  const sourcePageId = readNonEmptyString(record.sourcePageId)
+    || readNonEmptyString(record.pageId)
+    || 'collection';
+  const createdAt = resolveRecordDate(record.createdAt, record.submittedAt, record._id);
+  const updatedAt = resolveRecordDate(record.updatedAt, createdAt, record._id);
+
   return {
     id,
-    ...(typeof submission.appUserId === 'string' && submission.appUserId
-      ? { appUserId: submission.appUserId }
-      : {}),
-    sourceId: submission.formBlockId,
-    blockId: submission.formBlockId,
-    formBlockId: submission.formBlockId,
-    pageId: submission.pageId,
-    data: submission.data || {},
-    submittedAt: submission.submittedAt,
+    collectionId,
+    ...(ownerAppUserId ? { ownerAppUserId, appUserId: ownerAppUserId } : {}),
+    ...(sourceBlockId ? { sourceBlockId } : {}),
+    sourcePageId,
+    data: isRecord(record.data)
+      ? record.data as Record<string, AppDataRecordValue | undefined>
+      : {},
+    createdAt,
+    updatedAt,
+    sourceId: collectionId,
+    blockId: collectionId,
+    formBlockId: collectionId,
+    pageId: sourcePageId,
+    submittedAt: createdAt,
+  };
+}
+
+export function serializePublicAppDataRecord(
+  record: SerializedAppDataRecord,
+): PublicSerializedAppDataRecord {
+  const {
+    ownerAppUserId: _ownerAppUserId,
+    appUserId: _appUserId,
+    ...publicRecord
+  } = record;
+  return publicRecord;
+}
+
+export function appDataRecordSourceFilter(collectionId: string): FilterQuery<AppDataRecord> {
+  return {
+    $or: [
+      { collectionId },
+      { collectionId: { $exists: false }, formBlockId: collectionId },
+    ],
   };
 }
 
@@ -555,7 +718,7 @@ function normalizeCollectionFieldType(value: unknown): AppDataFieldDefinition['t
   return 'text';
 }
 
-function formatCsvValue(value: AppSubmissionValue | undefined) {
+function formatCsvValue(value: AppDataRecordValue | undefined) {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
   return value || '';
 }
@@ -578,4 +741,38 @@ function slugify(value: string) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function readNonEmptyString(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function resolveRecordDate(primary: unknown, fallback: unknown, objectId: unknown) {
+  const primaryDate = toValidDate(primary);
+  if (primaryDate) return primaryDate;
+  const fallbackDate = toValidDate(fallback);
+  if (fallbackDate) return fallbackDate;
+  if (objectId && typeof objectId === 'object' && 'getTimestamp' in objectId) {
+    const getTimestamp = objectId.getTimestamp;
+    if (typeof getTimestamp === 'function') {
+      const objectIdDate = toValidDate(getTimestamp.call(objectId));
+      if (objectIdDate) return objectIdDate;
+    }
+  }
+  return new Date(0);
+}
+
+function toValidDate(value: unknown) {
+  const date = value instanceof Date
+    ? value
+    : typeof value === 'string' || typeof value === 'number'
+      ? new Date(value)
+      : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function createServiceError(message: string, status: number) {
+  const error = new Error(message) as Error & { status: number };
+  error.status = status;
+  return error;
 }

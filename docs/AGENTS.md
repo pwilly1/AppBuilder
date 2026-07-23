@@ -158,7 +158,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/backend/src/controllers/ProjectController.ts` | Project HTTP adapter |
 | `app-builder/backend/src/controllers/AssetController.ts` | Asset-upload HTTP adapter |
 | `app-builder/backend/src/controllers/AppDataController.ts` | Hosted app-data HTTP adapter |
-| `app-builder/backend/src/models/AppSubmission.ts` | Schema-backed submission persistence model |
+| `app-builder/backend/src/models/AppDataRecord.ts` | Canonical mutable app-data persistence model with legacy document compatibility |
 | `app-builder/backend/src/services/AppDataService.ts` | Schema-backed app-data validation, persistence, queries, and CSV helpers |
 | `app-builder/backend/src/services/ProjectManager.ts` | Typed project mutation behavior including `dataCollections` persistence |
 | `app-builder/backend/src/services/AppSubmissionService.ts` | Legacy form-submission compatibility aliases |

@@ -154,6 +154,7 @@ These are important to the long-term product vision but should wait until the ed
 | Completed | Schema-backed form and grouped submit-button records tied to project schema. |
 | Completed | Apptura-hosted app-data source listing, record viewing, CSV export, and web/Android submission. |
 | Completed | App-level data collections with typed field definitions and stable IDs. |
+| Completed | Canonical mutable `AppDataRecord` persistence with legacy submission compatibility and builder-owner update/delete APIs. |
 | Later | Richer app-level relational data collections. |
 | Completed | Page-scoped text variables and Text/Hero bindings with matching web/Android resolution and editor sample values. |
 | Completed | Schema-backed Set Page Variable actions on Button, Icon, and Image across web and Android. |
@@ -161,7 +162,7 @@ These are important to the long-term product vision but should wait until the ed
 | Planned | Page parameters and app-state actions. |
 | Completed | Direct Text/Hero bindings to either the latest record or one creator-selected specific record in a publicly readable collection, with safe fallback in web and Android. |
 | Planned | Record selectors driven by current-user identity, filters, and sorting. |
-| Later | Record update/delete actions and broader property bindings. |
+| In Progress | Record update/delete: builder-owner APIs are complete; generated-app actions require collection ownership/access policies. |
 | In Progress | Generated app user accounts; signup/login/logout and stable identity are complete, while profiles and password recovery remain. |
 | In Progress | Access rules; collection public-read control and submission ownership metadata exist, broader ownership enforcement remains. |
 

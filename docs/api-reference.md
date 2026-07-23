@@ -313,25 +313,35 @@ Requires authentication and project ownership. Returns every app-data source in 
 
 Requires authentication and project ownership. Returns stored records for one app-data source, newest first.
 
+Canonical record fields are `id`, `collectionId`, optional `ownerAppUserId`, optional `sourceBlockId`, `sourcePageId`, `data`, `createdAt`, and `updatedAt`. During the compatibility period, responses also include the older `appUserId`, `sourceId`, `blockId`, `formBlockId`, `pageId`, and `submittedAt` names.
+
+### `PATCH /projects/:id/app-data/sources/:sourceId/records/:recordId`
+
+Requires builder authentication and project ownership. Merges the supplied field values into the existing record, validates the resulting data against the source schema, updates `updatedAt`, and returns the updated record. Unknown fields are not stored. A legacy submission document is upgraded to canonical record fields when edited.
+
+### `DELETE /projects/:id/app-data/sources/:sourceId/records/:recordId`
+
+Requires builder authentication and project ownership. Permanently deletes the record and returns `204`. Missing, malformed, incorrectly scoped, or already deleted records return `404`.
+
 ### `GET /projects/:id/app-data/sources/:sourceId/records.csv`
 
 Requires authentication and project ownership. Returns the same source records as CSV and sets `Content-Disposition` to a generated `<project>-<source>-records.csv` filename.
 
 ### `POST /public/projects/:id/app-data/sources/:sourceId/records`
 
-Allows anonymous submissions and accepts an optional generated-app JWT. This is the canonical runtime endpoint used by web and Android for schema-backed app-data submission. Authenticated records include an `appUserId` derived from the verified token; clients cannot set ownership through the request body.
+Allows anonymous submissions and accepts an optional generated-app JWT. This is the canonical runtime endpoint used by web and Android for schema-backed app-data submission. Authenticated records include an `ownerAppUserId` derived from the verified token; clients cannot set ownership through the request body. The response also exposes `appUserId` as a temporary compatibility alias.
 
-For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and Submit Data `button` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppSubmission`.
+For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and Submit Data `button` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppDataRecord`.
 
 Success: `201` with the stored record.
 
 ### `GET /public/projects/:id/app-data/collections/:collectionId/records/latest`
 
-Does not require authentication. Returns the newest record from the collection, or JSON `null` when the collection has no records. The collection must belong to the requested project and have `publicRead` enabled. Web and Android page runtimes use this endpoint for direct Text/Hero collection bindings. Disabled public reads return `403`.
+Does not require authentication. Returns the newest record from the collection, or JSON `null` when the collection has no records. The collection must belong to the requested project and have `publicRead` enabled. Web and Android page runtimes use this endpoint for direct Text/Hero collection bindings. Generated-app ownership fields are omitted from this public response. Disabled public reads return `403`.
 
 ### `GET /public/projects/:id/app-data/collections/:collectionId/records/:recordId`
 
-Does not require authentication. Returns one specific record only when it belongs to the requested project and collection and that collection has `publicRead` enabled. Web and Android use this endpoint when a Text/Hero binding is configured by the app creator to display a specific record. Missing, deleted, malformed, or incorrectly scoped record IDs return `404`; disabled public reads return `403`.
+Does not require authentication. Returns one specific record only when it belongs to the requested project and collection and that collection has `publicRead` enabled. Web and Android use this endpoint when a Text/Hero binding is configured by the app creator to display a specific record. Generated-app ownership fields are omitted from this public response. Missing, deleted, malformed, or incorrectly scoped record IDs return `404`; disabled public reads return `403`.
 
 ## Project Data Shape
 

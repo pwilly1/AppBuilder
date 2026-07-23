@@ -169,16 +169,26 @@ export function uploadProjectImage(projectId: string, file: File) {
   return multipartRequest(`/projects/${projectId}/assets/images`, formData) as Promise<UploadedImageAsset>;
 }
 
-export type ProjectFormSubmission = {
+export type ProjectAppDataRecord = {
   id: string;
-  appUserId?: string;
-  sourceId?: string;
-  blockId: string;
-  formBlockId?: string;
-  pageId?: string;
+  collectionId: string;
+  ownerAppUserId?: string;
+  sourceBlockId?: string;
+  sourcePageId?: string;
   data: Record<string, string | boolean | undefined>;
+  createdAt: string;
+  updatedAt: string;
+
+  // Compatibility aliases for older callers and stored records.
+  appUserId?: string;
+  sourceId: string;
+  blockId: string;
+  formBlockId: string;
+  pageId: string;
   submittedAt: string;
 };
+
+export type ProjectFormSubmission = ProjectAppDataRecord;
 
 export type ProjectAppDataField = {
   blockId: string;
@@ -199,8 +209,6 @@ export type ProjectAppDataSource = {
   fields: ProjectAppDataField[];
   recordCount: number;
 };
-
-export type ProjectAppDataRecord = ProjectFormSubmission;
 
 export type RuntimeAppUser = {
   id: string;
@@ -274,6 +282,24 @@ export function listProjectAppDataSources(projectId: string) {
 
 export function listProjectAppDataRecords(projectId: string, sourceId: string) {
   return request(`/projects/${projectId}/app-data/sources/${sourceId}/records`) as Promise<ProjectAppDataRecord[]>;
+}
+
+export function updateProjectAppDataRecord(
+  projectId: string,
+  sourceId: string,
+  recordId: string,
+  data: Record<string, string | boolean | undefined>,
+) {
+  return request(`/projects/${projectId}/app-data/sources/${sourceId}/records/${recordId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }) as Promise<ProjectAppDataRecord>;
+}
+
+export function deleteProjectAppDataRecord(projectId: string, sourceId: string, recordId: string) {
+  return request(`/projects/${projectId}/app-data/sources/${sourceId}/records/${recordId}`, {
+    method: 'DELETE',
+  }) as Promise<null>;
 }
 
 export function getLatestPublicCollectionRecord(projectId: string, collectionId: string) {

@@ -28,7 +28,7 @@ Not implemented:
 - current-user records
 - filters, sorting, or arbitrary collection queries
 - private current-user reads and complete ownership rules
-- record update/delete actions
+- generated-app record update/delete actions and their collection access policies
 - formulas, conditional visibility, or a general expression language
 
 ## Core Rules

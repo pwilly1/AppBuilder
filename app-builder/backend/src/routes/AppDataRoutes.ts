@@ -7,6 +7,8 @@ export function makeAppDataRoutes(controller: AppDataController, requireAuth: Re
   router.get('/:id/app-data/sources', requireAuth, controller.listSources);
   router.get('/:id/app-data/sources/:sourceId/records.csv', requireAuth, controller.exportRecordsCsv);
   router.get('/:id/app-data/sources/:sourceId/records', requireAuth, controller.listRecords);
+  router.patch('/:id/app-data/sources/:sourceId/records/:recordId', requireAuth, controller.updateRecord);
+  router.delete('/:id/app-data/sources/:sourceId/records/:recordId', requireAuth, controller.deleteRecord);
   router.post('/:id/forms/:blockId/submissions', requireAuth, controller.submitOwnedLegacy);
   return router;
 }

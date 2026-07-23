@@ -532,3 +532,18 @@ Representative areas:
 - `frontend/src/components/Inspector.tsx`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeAppUserSessionStore.kt`
+
+## Phase 28: Mutable App Data Records
+
+Date range: July 2026
+
+Hosted submissions were generalized into a canonical `AppDataRecord` persistence model with collection identity, optional generated-app-user ownership, source metadata, and created/updated timestamps. The model reuses the existing MongoDB `appsubmissions` collection, reads legacy documents through isolated fallback fields, and preserves older response aliases for current web and Android consumers. Builder-authenticated project owners can now update or delete individual records; public generated-app mutation remains intentionally unavailable until collection ownership and access policies are implemented.
+
+Representative areas:
+
+- `backend/src/models/AppDataRecord.ts`
+- `backend/src/services/AppDataService.ts`
+- `backend/src/controllers/AppDataController.ts`
+- `backend/src/routes/AppDataRoutes.ts`
+- `backend/test/appDataContracts.test.ts`
+- `frontend/src/api.ts`
