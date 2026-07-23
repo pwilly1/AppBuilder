@@ -547,3 +547,18 @@ Representative areas:
 - `backend/src/routes/AppDataRoutes.ts`
 - `backend/test/appDataContracts.test.ts`
 - `frontend/src/api.ts`
+
+## Phase 29: Collection Access Policies
+
+Date range: July 2026
+
+Project collections gained explicit runtime policies for create, read, update, and delete operations. Existing projects retain anonymous submission and `publicRead` behavior through compatibility defaults. Generated-app JWTs now authorize owner-scoped record listing, updates, and deletes, with database filters matching canonical and legacy ownership fields while preventing cross-user access. Web and Android expose matching API clients, but current-user display bindings and mutation block actions remain separate follow-up work.
+
+Representative areas:
+
+- `frontend/src/components/DataCollectionsPanel.tsx`
+- `frontend/src/shared/schema/types.ts`
+- `backend/src/services/AppDataService.ts`
+- `backend/src/controllers/AppDataController.ts`
+- `backend/src/routes/AppDataRoutes.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`

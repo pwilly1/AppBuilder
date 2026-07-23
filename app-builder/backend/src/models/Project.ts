@@ -21,10 +21,18 @@ export interface ProjectDataCollectionField {
   required?: boolean;
 }
 
+export interface ProjectDataCollectionAccess {
+  create: 'anyone' | 'authenticated';
+  read: 'public' | 'own' | 'none';
+  update: 'own' | 'none';
+  delete: 'own' | 'none';
+}
+
 export interface ProjectDataCollection {
   id: string;
   name: string;
   publicRead: boolean;
+  access?: ProjectDataCollectionAccess;
   fields: ProjectDataCollectionField[];
 }
 

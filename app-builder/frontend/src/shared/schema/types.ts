@@ -96,10 +96,18 @@ export type AppDataCollectionField = {
   required?: boolean;
 };
 
+export type AppDataCollectionAccess = {
+  create: 'anyone' | 'authenticated';
+  read: 'public' | 'own' | 'none';
+  update: 'own' | 'none';
+  delete: 'own' | 'none';
+};
+
 export type AppDataCollection = {
   id: string;
   name: string;
   publicRead: boolean;
+  access?: AppDataCollectionAccess;
   fields: AppDataCollectionField[];
 };
 

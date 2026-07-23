@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { AppDataCollection, AppDataCollectionField, AppDataFieldType } from '../shared/schema/types'
+import type {
+  AppDataCollection,
+  AppDataCollectionAccess,
+  AppDataCollectionField,
+  AppDataFieldType,
+} from '../shared/schema/types'
 
 type Props = {
   collections: AppDataCollection[]
@@ -30,6 +35,18 @@ export default function DataCollectionsPanel({ collections, onChange }: Props) {
   function updateField(collection: AppDataCollection, fieldId: string, updates: Partial<AppDataCollectionField>) {
     updateCollection(collection.id, {
       fields: collection.fields.map((field) => field.id === fieldId ? { ...field, ...updates } : field),
+    })
+  }
+
+  function updateAccess<K extends keyof AppDataCollectionAccess>(
+    collection: AppDataCollection,
+    key: K,
+    value: AppDataCollectionAccess[K],
+  ) {
+    const access = { ...resolveCollectionAccess(collection), [key]: value } as AppDataCollectionAccess
+    updateCollection(collection.id, {
+      access,
+      publicRead: access.read === 'public',
     })
   }
 
@@ -191,18 +208,52 @@ export default function DataCollectionsPanel({ collections, onChange }: Props) {
                     <div className="text-[11px] text-slate-500">Control whether runtime blocks can show these records.</div>
                   </div>
                 </div>
-                <label className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 ${selectedCollection.publicRead ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'}`}>
-                  <input
-                    type="checkbox"
-                    className="inspector-toggle mt-0.5"
-                    checked={selectedCollection.publicRead}
-                    onChange={(event) => updateCollection(selectedCollection.id, { publicRead: event.target.checked })}
+                <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3">
+                  <AccessSelect
+                    label="Create"
+                    description="Who can add records"
+                    value={resolveCollectionAccess(selectedCollection).create}
+                    options={[
+                      ['anyone', 'Anyone'],
+                      ['authenticated', 'Signed-in users'],
+                    ]}
+                    onChange={(value) => updateAccess(selectedCollection, 'create', value)}
                   />
-                  <span className="text-xs leading-5 text-slate-600">
-                    <strong className="block text-slate-900">Show records inside the app</strong>
-                    Turn this on when Text or Hero blocks should read this collection. Leave it off for private submission-only data.
-                  </span>
-                </label>
+                  <AccessSelect
+                    label="Read"
+                    description="Who can view records"
+                    value={resolveCollectionAccess(selectedCollection).read}
+                    options={[
+                      ['none', 'No app access'],
+                      ['own', 'Signed-in user: own'],
+                      ['public', 'Anyone: all records'],
+                    ]}
+                    onChange={(value) => updateAccess(selectedCollection, 'read', value)}
+                  />
+                  <AccessSelect
+                    label="Update"
+                    description="Who can edit records"
+                    value={resolveCollectionAccess(selectedCollection).update}
+                    options={[
+                      ['none', 'No app access'],
+                      ['own', 'Signed-in user: own'],
+                    ]}
+                    onChange={(value) => updateAccess(selectedCollection, 'update', value)}
+                  />
+                  <AccessSelect
+                    label="Delete"
+                    description="Who can remove records"
+                    value={resolveCollectionAccess(selectedCollection).delete}
+                    options={[
+                      ['none', 'No app access'],
+                      ['own', 'Signed-in user: own'],
+                    ]}
+                    onChange={(value) => updateAccess(selectedCollection, 'delete', value)}
+                  />
+                </div>
+                <p className="text-[11px] leading-5 text-slate-500">
+                  Own-record rules require the generated app user to be signed in when the record is created.
+                </p>
               </div>
 
               <div className="border-t border-slate-200 pt-3">
@@ -227,8 +278,59 @@ function createCollection(index: number): AppDataCollection {
     id: crypto.randomUUID(),
     name: `Collection ${index}`,
     publicRead: false,
+    access: {
+      create: 'anyone',
+      read: 'none',
+      update: 'none',
+      delete: 'none',
+    },
     fields: [createField(1)],
   }
+}
+
+function resolveCollectionAccess(collection: AppDataCollection): AppDataCollectionAccess {
+  return {
+    create: collection.access?.create === 'authenticated' ? 'authenticated' : 'anyone',
+    read: collection.access?.read === 'public'
+      || collection.access?.read === 'own'
+      || collection.access?.read === 'none'
+      ? collection.access.read
+      : collection.publicRead ? 'public' : 'none',
+    update: collection.access?.update === 'own' ? 'own' : 'none',
+    delete: collection.access?.delete === 'own' ? 'own' : 'none',
+  }
+}
+
+function AccessSelect<T extends string>({
+  label,
+  description,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  description: string
+  value: T
+  options: Array<[T, string]>
+  onChange: (value: T) => void
+}) {
+  return (
+    <label className="grid grid-cols-[minmax(0,1fr)_minmax(132px,auto)] items-center gap-3">
+      <span>
+        <strong className="block text-xs font-semibold text-slate-900">{label}</strong>
+        <span className="text-[10px] text-slate-500">{description}</span>
+      </span>
+      <select
+        className="inspector-input min-w-0"
+        value={value}
+        onChange={(event) => onChange(event.target.value as T)}
+      >
+        {options.map(([optionValue, optionLabel]) => (
+          <option key={optionValue} value={optionValue}>{optionLabel}</option>
+        ))}
+      </select>
+    </label>
+  )
 }
 
 function createField(index: number): AppDataCollectionField {

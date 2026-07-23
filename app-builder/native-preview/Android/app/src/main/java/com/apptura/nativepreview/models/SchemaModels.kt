@@ -68,10 +68,19 @@ data class AppDataCollectionField(
 )
 
 @Serializable
+data class AppDataCollectionAccess(
+    val create: String = "anyone",
+    val read: String = "none",
+    val update: String = "none",
+    val delete: String = "none",
+)
+
+@Serializable
 data class AppDataCollection(
     val id: String,
     val name: String,
     val publicRead: Boolean = false,
+    val access: AppDataCollectionAccess? = null,
     val fields: List<AppDataCollectionField> = emptyList(),
 )
 
@@ -168,8 +177,13 @@ data class PublicFormSubmissionRequest(
 @Serializable
 data class AppDataRecord(
     val id: String,
+    val collectionId: String? = null,
     val sourceId: String? = null,
+    val sourceBlockId: String? = null,
+    val sourcePageId: String? = null,
     val data: JsonObject = buildJsonObject { },
+    val createdAt: String? = null,
+    val updatedAt: String? = null,
     val submittedAt: String? = null,
 )
 
@@ -463,6 +477,48 @@ object ProjectLoader {
         return json.decodeFromString(body)
     }
 
+    suspend fun listCurrentAppUserCollectionRecords(
+        baseUrl: String,
+        projectId: String,
+        collectionId: String,
+        appUserToken: String,
+    ): List<AppDataRecord> {
+        val body = httpGet(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records/mine",
+            token = appUserToken,
+        )
+        return json.decodeFromString(body)
+    }
+
+    suspend fun updateCurrentAppUserCollectionRecord(
+        baseUrl: String,
+        projectId: String,
+        collectionId: String,
+        recordId: String,
+        values: Map<String, JsonPrimitive>,
+        appUserToken: String,
+    ): AppDataRecord {
+        val body = httpPatchJson(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records/$recordId",
+            JsonObject(values).toString(),
+            token = appUserToken,
+        )
+        return json.decodeFromString(body)
+    }
+
+    suspend fun deleteCurrentAppUserCollectionRecord(
+        baseUrl: String,
+        projectId: String,
+        collectionId: String,
+        recordId: String,
+        appUserToken: String,
+    ) {
+        httpDelete(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records/$recordId",
+            token = appUserToken,
+        )
+    }
+
     private suspend fun httpGet(url: String, token: String?): String {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
@@ -495,10 +551,27 @@ object ProjectLoader {
     }
 
     private suspend fun httpPostJson(url: String, bodyJson: String, token: String?): String {
+        return httpWriteJson("POST", url, bodyJson, token)
+    }
+
+    private suspend fun httpPatchJson(url: String, bodyJson: String, token: String?): String {
+        return httpWriteJson("PATCH", url, bodyJson, token)
+    }
+
+    private suspend fun httpDelete(url: String, token: String?): String {
+        return httpWriteJson("DELETE", url, bodyJson = null, token = token)
+    }
+
+    private suspend fun httpWriteJson(
+        method: String,
+        url: String,
+        bodyJson: String?,
+        token: String?,
+    ): String {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
-                requestMethod = "POST"
-                doOutput = true
+                requestMethod = method
+                doOutput = bodyJson != null
                 connectTimeout = 10_000
                 readTimeout = 20_000
                 setRequestProperty("Accept", "application/json")
@@ -510,7 +583,9 @@ object ProjectLoader {
             }
 
             try {
-                conn.outputStream.use { it.write(bodyJson.toByteArray(Charsets.UTF_8)) }
+                if (bodyJson != null) {
+                    conn.outputStream.use { it.write(bodyJson.toByteArray(Charsets.UTF_8)) }
+                }
 
                 val code = conn.responseCode
                 val stream = if (code in 200..299) conn.inputStream else (conn.errorStream ?: conn.inputStream)

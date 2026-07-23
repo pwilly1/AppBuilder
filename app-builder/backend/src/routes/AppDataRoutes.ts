@@ -16,8 +16,24 @@ export function makeAppDataRoutes(controller: AppDataController, requireAuth: Re
 export function makePublicAppDataRoutes(
   controller: AppDataController,
   optionalAppUser: RequestHandler,
+  requireAppUser: RequestHandler,
 ) {
   const router = Router();
+  router.get(
+    '/projects/:id/app-data/collections/:collectionId/records/mine',
+    requireAppUser,
+    controller.listCurrentAppUserCollectionRecords,
+  );
+  router.patch(
+    '/projects/:id/app-data/collections/:collectionId/records/:recordId',
+    requireAppUser,
+    controller.updateCurrentAppUserCollectionRecord,
+  );
+  router.delete(
+    '/projects/:id/app-data/collections/:collectionId/records/:recordId',
+    requireAppUser,
+    controller.deleteCurrentAppUserCollectionRecord,
+  );
   router.get('/projects/:id/app-data/collections/:collectionId/records/latest', controller.getLatestPublicCollectionRecord);
   router.get('/projects/:id/app-data/collections/:collectionId/records/:recordId', controller.getPublicCollectionRecord);
   router.post('/projects/:id/forms/:blockId/submissions', optionalAppUser, controller.submitPublicLegacy);

@@ -13,6 +13,19 @@ type Project = {
   dataCollections?: AppDataCollection[]
 }
 
+type AppDataCollection = {
+  id: string
+  name: string
+  publicRead: boolean // compatibility mirror of access.read === 'public'
+  access?: {
+    create: 'anyone' | 'authenticated'
+    read: 'public' | 'own' | 'none'
+    update: 'own' | 'none'
+    delete: 'own' | 'none'
+  }
+  fields: AppDataCollectionField[]
+}
+
 type Page = {
   id: string
   title?: string
@@ -41,6 +54,8 @@ type Block = {
 `Page.appearance.backgroundColor` stores an optional six-digit hex color for the full page surface. Web and Android preview normalize invalid or missing values back to white for older projects.
 
 Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest record or one specific record; bindings without a selector default to latest for compatibility. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an editable Text block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
+
+Collections without `access` retain the legacy behavior: anyone may create records, `publicRead` controls anonymous reads, and generated-app update/delete access is disabled. New collection access settings are decoded by both web and Android even though current-user bindings and mutation block actions are not yet exposed.
 
 ## Layout Contract
 

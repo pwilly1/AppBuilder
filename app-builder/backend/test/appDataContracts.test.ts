@@ -2,14 +2,19 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   appDataRecordSourceFilter,
+  appDataRecordOwnerFilter,
   collectAppDataSourceMatches,
+  createAppDataRecord,
+  deleteCurrentAppUserRecord,
   findAppDataSource,
   isPublicReadableCollection,
   isPublicSubmissionSource,
   resolveAppDataWriteSource,
+  resolveAppDataCollectionAccess,
   sanitizeRecordData,
   serializeAppDataRecord,
   serializePublicAppDataRecord,
+  updateCurrentAppUserRecord,
 } from '../src/services/AppDataService.js'
 import { normalizeBlockAction } from '../../frontend/src/shared/actions/blockActions.js'
 import { migrateProjectToGridLayout } from '../../frontend/src/shared/schema/gridMigration.js'
@@ -107,6 +112,109 @@ test('collection sources replace duplicate button sources in listings', () => {
 test('public submissions require a block-backed source', () => {
   assert.equal(isPublicSubmissionSource(project, 'button-collection'), true)
   assert.equal(isPublicSubmissionSource(project, collection.id), false)
+})
+
+test('collection access rules preserve legacy defaults and prefer explicit policies', () => {
+  assert.deepEqual(resolveAppDataCollectionAccess({ publicRead: true }), {
+    create: 'anyone',
+    read: 'public',
+    update: 'none',
+    delete: 'none',
+  })
+  assert.deepEqual(resolveAppDataCollectionAccess({
+    publicRead: true,
+    access: {
+      create: 'authenticated',
+      read: 'own',
+      update: 'own',
+      delete: 'own',
+    },
+  }), {
+    create: 'authenticated',
+    read: 'own',
+    update: 'own',
+    delete: 'own',
+  })
+})
+
+test('explicit own-read access disables anonymous collection reads', () => {
+  const privateProject = {
+    ...project,
+    dataCollections: [{
+      ...collection,
+      access: {
+        create: 'authenticated' as const,
+        read: 'own' as const,
+        update: 'own' as const,
+        delete: 'own' as const,
+      },
+    }],
+  }
+
+  assert.equal(isPublicReadableCollection(privateProject, collection.id), false)
+  assert.equal(findAppDataSource(privateProject, collection.id)?.access.read, 'own')
+})
+
+test('authenticated-create collections reject anonymous submissions before persistence', async () => {
+  const privateProject = {
+    ...project,
+    dataCollections: [{
+      ...collection,
+      access: {
+        create: 'authenticated' as const,
+        read: 'own' as const,
+        update: 'none' as const,
+        delete: 'none' as const,
+      },
+    }],
+  }
+
+  await assert.rejects(
+    createAppDataRecord(privateProject, 'button-collection', { title: 'Private task' }),
+    (error: unknown) => error instanceof Error
+      && 'status' in error
+      && error.status === 401
+      && /Sign in/.test(error.message),
+  )
+})
+
+test('generated-app mutation requires explicit own-record policies', async () => {
+  const lockedProject = {
+    ...project,
+    dataCollections: [{
+      ...collection,
+      access: {
+        create: 'authenticated' as const,
+        read: 'own' as const,
+        update: 'none' as const,
+        delete: 'none' as const,
+      },
+    }],
+  }
+
+  await assert.rejects(
+    updateCurrentAppUserRecord(
+      lockedProject,
+      'owner-1',
+      'project-1',
+      collection.id,
+      'invalid-record-id',
+      'app-user-1',
+      { title: 'Updated task' },
+    ),
+    /does not allow app-user updates/,
+  )
+  await assert.rejects(
+    deleteCurrentAppUserRecord(
+      lockedProject,
+      'owner-1',
+      'project-1',
+      collection.id,
+      'invalid-record-id',
+      'app-user-1',
+    ),
+    /does not allow app-user deletes/,
+  )
 })
 
 test('generated-app auth actions preserve stable field references during normalization', () => {
@@ -211,6 +319,15 @@ test('record source filters prefer canonical ids and fall back only for legacy d
     $or: [
       { collectionId: 'collection-1' },
       { collectionId: { $exists: false }, formBlockId: 'collection-1' },
+    ],
+  })
+})
+
+test('record owner filters prefer canonical ownership and fall back only for legacy documents', () => {
+  assert.deepEqual(appDataRecordOwnerFilter('app-user-1'), {
+    $or: [
+      { ownerAppUserId: 'app-user-1' },
+      { ownerAppUserId: { $exists: false }, appUserId: 'app-user-1' },
     ],
   })
 })

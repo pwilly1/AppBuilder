@@ -21,14 +21,16 @@ Implemented:
 - page-level collection request deduplication
 - loading, empty, missing, permission, and error fallback to static content
 - matching web and Android schema/runtime behavior
+- collection create/read/update/delete access rules
+- generated-app owner-scoped record list/update/delete APIs with web and Android clients
 
 Not implemented:
 
 - end-user-selected records and record selection passed through navigation
-- current-user records
+- current-user record selectors in the page runtime
 - filters, sorting, or arbitrary collection queries
-- private current-user reads and complete ownership rules
-- generated-app record update/delete actions and their collection access policies
+- current-user display bindings
+- generated-app record update/delete block actions
 - formulas, conditional visibility, or a general expression language
 
 ## Core Rules
@@ -126,6 +128,12 @@ type AppDataCollection = {
   id: string
   name: string
   publicRead: boolean
+  access?: {
+    create: 'anyone' | 'authenticated'
+    read: 'public' | 'own' | 'none'
+    update: 'own' | 'none'
+    delete: 'own' | 'none'
+  }
   fields: Array<{
     id: string
     key: string
@@ -135,6 +143,8 @@ type AppDataCollection = {
   }>
 }
 ```
+
+`publicRead` remains as a compatibility mirror for older projects and runtime checks. Collections without `access` preserve legacy behavior: anonymous creation is allowed, `publicRead` controls anonymous reads, and runtime update/delete access is disabled.
 
 Bindings save `collection.id` and `field.id`. Stored records use each field's `key`, so the runtime maps record keys back to stable field IDs before resolving block properties.
 
@@ -266,17 +276,17 @@ End-user record selection and record-aware navigation can be designed later usin
 
 ## Security Boundary
 
-`publicRead` is required because web preview and Android preview currently make anonymous collection-read requests. A binding is presentation configuration, not authorization.
+Public Text/Hero bindings require `access.read = "public"` because those selectors make anonymous collection-read requests. A binding is presentation configuration, not authorization.
 
 Builder authentication and generated-app user authentication are separate concerns. Before Apptura supports private current-user data, it needs:
 
 - generated-app signup/login/session behavior - implemented
 - a stable project-scoped app-user ID - implemented
 - record ownership metadata - implemented for authenticated submissions
-- backend read/write policies for every collection operation
-- tests proving users cannot access another user's records
+- backend read/write policies for every collection operation - implemented
+- owner-scoped database filters that prevent cross-user record reads or mutations - implemented
 
-Generated-app authentication currently uses `signUpAppUser`, `loginAppUser`, and `logoutAppUser` Button actions. The actions read editable Text fields by stable block ID. Builder JWTs and generated-app JWTs use separate payload contracts, and production may configure a separate `APP_USER_JWT_SECRET`. Identity alone does not make collection reads private; current-user selectors must wait for enforced backend ownership policies.
+Generated-app authentication uses `signUpAppUser`, `loginAppUser`, and `logoutAppUser` Button actions. The actions read editable Text fields by stable block ID. Builder JWTs and generated-app JWTs use separate payload contracts, and production may configure a separate `APP_USER_JWT_SECRET`. Owner-scoped APIs are now enforced, but current-user selectors still need to be connected to the page-owned runtime context before blocks can display private records.
 
 Client-side hidden fields, missing blocks, or guessed IDs must never be treated as access control.
 

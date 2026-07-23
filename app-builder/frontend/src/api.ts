@@ -208,6 +208,12 @@ export type ProjectAppDataSource = {
   pageTitle: string;
   fields: ProjectAppDataField[];
   recordCount: number;
+  access: {
+    create: 'anyone' | 'authenticated';
+    read: 'public' | 'own' | 'none';
+    update: 'own' | 'none';
+    delete: 'own' | 'none';
+  };
 };
 
 export type RuntimeAppUser = {
@@ -312,6 +318,38 @@ export function getPublicCollectionRecord(projectId: string, collectionId: strin
   return request(
     `/public/projects/${projectId}/app-data/collections/${collectionId}/records/${recordId}`
   ) as Promise<ProjectAppDataRecord>;
+}
+
+export function listCurrentAppUserCollectionRecords(projectId: string, collectionId: string) {
+  return runtimeRequest(
+    projectId,
+    `/public/projects/${projectId}/app-data/collections/${collectionId}/records/mine`,
+  ) as Promise<ProjectAppDataRecord[]>;
+}
+
+export function updateCurrentAppUserCollectionRecord(
+  projectId: string,
+  collectionId: string,
+  recordId: string,
+  data: Record<string, string | boolean | undefined>,
+) {
+  return runtimeRequest(
+    projectId,
+    `/public/projects/${projectId}/app-data/collections/${collectionId}/records/${recordId}`,
+    { method: 'PATCH', body: JSON.stringify(data) },
+  ) as Promise<ProjectAppDataRecord>;
+}
+
+export function deleteCurrentAppUserCollectionRecord(
+  projectId: string,
+  collectionId: string,
+  recordId: string,
+) {
+  return runtimeRequest(
+    projectId,
+    `/public/projects/${projectId}/app-data/collections/${collectionId}/records/${recordId}`,
+    { method: 'DELETE' },
+  ) as Promise<null>;
 }
 
 export function exportProjectAppDataCsv(projectId: string, sourceId: string) {

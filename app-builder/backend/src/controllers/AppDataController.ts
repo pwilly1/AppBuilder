@@ -3,6 +3,7 @@ import {
   appDataRecordsToCsv,
   createAppDataRecord,
   deleteAppDataRecord,
+  deleteCurrentAppUserRecord,
   findAppDataSource,
   getAppDataRecord,
   getLatestAppDataRecord,
@@ -11,8 +12,10 @@ import {
   isPublicSubmissionSource,
   listAppDataRecords,
   listAppDataSources,
+  listCurrentAppUserRecords,
   serializePublicAppDataRecord,
   updateAppDataRecord,
+  updateCurrentAppUserRecord,
 } from '../services/AppDataService.js';
 import { EmailNotificationService } from '../services/EmailNotificationService.js';
 import { ProjectManager } from '../services/ProjectManager.js';
@@ -87,7 +90,7 @@ export class AppDataController {
       return;
     }
     await this.withOwnedProject(req, res, next, id, async (project) => {
-      await this.createAndRespond(project, sourceId, req.body, res);
+      await this.createAndRespond(project, sourceId, req.body, res, undefined, true);
     });
   };
 
@@ -120,6 +123,67 @@ export class AppDataController {
     }
   };
 
+  listCurrentAppUserCollectionRecords = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const collectionId = getRouteParam(req, 'collectionId');
+    if (!id || !collectionId) return this.missingParams(res);
+    await this.withAppUserProject(req, res, next, id, async (project, appUserId) => {
+      const records = await listCurrentAppUserRecords(
+        project,
+        project.ownerId,
+        id,
+        collectionId,
+        appUserId,
+      );
+      res.json(records.map(serializePublicAppDataRecord));
+    });
+  };
+
+  updateCurrentAppUserCollectionRecord = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const collectionId = getRouteParam(req, 'collectionId');
+    const recordId = getRouteParam(req, 'recordId');
+    if (!id || !collectionId || !recordId) return this.missingParams(res);
+    await this.withAppUserProject(req, res, next, id, async (project, appUserId) => {
+      const record = await updateCurrentAppUserRecord(
+        project,
+        project.ownerId,
+        id,
+        collectionId,
+        recordId,
+        appUserId,
+        req.body,
+      );
+      if (!record) {
+        res.status(404).json({ error: 'Record not found' });
+        return;
+      }
+      res.json(serializePublicAppDataRecord(record));
+    });
+  };
+
+  deleteCurrentAppUserCollectionRecord = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const collectionId = getRouteParam(req, 'collectionId');
+    const recordId = getRouteParam(req, 'recordId');
+    if (!id || !collectionId || !recordId) return this.missingParams(res);
+    await this.withAppUserProject(req, res, next, id, async (project, appUserId) => {
+      const deleted = await deleteCurrentAppUserRecord(
+        project,
+        project.ownerId,
+        id,
+        collectionId,
+        recordId,
+        appUserId,
+      );
+      if (!deleted) {
+        res.status(404).json({ error: 'Record not found' });
+        return;
+      }
+      res.status(204).send();
+    });
+  };
+
   updateRecord = async (req: Request, res: Response, next: NextFunction) => {
     const id = getRouteParam(req, 'id');
     const sourceId = getRouteParam(req, 'sourceId');
@@ -131,7 +195,7 @@ export class AppDataController {
         res.status(404).json({ error: 'Record not found' });
         return;
       }
-      res.json(serializePublicAppDataRecord(record));
+      res.json(record);
     });
   };
 
@@ -170,7 +234,7 @@ export class AppDataController {
         res.status(404).json({ error: 'Record not found' });
         return;
       }
-      res.json(record);
+      res.json(serializePublicAppDataRecord(record));
     } catch (error) {
       this.handleAppDataError(error, res, next);
     }
@@ -227,12 +291,37 @@ export class AppDataController {
     }
   }
 
+  private async withAppUserProject(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+    projectId: string,
+    handler: (project: ProjectRecord, appUserId: string) => Promise<void>,
+  ) {
+    try {
+      const appUserId = (req as AppUserAuthenticatedRequest).appUserId;
+      if (!appUserId) {
+        res.status(401).json({ error: 'Missing app-user session token' });
+        return;
+      }
+      const project = await this.projects.findById(projectId);
+      if (!project) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+      }
+      await handler(project, appUserId);
+    } catch (error) {
+      this.handleAppDataError(error, res, next);
+    }
+  }
+
   private async createAndRespond(
     project: ProjectRecord,
     sourceId: string,
     body: unknown,
     res: Response,
     appUserId?: string,
+    bypassAccess = false,
   ) {
     const source = findAppDataSource(project, sourceId);
     if (!source) {
@@ -243,7 +332,10 @@ export class AppDataController {
       project,
       sourceId,
       body || {},
-      appUserId ? { ownerAppUserId: appUserId } : {},
+      {
+        ...(appUserId ? { ownerAppUserId: appUserId } : {}),
+        ...(bypassAccess ? { bypassAccess: true } : {}),
+      },
     );
     if (source.type === 'contactForm' && source.block) {
       try {

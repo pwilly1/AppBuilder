@@ -307,7 +307,7 @@ These routes expose the broader app-data source model used by the dashboard and 
 
 ### `GET /projects/:id/app-data/sources`
 
-Requires authentication and project ownership. Returns every app-data source in the project with its source id, block id, type, display name, page metadata, normalized field definitions, and record count.
+Requires authentication and project ownership. Returns every app-data source in the project with its source id, block id, type, display name, page metadata, normalized field definitions, record count, and resolved create/read/update/delete access rules.
 
 ### `GET /projects/:id/app-data/sources/:sourceId/records`
 
@@ -333,15 +333,29 @@ Allows anonymous submissions and accepts an optional generated-app JWT. This is 
 
 For `contactForm` sources it preserves the older fixed payload and email-notification behavior. For `form` and Submit Data `button` sources it validates the dynamic field set discovered from the saved schema and stores the record through `AppDataRecord`.
 
+When the target collection uses `create: "authenticated"`, requests without a valid generated-app JWT return `401`. Builder-owned compatibility submissions bypass generated-app access rules.
+
 Success: `201` with the stored record.
 
 ### `GET /public/projects/:id/app-data/collections/:collectionId/records/latest`
 
-Does not require authentication. Returns the newest record from the collection, or JSON `null` when the collection has no records. The collection must belong to the requested project and have `publicRead` enabled. Web and Android page runtimes use this endpoint for direct Text/Hero collection bindings. Generated-app ownership fields are omitted from this public response. Disabled public reads return `403`.
+Does not require authentication. Returns the newest record from the collection, or JSON `null` when the collection has no records. The collection must belong to the requested project and allow `read: "public"`; legacy projects derive this rule from `publicRead`. Web and Android page runtimes use this endpoint for direct Text/Hero collection bindings. Generated-app ownership fields are omitted from this public response. Disabled public reads return `403`.
 
 ### `GET /public/projects/:id/app-data/collections/:collectionId/records/:recordId`
 
-Does not require authentication. Returns one specific record only when it belongs to the requested project and collection and that collection has `publicRead` enabled. Web and Android use this endpoint when a Text/Hero binding is configured by the app creator to display a specific record. Generated-app ownership fields are omitted from this public response. Missing, deleted, malformed, or incorrectly scoped record IDs return `404`; disabled public reads return `403`.
+Does not require authentication. Returns one specific record only when it belongs to the requested project and collection and that collection allows `read: "public"`; legacy projects derive this rule from `publicRead`. Web and Android use this endpoint when a Text/Hero binding is configured by the app creator to display a specific record. Generated-app ownership fields are omitted from this public response. Missing, deleted, malformed, or incorrectly scoped record IDs return `404`; disabled public reads return `403`.
+
+### `GET /public/projects/:id/app-data/collections/:collectionId/records/mine`
+
+Requires a generated-app JWT. Returns only records whose server-derived owner matches the authenticated app user. The collection must allow `read: "own"` or `read: "public"`. Internal ownership IDs are omitted from the response.
+
+### `PATCH /public/projects/:id/app-data/collections/:collectionId/records/:recordId`
+
+Requires a generated-app JWT and `update: "own"`. Updates only a record owned by that app user, validates the merged data against the collection fields, and returns the updated record. Another user's record is indistinguishable from a missing record and returns `404`.
+
+### `DELETE /public/projects/:id/app-data/collections/:collectionId/records/:recordId`
+
+Requires a generated-app JWT and `delete: "own"`. Deletes only a record owned by that app user and returns `204`. Another user's record returns `404`.
 
 ## Project Data Shape
 

@@ -101,7 +101,8 @@ Current layout capabilities:
 - Projects are saved to MongoDB through the backend.
 - Project CRUD is available through authenticated API routes.
 - Saved projects can review Contact Form, Form, and Submit Data button app-data sources from the dashboard, inspect stored records, and export source data as CSV.
-- Hosted records use a mutable collection-oriented model with created/updated timestamps and optional generated-app-user ownership. Builder-owned APIs can update and delete records; generated-app mutation remains disabled until collection access policies are defined.
+- Hosted records use a mutable collection-oriented model with created/updated timestamps and optional generated-app-user ownership.
+- Collection access rules independently configure runtime create, read, update, and delete permissions. Authenticated generated-app users can list, update, and delete their own records through owner-scoped web and Android API clients.
 
 ### Deployment
 
@@ -260,9 +261,9 @@ Later AI features:
 - Business blocks need a clearer long-term strategy.
 - Android preview parity is improving but still needs systematic testing.
 - Container editing is intentionally limited to one level; nested containers are not supported.
-- Generated-app identity currently covers project-scoped signup/login/logout and ownership metadata on authenticated submissions. Current-user display bindings, private user-scoped reads, profile editing, password recovery, and collection access policies are not implemented.
+- Generated-app identity covers project-scoped signup/login/logout, ownership metadata, and policy-enforced owner-scoped record APIs. Current-user display bindings, profile editing, and password recovery are not implemented.
 - Dynamic bindings currently cover page-scoped text variables plus latest-record and creator-selected specific-record collection fields for Text/Hero. Generic page parameters, app-state actions, and current-user bindings are not implemented.
 - Page-variable values are runtime-only preview state. They reset when a page runtime is recreated and are not persisted as hosted app data.
-- Project collections, public collection lists, creator-configured latest/specific Text/Hero bindings, and submission ownership metadata are implemented, but end-user record selection, record update/delete actions, relationships, filtering, and ownership enforcement are not.
+- Project collections, public and owner-scoped reads, creator-configured latest/specific Text/Hero bindings, ownership enforcement, and owner-scoped update/delete APIs are implemented. End-user record selection, mutation block actions, relationships, and filtering are not.
 - Export and app-store pipeline features are not implemented.
 - GenAI generation is planned, not currently implemented.

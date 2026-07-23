@@ -22,6 +22,7 @@ type CollectionLike = {
   id: string;
   name?: string;
   publicRead?: boolean;
+  access?: Partial<AppDataCollectionAccess>;
   fields?: Array<{
     id?: string;
     key?: string;
@@ -29,6 +30,13 @@ type CollectionLike = {
     type?: string;
     required?: boolean;
   }>;
+};
+
+export type AppDataCollectionAccess = {
+  create: 'anyone' | 'authenticated';
+  read: 'public' | 'own' | 'none';
+  update: 'own' | 'none';
+  delete: 'own' | 'none';
 };
 
 type BlockLike = {
@@ -50,6 +58,7 @@ type AppDataSourceMatch = {
   pageBlocks: BlockLike[];
   fields: AppDataFieldDefinition[];
   publicRead: boolean;
+  access: AppDataCollectionAccess;
 };
 
 export type AppDataFieldDefinition = {
@@ -70,6 +79,14 @@ export type AppDataSourceSummary = {
   pageTitle: string;
   fields: AppDataFieldDefinition[];
   recordCount: number;
+  access: AppDataCollectionAccess;
+};
+
+const LEGACY_SOURCE_ACCESS: AppDataCollectionAccess = {
+  create: 'anyone',
+  read: 'none',
+  update: 'none',
+  delete: 'none',
 };
 
 export type SerializedAppDataRecord = {
@@ -118,6 +135,7 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
         pageBlocks,
         fields: collectSelectedFields(pageBlocks, block),
         publicRead: false,
+        access: LEGACY_SOURCE_ACCESS,
       };
     }
 
@@ -134,6 +152,7 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
         pageBlocks,
         fields: collectFormChildFields(project, block.id),
         publicRead: false,
+        access: LEGACY_SOURCE_ACCESS,
       };
     }
 
@@ -150,6 +169,7 @@ export function findAppDataSource(project: ProjectLike, sourceId: string): AppDa
         pageBlocks,
         fields: collectContactFormFields(block),
         publicRead: false,
+        access: LEGACY_SOURCE_ACCESS,
       };
     }
   }
@@ -185,6 +205,7 @@ export async function listAppDataSources(project: ProjectLike, ownerId: string, 
       pageId: source.pageId,
       pageTitle: source.pageTitle,
       fields: source.fields,
+      access: source.access,
       recordCount: await AppDataRecordModel.countDocuments({
         ownerId,
         projectId,
@@ -198,7 +219,7 @@ export async function createAppDataRecord(
   project: ProjectLike,
   sourceId: string,
   body: unknown,
-  options: { ownerAppUserId?: string } = {},
+  options: { ownerAppUserId?: string; bypassAccess?: boolean } = {},
 ) {
   const requestedSource = findAppDataSource(project, sourceId);
   if (!requestedSource) {
@@ -215,6 +236,9 @@ export async function createAppDataRecord(
     const error: any = new Error('Target collection not found');
     error.status = 404;
     throw error;
+  }
+  if (!options.bypassAccess) {
+    assertCanCreateAppDataRecord(source, options.ownerAppUserId);
   }
 
   if (!source.fields.length) {
@@ -256,12 +280,18 @@ export function resolveAppDataWriteSource(project: ProjectLike, sourceId: string
 
 export function isPublicReadableCollection(project: ProjectLike, collectionId: string) {
   const source = findAppDataSource(project, collectionId);
-  return source?.type === 'collection' && source.publicRead;
+  return source?.type === 'collection' && source.access.read === 'public';
 }
 
 export function isPublicSubmissionSource(project: ProjectLike, sourceId: string) {
   const source = findAppDataSource(project, sourceId);
   return Boolean(source && source.type !== 'collection');
+}
+
+function assertCanCreateAppDataRecord(source: AppDataSourceMatch, appUserId?: string) {
+  if (source.access.create === 'authenticated' && !appUserId) {
+    throw createServiceError('Sign in before creating records in this collection', 401);
+  }
 }
 
 export async function listAppDataRecords(
@@ -277,7 +307,6 @@ export async function listAppDataRecords(
     error.status = 404;
     throw error;
   }
-
   let query = AppDataRecordModel.find({
     ownerId,
     projectId,
@@ -297,6 +326,27 @@ export async function getLatestAppDataRecord(
 ) {
   const records = await listAppDataRecords(project, ownerId, projectId, sourceId, { limit: 1 });
   return records[0] ?? null;
+}
+
+export async function listCurrentAppUserRecords(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  collectionId: string,
+  appUserId: string,
+) {
+  const source = requireCollectionSource(project, collectionId);
+  if (source.access.read !== 'own' && source.access.read !== 'public') {
+    throw createServiceError('This collection does not allow app-user reads', 403);
+  }
+
+  const records = await AppDataRecordModel.find({
+    ownerId,
+    projectId,
+    ...appDataRecordScopeFilter(source.sourceId, appUserId),
+  }).sort({ createdAt: -1, submittedAt: -1 }).lean();
+
+  return records.map((record) => serializeAppDataRecord(record));
 }
 
 export async function getAppDataRecord(
@@ -330,6 +380,7 @@ export async function updateAppDataRecord(
   sourceId: string,
   recordId: string,
   body: unknown,
+  options: { ownerAppUserId?: string } = {},
 ) {
   const source = resolveAppDataWriteSource(project, sourceId);
   if (!source) {
@@ -344,7 +395,7 @@ export async function updateAppDataRecord(
     _id: recordId,
     ownerId,
     projectId,
-    ...appDataRecordSourceFilter(source.sourceId),
+    ...appDataRecordScopeFilter(source.sourceId, options.ownerAppUserId),
   };
   const existing = await AppDataRecordModel.findOne(recordFilter).lean();
   if (!existing) return null;
@@ -389,6 +440,7 @@ export async function deleteAppDataRecord(
   projectId: string,
   sourceId: string,
   recordId: string,
+  options: { ownerAppUserId?: string } = {},
 ) {
   const source = resolveAppDataWriteSource(project, sourceId);
   if (!source) {
@@ -400,9 +452,44 @@ export async function deleteAppDataRecord(
     _id: recordId,
     ownerId,
     projectId,
-    ...appDataRecordSourceFilter(source.sourceId),
+    ...appDataRecordScopeFilter(source.sourceId, options.ownerAppUserId),
   }).lean();
   return Boolean(deleted);
+}
+
+export async function updateCurrentAppUserRecord(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  collectionId: string,
+  recordId: string,
+  appUserId: string,
+  body: unknown,
+) {
+  const source = requireCollectionSource(project, collectionId);
+  if (source.access.update !== 'own') {
+    throw createServiceError('This collection does not allow app-user updates', 403);
+  }
+  return updateAppDataRecord(project, ownerId, projectId, collectionId, recordId, body, {
+    ownerAppUserId: appUserId,
+  });
+}
+
+export async function deleteCurrentAppUserRecord(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  collectionId: string,
+  recordId: string,
+  appUserId: string,
+) {
+  const source = requireCollectionSource(project, collectionId);
+  if (source.access.delete !== 'own') {
+    throw createServiceError('This collection does not allow app-user deletes', 403);
+  }
+  return deleteAppDataRecord(project, ownerId, projectId, collectionId, recordId, {
+    ownerAppUserId: appUserId,
+  });
 }
 
 export function appDataRecordsToCsv(source: AppDataSourceSummary | AppDataSourceMatch, records: SerializedAppDataRecord[]) {
@@ -473,6 +560,7 @@ function collectContactFormFields(block: BlockLike): AppDataFieldDefinition[] {
 }
 
 function createCollectionSource(collection: CollectionLike): AppDataSourceMatch {
+  const access = resolveAppDataCollectionAccess(collection);
   return {
     id: collection.id,
     sourceId: collection.id,
@@ -491,7 +579,23 @@ function createCollectionSource(collection: CollectionLike): AppDataSourceMatch 
         label: field.label?.trim() || formatLabel(field.key!.trim()),
         required: Boolean(field.required),
       })),
-    publicRead: Boolean(collection.publicRead),
+    publicRead: access.read === 'public',
+    access,
+  };
+}
+
+export function resolveAppDataCollectionAccess(
+  collection: Pick<CollectionLike, 'publicRead' | 'access'>,
+): AppDataCollectionAccess {
+  return {
+    create: collection.access?.create === 'authenticated' ? 'authenticated' : 'anyone',
+    read: collection.access?.read === 'public'
+      || collection.access?.read === 'own'
+      || collection.access?.read === 'none'
+      ? collection.access.read
+      : collection.publicRead ? 'public' : 'none',
+    update: collection.access?.update === 'own' ? 'own' : 'none',
+    delete: collection.access?.delete === 'own' ? 'own' : 'none',
   };
 }
 
@@ -636,6 +740,33 @@ export function appDataRecordSourceFilter(collectionId: string): FilterQuery<App
       { collectionId: { $exists: false }, formBlockId: collectionId },
     ],
   };
+}
+
+export function appDataRecordOwnerFilter(appUserId: string): FilterQuery<AppDataRecord> {
+  return {
+    $or: [
+      { ownerAppUserId: appUserId },
+      { ownerAppUserId: { $exists: false }, appUserId },
+    ],
+  };
+}
+
+function appDataRecordScopeFilter(
+  collectionId: string,
+  appUserId?: string,
+): FilterQuery<AppDataRecord> {
+  const sourceFilter = appDataRecordSourceFilter(collectionId);
+  return appUserId
+    ? { $and: [sourceFilter, appDataRecordOwnerFilter(appUserId)] }
+    : sourceFilter;
+}
+
+function requireCollectionSource(project: ProjectLike, collectionId: string) {
+  const source = findAppDataSource(project, collectionId);
+  if (!source || source.type !== 'collection') {
+    throw createServiceError('App data collection not found', 404);
+  }
+  return source;
 }
 
 function resolveFieldKey(block: BlockLike) {

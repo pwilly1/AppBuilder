@@ -77,7 +77,7 @@ app.use('/projects', makeAssetRoutes(assetController, requireAuth));
 app.use('/projects', makeAppDataRoutes(appDataController, requireAuth));
 app.use('/projects', makeProjectRoutes(projectController, requireAuth));
 app.use('/public', makePublicAppUserRoutes(appUserController, requireAppUser));
-app.use('/public', makePublicAppDataRoutes(appDataController, optionalAppUser));
+app.use('/public', makePublicAppDataRoutes(appDataController, optionalAppUser, requireAppUser));
 
 app.get('/', (_req, res) => res.send(' API running'));
 app.get('/health', (_req, res) => res.json({ ok: true }));
