@@ -140,6 +140,11 @@
     color: rgba(95, 107, 121, 0.82);
   }
 
+  .apptura-editable-text::placeholder {
+    color: var(--apptura-placeholder-color, #94a3b8);
+    opacity: 1;
+  }
+
   .tag {
     @apply inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em];
     background: rgba(37, 99, 235, 0.1);

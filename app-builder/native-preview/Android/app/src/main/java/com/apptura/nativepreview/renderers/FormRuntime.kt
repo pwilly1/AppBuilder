@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonPrimitive
 class FormRuntimeState {
     private val valuesByBlockId = mutableStateMapOf<String, JsonPrimitive>()
     private val fieldKeysByBlockId = mutableStateMapOf<String, String>()
+    private val seededStringsByBlockId = mutableMapOf<String, String>()
 
     fun getString(fieldBlockId: String): String? = valuesByBlockId[fieldBlockId]?.content
 
@@ -15,6 +16,16 @@ class FormRuntimeState {
     fun setString(fieldKey: String, value: String, fieldBlockId: String) {
         valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
         fieldKeysByBlockId[fieldBlockId] = fieldKey
+    }
+
+    fun seedString(fieldKey: String, value: String, fieldBlockId: String) {
+        val currentValue = getString(fieldBlockId)
+        val previousSeed = seededStringsByBlockId[fieldBlockId]
+        if (currentValue == null || currentValue == previousSeed) {
+            valuesByBlockId[fieldBlockId] = JsonPrimitive(value)
+        }
+        fieldKeysByBlockId[fieldBlockId] = fieldKey
+        seededStringsByBlockId[fieldBlockId] = value
     }
 
     fun setBoolean(fieldKey: String, value: Boolean, fieldBlockId: String) {

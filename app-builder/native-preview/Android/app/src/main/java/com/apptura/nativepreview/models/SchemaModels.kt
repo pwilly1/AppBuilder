@@ -151,8 +151,8 @@ data class AppDataRecord(
 object ProjectLoader {
     private const val GRID_DENSITY_SCHEMA_VERSION = 2
     private const val EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5
-    private const val CURRENT_SCHEMA_VERSION = EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION
-    private val submissionFieldTypes = setOf("input", "textarea", "checkbox", "toggle")
+    private const val UNIFIED_TEXT_FIELD_SCHEMA_VERSION = 6
+    private const val CURRENT_SCHEMA_VERSION = UNIFIED_TEXT_FIELD_SCHEMA_VERSION
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -221,7 +221,8 @@ object ProjectLoader {
         return project.copy(
             schemaVersion = CURRENT_SCHEMA_VERSION,
             pages = project.pages.map { page ->
-                val legacyButtonsMigrated = page.blocks.map(::migrateLegacyButton)
+                val textFieldsMigrated = page.blocks.map(::migrateLegacyTextField)
+                val legacyButtonsMigrated = textFieldsMigrated.map(::migrateLegacyButton)
                 val submissionFieldsMigrated = if (migrateLegacySubmissionGroups) {
                     migrateExplicitSubmitFields(legacyButtonsMigrated)
                 } else {
@@ -245,6 +246,43 @@ object ProjectLoader {
                 )
             }
         )
+    }
+
+    private fun migrateLegacyTextField(block: Block): Block {
+        if (block.type != "input" && block.type != "textarea") return block
+
+        val multiline = block.type == "textarea"
+        val label = (block.props["label"] as? JsonPrimitive)?.content?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: if (multiline) "Message" else "Label"
+        val props = buildJsonObject {
+            put("value", block.props["value"] ?: JsonPrimitive(""))
+            put("fontSize", block.props["fontSize"] ?: JsonPrimitive(14))
+            put("contentPadding", JsonPrimitive(8))
+            put("textColor", block.props["textColor"] ?: JsonPrimitive("#0f172a"))
+            put("editable", JsonPrimitive(true))
+            put("textInputMode", JsonPrimitive(if (multiline) "multiline" else "singleLine"))
+            put(
+                "inputType",
+                if (!multiline) block.props["inputType"] ?: JsonPrimitive("text") else JsonPrimitive("text"),
+            )
+            put("fieldLabel", JsonPrimitive(label))
+            put("showFieldLabel", JsonPrimitive(true))
+            put("fieldKey", block.props["fieldKey"] ?: JsonPrimitive(""))
+            put("required", block.props["required"] ?: JsonPrimitive(false))
+            put(
+                "placeholder",
+                block.props["placeholder"]
+                    ?: JsonPrimitive(if (multiline) "Write something..." else "Placeholder"),
+            )
+            put("backgroundColor", block.props["backgroundColor"] ?: JsonPrimitive("#ffffff"))
+            put("placeholderColor", block.props["placeholderColor"] ?: JsonPrimitive("#94a3b8"))
+            put("borderColor", block.props["borderColor"] ?: JsonPrimitive("#cbd5e1"))
+            put("borderWidth", JsonPrimitive(1))
+            put("borderRadius", block.props["borderRadius"] ?: JsonPrimitive(0))
+            block.props["submitGroupId"]?.let { put("submitGroupId", it) }
+        }
+        return block.copy(type = "text", props = props)
     }
 
     private fun migrateLegacyButton(block: Block): Block {
@@ -296,7 +334,7 @@ object ProjectLoader {
                     existingFields
                 } else {
                     blocks
-                        .filter { it.type in submissionFieldTypes }
+                        .filter(::isSubmissionFieldBlock)
                         .filter { candidate ->
                             val candidateGroup = (candidate.props["submitGroupId"] as? JsonPrimitive)
                                 ?.content?.trim()?.takeIf { it.isNotBlank() } ?: "default"
@@ -323,7 +361,13 @@ object ProjectLoader {
             }
         }
 
-        if (isSubmitButton || block.type in submissionFieldTypes) block.copy(props = nextProps) else block
+        if (isSubmitButton || isSubmissionFieldBlock(block)) block.copy(props = nextProps) else block
+    }
+
+    private fun isSubmissionFieldBlock(block: Block): Boolean {
+        if (block.type == "checkbox" || block.type == "toggle") return true
+        return block.type == "text"
+            && (block.props["editable"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() == true
     }
 
     suspend fun submitPublicAppDataRecord(

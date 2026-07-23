@@ -73,10 +73,10 @@ props.scaleY
 - Do not claim planned strategic features are implemented unless the code supports them.
 - Update docs when architecture, deployment, schema, or roadmap changes.
 - Image file uploads should use the backend asset upload path when storage is configured; saved blocks store the returned URL in `props.src`. Data URLs are only a local/unsaved fallback.
-- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a `form` block or explicitly selected by a same-page `button` using `submitData`; otherwise document them as editor-time mockup controls.
+- Text is display-only unless `props.editable === true`. Editable Text, Checkbox, and Toggle become live fields when nested inside a `form` block or explicitly selected by a same-page `button` using `submitData`.
 - Shared interactive behavior flows through `props.action`; Button can be static, navigate, submit, open URLs, or set page variables, while Icon and Image support the applicable tap actions.
 - Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, while Text and Hero may read the latest or one creator-selected record from publicly readable collections in web and Android preview.
-- Pages may define text `stateVariables`, while Text/Hero bindings may resolve either a stable variable ID or a stable project collection/field ID in web and Android. Collection bindings read either the latest record or one specific record chosen by the app creator from a publicly readable collection; bindings without a selector default to latest. Set Page Variable can use a fixed value or a live Input/Textarea value referenced by block ID. Runtime values are not persisted app data, and static props remain the fallback. End-user record selection, generic page parameters, and generated-app users are still planned.
+- Pages may define text `stateVariables`, while Text/Hero bindings may resolve either a stable variable ID or a stable project collection/field ID in web and Android. Collection bindings read either the latest record or one specific record chosen by the app creator from a publicly readable collection; bindings without a selector default to latest. Set Page Variable can use a fixed value or a live editable-Text value referenced by block ID. Runtime values are not persisted app data, and static props remain the fallback. End-user record selection, generic page parameters, and generated-app users are still planned.
 - Pages may also define `appearance.backgroundColor`; keep page-surface color behavior aligned across the Pages workspace, web canvas, web preview, and Android preview, with white fallback behavior preserved for older or malformed data.
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
 - The public `/editor/demo` route is now a four-screen `FieldReady` sample app that exercises containers, page backgrounds, navigation, checkbox/toggle state, and live page-variable binding with persistence intentionally disabled.
@@ -94,8 +94,6 @@ Visible editor palette today:
 - Image
 - Progress Bar
 - Form
-- Input
-- Textarea
 - Checkbox
 - Toggle
 - Container

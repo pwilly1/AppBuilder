@@ -218,11 +218,14 @@ export function createDemoProject(): Project {
             fontSize: 14,
             contentPadding: 8,
           }),
-          createDemoBlock(NOTE_FIELD_ID, 'textarea', { colStart: 2, rowStart: 11, colSpan: 13, rowSpan: 5 }, {
-            label: 'Site note',
+          createDemoBlock(NOTE_FIELD_ID, 'text', { colStart: 2, rowStart: 11, colSpan: 13, rowSpan: 5 }, {
+            value: '',
+            editable: true,
+            textInputMode: 'multiline',
+            fieldLabel: 'Site note',
+            showFieldLabel: true,
             placeholder: 'Example: Replace damaged dock signage...',
             fieldKey: 'siteNote',
-            rows: 3,
             borderRadius: 14,
             backgroundColor: '#ffffff',
             borderColor: '#cbd5e1',

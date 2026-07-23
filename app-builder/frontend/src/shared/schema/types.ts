@@ -13,8 +13,6 @@ export type BlockType =
   | 'checkbox'
   | 'toggle'
   | 'progressBar'
-  | 'input'
-  | 'textarea'
   | 'image'
   | 'servicesList'
   | 'contactForm'
@@ -31,7 +29,6 @@ export type BlockLayoutClass =
   | 'icon'
   | 'control'
   | 'status'
-  | 'input'
   | 'list'
   | 'media'
   | 'form';

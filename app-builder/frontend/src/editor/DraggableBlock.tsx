@@ -89,8 +89,6 @@ export function DraggableBlock({
     block.type === 'checkbox' ||
     block.type === 'toggle' ||
     block.type === 'progressBar' ||
-    block.type === 'input' ||
-    block.type === 'textarea' ||
     block.type === 'image' ||
     block.type === 'container' ||
     block.type === 'form'

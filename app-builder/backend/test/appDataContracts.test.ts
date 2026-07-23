@@ -33,12 +33,16 @@ const project = {
         props: {
           action: {
             type: 'submitData',
-            fields: [{ fieldBlockId: 'input-1', targetFieldKey: 'title' }],
+            fields: [{ fieldBlockId: 'title-field', targetFieldKey: 'title' }],
             collectionId: collection.id,
           },
         },
       },
-      { id: 'input-1', type: 'input', props: { fieldKey: 'title', label: 'Title' } },
+      {
+        id: 'title-field',
+        type: 'text',
+        props: { editable: true, fieldKey: 'title', fieldLabel: 'Title' },
+      },
     ],
   }],
 }
@@ -59,7 +63,12 @@ const unifiedButtonProject = {
           action: { type: 'submitData', fields: [{ fieldBlockId: 'email-1' }] },
         },
       },
-      { id: 'email-1', type: 'input', props: { fieldKey: 'email', label: 'Email' } },
+      {
+        id: 'email-1',
+        type: 'text',
+        props: { editable: true, inputType: 'email', fieldKey: 'email', fieldLabel: 'Email' },
+      },
+      { id: 'display-copy', type: 'text', props: { value: 'Display only', editable: false } },
       { id: 'static-1', type: 'button', props: { label: 'Decorative button' } },
     ],
   }],
@@ -99,8 +108,8 @@ test('public submissions require a block-backed source', () => {
 
 test('record sanitization omits optional fields that were not submitted', () => {
   const fields = [
-    { blockId: 'input-1', type: 'input' as const, key: 'field_1', label: 'Field 1', required: false },
-    { blockId: 'input-2', type: 'input' as const, key: 'field_2', label: 'Field 2', required: false },
+    { blockId: 'text-field-1', type: 'text' as const, key: 'field_1', label: 'Field 1', required: false },
+    { blockId: 'text-field-2', type: 'text' as const, key: 'field_2', label: 'Field 2', required: false },
     { blockId: 'toggle-1', type: 'toggle' as const, key: 'enabled', label: 'Enabled', required: false },
   ]
 
@@ -129,10 +138,11 @@ test('unified submit buttons are app-data sources while static buttons are not',
   assert.equal(sources[0]?.type, 'button')
   assert.equal(sources[0]?.name, 'Signups')
   assert.equal(sources[0]?.fields[0]?.key, 'email')
+  assert.equal(sources[0]?.fields.length, 1)
   assert.equal(findAppDataSource(unifiedButtonProject, 'static-1'), null)
 })
 
-test('project migration converts retired button records to the unified schema', () => {
+test('project migration converts retired buttons and text fields to the unified schema', () => {
   const migrated = migrateProjectToGridLayout({
     schemaVersion: 3,
     id: 'legacy-project',
@@ -143,17 +153,21 @@ test('project migration converts retired button records to the unified schema', 
         { id: 'old-nav', type: 'navButton', props: { label: 'Next', toPageId: 'page-2' } },
         { id: 'old-submit', type: 'submitButton', props: { label: 'Save', submitGroupId: 'profile' } },
         { id: 'profile-name', type: 'input', props: { label: 'Name', submitGroupId: 'profile' } },
+        { id: 'profile-bio', type: 'textarea', props: { label: 'Bio', submitGroupId: 'profile' } },
       ],
     }],
   } as any)
 
-  assert.deepEqual(migrated.pages[0].blocks.map((block) => block.type), ['button', 'button', 'input'])
+  assert.deepEqual(migrated.pages[0].blocks.map((block) => block.type), ['button', 'button', 'text', 'text'])
   assert.deepEqual(migrated.pages[0].blocks[0].props.action, { type: 'navigate', targetPageId: 'page-2' })
   assert.deepEqual(migrated.pages[0].blocks[1].props.action, {
     type: 'submitData',
-    fields: [{ fieldBlockId: 'profile-name' }],
+    fields: [{ fieldBlockId: 'profile-name' }, { fieldBlockId: 'profile-bio' }],
   })
   assert.equal(migrated.pages[0].blocks[2].props.submitGroupId, undefined)
+  assert.equal(migrated.pages[0].blocks[2].props.editable, true)
+  assert.equal(migrated.pages[0].blocks[2].props.textInputMode, 'singleLine')
+  assert.equal(migrated.pages[0].blocks[3].props.textInputMode, 'multiline')
 })
 
 test('backend project migration exposes only unified button records', () => {
@@ -171,11 +185,13 @@ test('backend project migration exposes only unified button records', () => {
     }],
   })
 
-  assert.equal(migrated.schemaVersion, 5)
+  assert.equal(migrated.schemaVersion, 6)
   assert.equal(migrated.pages?.[0].blocks?.[0].type, 'button')
   assert.deepEqual(migrated.pages?.[0].blocks?.[0].props.action, {
     type: 'submitData',
     fields: [{ fieldBlockId: 'profile-name' }],
   })
+  assert.equal(migrated.pages?.[0].blocks?.[1].type, 'text')
+  assert.equal(migrated.pages?.[0].blocks?.[1].props.editable, true)
   assert.equal(migrated.pages?.[0].blocks?.[1].props.submitGroupId, undefined)
 })

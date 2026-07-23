@@ -15,7 +15,7 @@ The implementation intentionally starts small. Text `value` and Hero `headline` 
 Implemented:
 
 - page-scoped text variables
-- `setPageState` actions with static or Input/Textarea values
+- `setPageState` actions with static or editable-Text values
 - direct Text/Hero bindings to project collections
 - latest-record and creator-selected specific-record collection selection
 - page-level collection request deduplication
@@ -66,7 +66,7 @@ The sources have distinct responsibilities:
 - `static` stores a fixed action value.
 - `pageState` reads a page-scoped runtime variable.
 - `collection` reads a field from the latest record or one creator-selected record in a project collection.
-- `formValue` reads a live Input/Textarea value for an action.
+- `formValue` reads a live editable-Text value for an action.
 
 `formValue` is currently an action-value source, not a display binding exposed for Text/Hero.
 
@@ -254,7 +254,7 @@ openUrl
 setPageState
 ```
 
-`setPageState` targets a stable variable ID. Its value may be static or come from a live Input/Textarea block.
+`setPageState` targets a stable variable ID. Its value may be static or come from a live editable Text block.
 
 `submitData` explicitly lists the field block IDs it submits. When it targets a project collection, those values are stored under the collection's stable field keys.
 

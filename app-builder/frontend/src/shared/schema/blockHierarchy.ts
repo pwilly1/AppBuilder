@@ -18,8 +18,6 @@ export const CONTAINER_CHILD_BLOCK_TYPES = [
   'shape',
   'badge',
   'icon',
-  'input',
-  'textarea',
   'image',
   'checkbox',
   'toggle',
@@ -27,8 +25,7 @@ export const CONTAINER_CHILD_BLOCK_TYPES = [
 ] as const satisfies readonly BlockType[]
 
 export const FORM_CHILD_BLOCK_TYPES = [
-  'input',
-  'textarea',
+  'text',
   'checkbox',
   'toggle',
 ] as const satisfies readonly BlockType[]

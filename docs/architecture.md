@@ -240,8 +240,6 @@ The visible add-block panel currently exposes:
 - Shape
 - Form
 - Progress Bar
-- Input
-- Textarea
 - Image
 - Checkbox
 - Toggle
@@ -256,7 +254,7 @@ Behavior notes:
 - Image is a schema-backed media primitive with pasted URL and backend-uploaded asset URL sources, fit, focus, border, radius, opacity, and optional tap actions across web and Android preview.
 - Form is a schema-backed submission surface with shared parent/child layout rules across web and Android preview.
 - Button with `submitData` is a schema-backed submission trigger that reads explicit same-page field references in both web and Android preview, then posts them to its own source or a configured project collection.
-- Input, Textarea, Checkbox, and Toggle become live submission fields when nested inside a Form block or selected by a Submit Data button in web or Android preview. Outside those paths, they still behave as editor-time mockup primitives.
+- Text is display-only by default. Enabling `props.editable` turns the same block into a single-line or multiline runtime field that can participate in Form or Submit Data flows. Checkbox and Toggle remain boolean fields.
 - Container is a schema-backed layout primitive. It owns supported child blocks through `parentId`, exposes optional surface styling, and renders children in relative grid coordinates on both web and Android.
 
 ### Block Action Contract
@@ -270,7 +268,7 @@ openUrl    -> HTTPS or HTTP URL
 setPageState -> variableId plus RuntimeValueRef
 ```
 
-Button supports no action, navigation, submission, URL, and page-variable actions; Icon and Image support their applicable tap actions. `setPageState` can assign a fixed text value or the current value of an Input/Textarea block referenced by stable block ID. A Submit Data button remains the app-data source identity. Web and Android have separate executors over the same action JSON.
+Button supports no action, navigation, submission, URL, and page-variable actions; Icon and Image support their applicable tap actions. `setPageState` can assign a fixed text value or the current value of an editable Text block referenced by stable block ID. A Submit Data button remains the app-data source identity. Web and Android have separate executors over the same action JSON.
 
 ### Dynamic Data Binding Foundation
 

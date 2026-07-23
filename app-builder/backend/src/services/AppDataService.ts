@@ -50,7 +50,7 @@ type AppDataSourceMatch = {
 
 export type AppDataFieldDefinition = {
   blockId: string;
-  type: 'input' | 'textarea' | 'checkbox' | 'toggle' | 'text' | 'number' | 'email' | 'phone' | 'date' | 'boolean';
+  type: 'checkbox' | 'toggle' | 'text' | 'number' | 'email' | 'phone' | 'date' | 'boolean';
   key: string;
   label: string;
   required: boolean;
@@ -77,8 +77,6 @@ export type SerializedAppDataRecord = {
   data: Record<string, AppSubmissionValue | undefined>;
   submittedAt: Date;
 };
-
-const FIELD_TYPES = new Set(['input', 'textarea', 'checkbox', 'toggle']);
 
 export function findAppDataSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
   const collection = (project.dataCollections || []).find((entry) => entry.id === sourceId);
@@ -329,7 +327,7 @@ function collectFormChildFields(project: ProjectLike, formBlockId: string): AppD
 
   for (const page of project.pages || []) {
     for (const block of page.blocks || []) {
-      if (block.parentId !== formBlockId || !FIELD_TYPES.has(block.type)) continue;
+      if (block.parentId !== formBlockId || !isSubmissionFieldBlock(block)) continue;
       fields.push(createFieldDefinition(block, usedKeys));
     }
   }
@@ -344,7 +342,7 @@ function collectSelectedFields(pageBlocks: BlockLike[], submitBlock: BlockLike):
 
   for (const fieldRef of readSubmitActionFields(submitBlock)) {
     const block = fieldsById.get(fieldRef.fieldBlockId);
-    if (!block || !FIELD_TYPES.has(block.type)) continue;
+    if (!block || !isSubmissionFieldBlock(block)) continue;
     fields.push(createFieldDefinition(block, usedKeys, fieldRef.targetFieldKey));
   }
 
@@ -356,7 +354,7 @@ function collectContactFormFields(block: BlockLike): AppDataFieldDefinition[] {
   if (block.props?.showName !== false) fields.push({ blockId: block.id, type: 'text', key: 'name', label: 'Name', required: false });
   if (block.props?.showEmail !== false) fields.push({ blockId: block.id, type: 'email', key: 'email', label: 'Email', required: false });
   if (block.props?.showPhone) fields.push({ blockId: block.id, type: 'phone', key: 'phone', label: 'Phone', required: false });
-  if (block.props?.showMessage !== false) fields.push({ blockId: block.id, type: 'textarea', key: 'message', label: 'Message', required: false });
+  if (block.props?.showMessage !== false) fields.push({ blockId: block.id, type: 'text', key: 'message', label: 'Message', required: false });
   return fields;
 }
 
@@ -391,7 +389,7 @@ function createFieldDefinition(block: BlockLike, usedKeys: Map<string, number>, 
 
   return {
     blockId: block.id,
-    type: block.type as AppDataFieldDefinition['type'],
+    type: resolveFieldDefinitionType(block),
     key,
     label: readableLabel(block),
     required: Boolean(block.props?.required),
@@ -479,9 +477,25 @@ function resolveFieldKey(block: BlockLike) {
 }
 
 function readableLabel(block: BlockLike) {
+  const fieldLabel = typeof block.props?.fieldLabel === 'string' ? block.props.fieldLabel.trim() : '';
   const label = typeof block.props?.label === 'string' ? block.props.label.trim() : '';
   const placeholder = typeof block.props?.placeholder === 'string' ? block.props.placeholder.trim() : '';
-  return label || placeholder || block.id;
+  return fieldLabel || label || placeholder || block.id;
+}
+
+function isSubmissionFieldBlock(block: BlockLike) {
+  return block.type === 'checkbox'
+    || block.type === 'toggle'
+    || (block.type === 'text' && block.props?.editable === true);
+}
+
+function resolveFieldDefinitionType(block: BlockLike): AppDataFieldDefinition['type'] {
+  if (block.type === 'checkbox' || block.type === 'toggle') return block.type;
+  const inputType = readStringProp(block, 'inputType');
+  if (inputType === 'number' || inputType === 'email' || inputType === 'phone' || inputType === 'date') {
+    return inputType;
+  }
+  return 'text';
 }
 
 function coerceBoolean(value: unknown) {

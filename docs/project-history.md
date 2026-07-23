@@ -497,3 +497,19 @@ Representative areas:
 - `backend/src/services/AppDataService.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`
+
+## Phase 26: Unified Display And Input Text
+
+Date range: July 2026
+
+The separate Input and Textarea block types were retired in favor of one Text primitive. Text remains display-only by default, but the creator can enable app editing, choose single-line or multiline behavior, configure input metadata and appearance, and use the same stable block ID in Submit Data or Set Page Variable actions. Schema version 6 upgrades existing Input and Textarea records without breaking placement, parent relationships, or action field references. Web preview, backend app-data discovery, templates, and Android Compose now consume the same editable-Text contract.
+
+Representative areas:
+
+- `frontend/src/shared/blocks/TextBlock.tsx`
+- `frontend/src/components/Inspector.tsx`
+- `frontend/src/shared/schema/gridMigration.ts`
+- `backend/src/services/AppDataService.ts`
+- `backend/src/services/ProjectSchemaMigration.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/TextView.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`

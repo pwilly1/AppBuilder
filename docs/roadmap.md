@@ -95,8 +95,7 @@ Recommended order:
 | Completed | Icon |
 | Completed | Progress Bar |
 | Completed | Form |
-| Completed | Input |
-| Completed | Textarea |
+| Completed | Unified display/editable Text with single-line and multiline modes |
 | Completed | Checkbox |
 | Completed | Toggle |
 | Completed | Image |
@@ -157,7 +156,7 @@ These are important to the long-term product vision but should wait until the ed
 | Later | Richer app-level relational data collections. |
 | Completed | Page-scoped text variables and Text/Hero bindings with matching web/Android resolution and editor sample values. |
 | Completed | Schema-backed Set Page Variable actions on Button, Icon, and Image across web and Android. |
-| Completed | Input/Textarea runtime values as stable-ID sources for Set Page Variable actions. |
+| Completed | Editable Text runtime values as stable-ID sources for Set Page Variable and Submit Data actions. |
 | Planned | Page parameters and app-state actions. |
 | Completed | Direct Text/Hero bindings to either the latest record or one creator-selected specific record in a publicly readable collection, with safe fallback in web and Android. |
 | Planned | Record selectors driven by generated-app users, current-user identity, filters, and sorting. |

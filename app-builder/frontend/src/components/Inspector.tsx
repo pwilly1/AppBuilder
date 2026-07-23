@@ -5,6 +5,7 @@ import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
 import { listProjectAppDataRecords, uploadProjectImage, type ProjectAppDataRecord } from '../api';
 import { normalizeBlockAction, resolveBlockAction } from '../shared/actions/blockActions';
+import { BlockRegistry } from '../shared/schema/registry';
 
 type PageLite = { id: string; title?: string; path?: string };
 
@@ -40,6 +41,7 @@ function getInspectorDefaultProps(block?: Block | null) {
   if (!block) return {};
   const action = resolveBlockAction(block);
   return {
+    ...(block.type === 'text' ? BlockRegistry.text.defaultProps : {}),
     ...(block.props as Record<string, any>),
     ...(action ? { action } : {}),
   };
@@ -119,6 +121,8 @@ export default function Inspector({
   const actionType = watch('action.type') as string | undefined;
   const actionValueSource = watch('action.value.source') as string | undefined;
   const selectedActionFieldBlockId = watch('action.value.fieldBlockId') as string | undefined;
+  const textEditable = block?.type === 'text' && Boolean(watch('editable'));
+  const textInputMode = watch('textInputMode') as string | undefined;
   const watchedSubmitFields = watch('action.fields');
   const selectedSubmitFields = Array.isArray(watchedSubmitFields)
     ? watchedSubmitFields as SubmitDataFieldRef[]
@@ -128,7 +132,7 @@ export default function Inspector({
     const formIds = new Set(pageBlocks.filter((candidate) => candidate.type === 'form').map((candidate) => candidate.id));
     const actionFormScope = block?.parentId && formIds.has(block.parentId) ? block.parentId : null;
     return pageBlocks.filter((candidate) => {
-      if (candidate.type !== 'input' && candidate.type !== 'textarea') return false;
+      if (candidate.type !== 'text' || candidate.props.editable !== true) return false;
       const candidateFormScope = candidate.parentId && formIds.has(candidate.parentId) ? candidate.parentId : null;
       return candidateFormScope === actionFormScope;
     });
@@ -210,7 +214,6 @@ export default function Inspector({
     if (props.headlineSize) props.headlineSize = Number(props.headlineSize);
     if (props.columns) props.columns = Number(props.columns);
     if (props.thickness !== undefined) props.thickness = Number(props.thickness);
-    if (props.rows !== undefined) props.rows = Number(props.rows);
     if (props.contentPadding !== undefined) props.contentPadding = Number(props.contentPadding);
     if (props.buttonPaddingX !== undefined) props.buttonPaddingX = Number(props.buttonPaddingX);
     if (props.buttonPaddingY !== undefined) props.buttonPaddingY = Number(props.buttonPaddingY);
@@ -352,7 +355,7 @@ export default function Inspector({
                 </div>
               ) : (
                 <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                  Add an Input, Textarea, Checkbox, or Toggle to this page first.
+                  Add an editable Text, Checkbox, or Toggle block to this page first.
                 </p>
               )}
               <p className="text-xs text-slate-500">Only the checked fields are included when this button is tapped.</p>
@@ -383,7 +386,7 @@ export default function Inspector({
               <FieldLabel>Value source</FieldLabel>
               <select className="inspector-input" defaultValue="static" {...register('action.value.source')}>
                 <option value="static">Fixed value</option>
-                <option value="formValue">Input or textarea</option>
+                <option value="formValue">Editable text</option>
               </select>
             </div>
             {actionValueSource === 'formValue' ? (
@@ -396,13 +399,13 @@ export default function Inspector({
                   ) : null}
                   {stateValueFieldBlocks.map((field) => (
                     <option key={field.id} value={field.id}>
-                      {String(field.props.label || field.props.placeholder || (field.type === 'textarea' ? 'Textarea' : 'Input'))}
+                      {getSubmissionFieldLabel(field)}
                     </option>
                   ))}
                 </select>
                 {stateValueFieldBlocks.length === 0 ? (
                   <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                    Add an Input or Textarea block to this page first.
+                    Turn on Editable in app for a Text block on this page first.
                   </p>
                 ) : null}
               </div>
@@ -914,7 +917,7 @@ export default function Inspector({
           title={`${block.type === 'form' ? 'Form' : 'Container'} contents`}
           description={
             block.type === 'form'
-              ? 'Click Edit contents, then add input, textarea, checkbox, or toggle blocks from the left sidebar.'
+              ? 'Click Edit contents, then add editable Text, Checkbox, or Toggle blocks from the left sidebar.'
               : 'Click Edit contents, then click blocks in the left sidebar. New blocks will be placed inside this container until you exit.'
           }
         >
@@ -1006,7 +1009,7 @@ export default function Inspector({
         {block.type === 'text' && (
           <>
             {renderTextBindingControls('text')}
-            <FormSection title="Content" description="Edit the static text or fallback shown when a bound value is unavailable.">
+            <FormSection title="Content" description="Set the displayed text or the starting value used by an editable field.">
               <div className="grid gap-2">
                 <FieldLabel>Text</FieldLabel>
                 <TextArea {...registerLiveText('value')} />
@@ -1015,6 +1018,82 @@ export default function Inspector({
                 <FieldLabel>Font size (px)</FieldLabel>
                 <TextInput type="number" className="max-w-[120px]" {...register('fontSize')} />
               </div>
+              <div className="grid gap-2">
+                <FieldLabel>Text color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
+              </div>
+            </FormSection>
+            <FormSection title="App input" description="Optionally let app users edit this text and expose its value to actions and submissions.">
+              <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+                <ToggleInput type="checkbox" {...register('editable')} />
+                Editable in app
+              </label>
+              {textEditable ? (
+                <>
+                  <div className="grid gap-2">
+                    <FieldLabel>Field label</FieldLabel>
+                    <TextInput {...register('fieldLabel')} />
+                    <p className="text-xs text-slate-500">Used in submission records and validation messages.</p>
+                  </div>
+                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+                    <ToggleInput type="checkbox" {...register('showFieldLabel')} />
+                    Show field label
+                  </label>
+                  {renderDataFieldControls()}
+                  <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
+                    <ToggleInput type="checkbox" {...register('required')} />
+                    Required when submitted
+                  </label>
+                  <div className="grid gap-2">
+                    <FieldLabel>Input mode</FieldLabel>
+                    <select className="inspector-input" {...register('textInputMode')}>
+                      <option value="singleLine">Single line</option>
+                      <option value="multiline">Multiple lines</option>
+                    </select>
+                  </div>
+                  {textInputMode !== 'multiline' ? (
+                    <div className="grid gap-2">
+                      <FieldLabel>Keyboard type</FieldLabel>
+                      <select className="inspector-input" {...register('inputType')}>
+                        <option value="text">Text</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Phone</option>
+                        <option value="number">Number</option>
+                        <option value="password">Password</option>
+                      </select>
+                    </div>
+                  ) : null}
+                  <div className="grid gap-2">
+                    <FieldLabel>Placeholder</FieldLabel>
+                    <TextInput {...register('placeholder')} />
+                  </div>
+                  <div className="grid gap-2">
+                    <FieldLabel>Background color</FieldLabel>
+                    <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
+                  </div>
+                  <div className="grid gap-2">
+                    <FieldLabel>Placeholder color</FieldLabel>
+                    <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('placeholderColor')} />
+                  </div>
+                  <div className="grid gap-2">
+                    <FieldLabel>Border color</FieldLabel>
+                    <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
+                  </div>
+                  <div className="grid gap-2">
+                    <FieldLabel>Border width (px)</FieldLabel>
+                    <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderWidth')} />
+                  </div>
+                  <div className="grid gap-2">
+                    <FieldLabel>Corner radius (px)</FieldLabel>
+                    <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
+                  </div>
+                  <p className="text-xs leading-5 text-slate-500">
+                    A Form submits editable Text children automatically. A Submit Data button can select editable Text blocks from its field list.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs leading-5 text-slate-500">This block only displays its static or bound value.</p>
+              )}
             </FormSection>
           </>
         )}
@@ -1292,112 +1371,6 @@ export default function Inspector({
           </FormSection>
         )}
 
-        {block.type === 'input' && (
-          <FormSection title="Input" description="A single-line field that a Submit Data button can include.">
-            <div className="grid gap-2">
-              <FieldLabel>Label</FieldLabel>
-              <TextInput {...register('label')} />
-            </div>
-            {renderDataFieldControls()}
-            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
-              <ToggleInput type="checkbox" {...register('required')} />
-              Required in forms
-            </label>
-            <div className="grid gap-2">
-              <FieldLabel>Placeholder</FieldLabel>
-              <TextInput {...register('placeholder')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Display value</FieldLabel>
-              <TextInput {...register('value')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Input type</FieldLabel>
-              <select className="inspector-input" {...register('inputType')}>
-                <option value="text">Text</option>
-                <option value="email">Email</option>
-                <option value="phone">Phone</option>
-                <option value="number">Number</option>
-                <option value="password">Password</option>
-              </select>
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Font size (px)</FieldLabel>
-              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Background color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Text color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Placeholder color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('placeholderColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Border color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Corner radius (px)</FieldLabel>
-              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
-            </div>
-          </FormSection>
-        )}
-
-        {block.type === 'textarea' && (
-          <FormSection title="Textarea" description="A multi-line field that a Submit Data button can include.">
-            <div className="grid gap-2">
-              <FieldLabel>Label</FieldLabel>
-              <TextInput {...register('label')} />
-            </div>
-            {renderDataFieldControls()}
-            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
-              <ToggleInput type="checkbox" {...register('required')} />
-              Required in forms
-            </label>
-            <div className="grid gap-2">
-              <FieldLabel>Placeholder</FieldLabel>
-              <TextInput {...register('placeholder')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Display value</FieldLabel>
-              <TextArea rows={3} {...register('value')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Rows</FieldLabel>
-              <TextInput type="number" min={1} className="max-w-[120px]" {...register('rows')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Font size (px)</FieldLabel>
-              <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Background color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Text color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Placeholder color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('placeholderColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Border color</FieldLabel>
-              <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Corner radius (px)</FieldLabel>
-              <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
-            </div>
-          </FormSection>
-        )}
-
         {block.type === 'image' && (
           <>
             <FormSection title="Image source" description="Upload an image from your device or paste an image URL. Saved projects upload files to asset storage and keep the returned URL in the block schema.">
@@ -1622,7 +1595,9 @@ function friendlyFieldType(type: AppDataCollection['fields'][number]['type']) {
 }
 
 function isSubmissionField(block: Block) {
-  return block.type === 'input' || block.type === 'textarea' || block.type === 'checkbox' || block.type === 'toggle';
+  return block.type === 'checkbox'
+    || block.type === 'toggle'
+    || (block.type === 'text' && block.props.editable === true);
 }
 
 function isBooleanSubmissionField(block: Block) {
@@ -1630,7 +1605,7 @@ function isBooleanSubmissionField(block: Block) {
 }
 
 function getSubmissionFieldLabel(block: Block) {
-  return String(block.props.label || block.props.placeholder || block.type);
+  return String(block.props.fieldLabel || block.props.label || block.props.placeholder || block.props.value || block.type);
 }
 
 function findOwningFormId(block: Block | null | undefined, pageBlocks: Block[]) {

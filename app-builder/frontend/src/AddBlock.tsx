@@ -235,7 +235,7 @@ export function AddBlock({
       <CollapsibleSection title="Text & Navigation">
         <div className="grid gap-2">
           <BlockEntry title="Hero" note="Intro headline" create={() => createBlock('hero', { headline: 'New Hero' })} onAdd={onAdd} />
-          <BlockEntry title="Text" note="Paragraphs or short body copy" create={() => createBlock('text', { value: 'New text' })} onAdd={onAdd} />
+          <BlockEntry title="Text" note="Display text or collect typed values" create={() => createBlock('text', { value: 'New text' })} onAdd={onAdd} />
           <BlockEntry title="Button" note="Navigate, submit data, open a URL, or update page state" create={() => createBlock('button')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
@@ -252,8 +252,6 @@ export function AddBlock({
 
       <CollapsibleSection title="Forms & Fields">
         <div className="grid gap-2">
-          <BlockEntry title="Input" note="Single-line field" create={() => createBlock('input')} onAdd={onAdd} />
-          <BlockEntry title="Textarea" note="Multi-line field" create={() => createBlock('textarea')} onAdd={onAdd} />
           <BlockEntry title="Checkbox" note="Checked/unchecked option" create={() => createBlock('checkbox')} onAdd={onAdd} />
           <BlockEntry title="Toggle" note="On/off switch" create={() => createBlock('toggle')} onAdd={onAdd} />
         </div>

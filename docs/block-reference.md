@@ -40,7 +40,7 @@ type Block = {
 `parentId` is ownership metadata for container children. Top-level blocks omit it.
 `Page.appearance.backgroundColor` stores an optional six-digit hex color for the full page surface. Web and Android preview normalize invalid or missing values back to white for older projects.
 
-Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest record or one specific record; bindings without a selector default to latest for compatibility. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an Input/Textarea block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
+Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest record or one specific record; bindings without a selector default to latest for compatibility. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an editable Text block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
 
 ## Layout Contract
 
@@ -115,7 +115,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 | Type | Main props | Default grid span | Runtime notes |
 | --- | --- | --- | --- |
 | `hero` | `headline`, `headlineSize`, optional `bindings.headline` | 16 x 6 | Inline editable while static; supports page-state or latest/specific collection binding and content scaling |
-| `text` | `value`, `fontSize`, optional `bindings.value` | 8 x 4 | Inline editable while static; supports page-state or latest/specific collection binding, content scaling, and row auto-growth |
+| `text` | `value`, `fontSize`, optional `bindings.value`; optional `editable`, `textInputMode`, `inputType`, `fieldLabel`, `fieldKey`, `required`, placeholder and field styling | 8 x 4 | Display-only by default; can become a single-line or multiline runtime field while preserving binding, submission, and stable-ID behavior |
 | `button` | `label`, optional `action`, submission/source settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, submission, URL, page-state updates, inline editing, and content scaling |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
@@ -125,8 +125,6 @@ The grid remains the collision and placement boundary. Render width, height, and
 | `checkbox` | `label`, `fieldKey`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when selected by a Submit Data button; visual mockup elsewhere |
 | `toggle` | `label`, `fieldKey`, `required`, `checked`, font and colors | 6 x 2 | Functional boolean field inside a `form` or when selected by a Submit Data button; visual mockup elsewhere |
 | `progressBar` | `label`, `value`, visibility and colors | 8 x 2 | Visual status primitive |
-| `input` | label/fieldKey/value/placeholder/type/required/font/colors/radius | 8 x 3 | Functional text field inside a `form` or when selected by a Submit Data button; visual mockup elsewhere |
-| `textarea` | label/fieldKey/value/placeholder/rows/required/font/colors/radius | 8 x 4 | Functional text field inside a `form` or when selected by a Submit Data button; visual mockup elsewhere |
 | `image` | `src`, `alt`, `fit`, focus, background/border/radius/opacity, optional `action` | 8 x 6 | Atomic image block; supports pasted/uploaded assets plus navigation or safe URL taps |
 | `servicesList` | `title`, `items` | 16 x 6 | Existing business block; hidden from the preferred palette |
 | `contactForm` | labels, field visibility, destination email | 16 x 8 | Functional submission block |
@@ -134,7 +132,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 
 The exact defaults and constraints must be read from the registry rather than duplicated in feature logic.
 
-Actions use a discriminated schema object in `props.action`. The `button` block may omit the action for static presentation or use `navigate`, `submitData`, `openUrl`, or `setPageState`. A `submitData` action owns an explicit `fields` list of stable block IDs and may include a stable project `collectionId`; collection writes map fields through optional `targetFieldKey` values. `setPageState` stores a target variable ID and a `RuntimeValueRef`; its current value sources are `static` and `formValue` for Input/Textarea blocks. Only HTTP and HTTPS links are executable.
+Actions use a discriminated schema object in `props.action`. The `button` block may omit the action for static presentation or use `navigate`, `submitData`, `openUrl`, or `setPageState`. A `submitData` action owns an explicit `fields` list of stable block IDs and may include a stable project `collectionId`; collection writes map fields through optional `targetFieldKey` values. `setPageState` stores a target variable ID and a `RuntimeValueRef`; its current value sources are `static` and `formValue` for editable Text blocks. Only HTTP and HTTPS links are executable.
 
 ## Container Hierarchy Contract
 
@@ -144,7 +142,7 @@ Actions use a discriminated schema object in `props.action`. The `button` block 
 - Nested parent blocks are not supported.
 - Container and form children use relative `layout.grid` coordinates.
 - `container` currently accepts lightweight child blocks including `button`, but not nested `container` or `form` blocks.
-- `form` only accepts `input`, `textarea`, `checkbox`, and `toggle` children.
+- `form` only accepts editable `text`, `checkbox`, and `toggle` children. Static Text may be placed in a Form for presentation, but only Text with `props.editable === true` is exposed as a submission field.
 - A Submit Data `button` is not a Form child. It stays top-level or inside a Container and explicitly selects same-page fields in its `action.fields` list.
 - Unsupported or orphaned child relationships are repaired at load time.
 
@@ -183,16 +181,19 @@ The preferred production path is backend upload. The backend validates the file,
 
 ## Schema Version And Migration
 
-The current schema version is `3`.
+The current schema version is `6`.
 
-`gridMigration.ts` performs three important load-time operations:
+`gridMigration.ts` performs these important load-time operations:
 
 1. filters block types that are no longer in the registry
 2. scales version-1 eight-column placements into the 16-column grid
 3. assigns placements and render defaults when older blocks do not have them
 4. repairs invalid container hierarchy data before the editor/runtime uses it
+5. converts retired Nav Button and Submit Button records into the unified Button action schema
+6. converts grouped submission fields into explicit button-owned field references
+7. converts retired Input and Textarea records into editable Text records without changing block IDs
 
-The Android loader independently scales projects older than schema version `2`, while the shared frontend migration now also bumps projects to schema version `3` for container hierarchy support. Any future schema-version change must be implemented and tested on both surfaces.
+The backend, frontend, and Android loader all normalize saved projects to schema version `6`. The Input/Textarea conversion preserves block IDs so existing Button actions still reference the same runtime fields. Any future schema-version change must be implemented and tested across all three surfaces.
 
 ## Related
 

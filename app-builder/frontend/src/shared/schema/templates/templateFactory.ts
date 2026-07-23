@@ -7,6 +7,7 @@ import type {
   AppTemplateDefinition,
   PageTemplateDefinition,
   SectionTemplateDefinition,
+  TemplateBlockDefinition,
   TemplateDefinition,
   TemplatePageDefinition,
 } from './templateTypes'
@@ -52,7 +53,7 @@ export function instantiateSectionTemplate(
 
   for (const block of template.blocks) {
     const submitGroupKey = typeof block.props?.submitGroupKey === 'string' ? block.props.submitGroupKey : ''
-    if (!submitGroupKey || !isSubmissionFieldType(block.type)) continue
+    if (!submitGroupKey || !isSubmissionFieldDefinition(block)) continue
     const fieldBlockId = idByKey.get(block.key)
     if (!fieldBlockId) continue
     submitFieldsByGroupKey.set(submitGroupKey, [
@@ -155,6 +156,8 @@ function resolveTemplateProps(
   return next
 }
 
-function isSubmissionFieldType(type: Block['type']) {
-  return type === 'input' || type === 'textarea' || type === 'checkbox' || type === 'toggle'
+function isSubmissionFieldDefinition(block: TemplateBlockDefinition) {
+  return block.type === 'checkbox'
+    || block.type === 'toggle'
+    || (block.type === 'text' && block.props?.editable === true)
 }

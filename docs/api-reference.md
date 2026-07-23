@@ -174,7 +174,7 @@ Typical editor request:
 ```json
 {
   "name": "Updated App",
-  "schemaVersion": 3,
+  "schemaVersion": 6,
   "pages": []
 }
 ```
@@ -224,8 +224,8 @@ Success: `204` with no response body.
 These endpoints support two submission models:
 
 - legacy `contactForm` blocks, which store the older fixed `name` / `email` / `phone` / `message` payload and can trigger email notifications
-- schema-backed `form` blocks, which store dynamic field data collected from child `input`, `textarea`, `checkbox`, and `toggle` blocks
-- schema-backed `button` blocks with `action.type = "submitData"`, which store dynamic field data from the same-page `input`, `textarea`, `checkbox`, and `toggle` blocks listed in `action.fields`
+- schema-backed `form` blocks, which store dynamic field data collected from child editable `text`, `checkbox`, and `toggle` blocks
+- schema-backed `button` blocks with `action.type = "submitData"`, which store dynamic field data from the same-page editable `text`, `checkbox`, and `toggle` blocks listed in `action.fields`
 
 Legacy `contactForm` submission data can contain:
 

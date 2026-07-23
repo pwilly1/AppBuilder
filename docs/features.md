@@ -61,22 +61,20 @@ The current visible block palette is:
 - Shape
 - Progress Bar
 - Form
-- Input
-- Textarea
 - Image
 - Checkbox
 - Toggle
 - Container
 
-Hero, Text, Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Input, Textarea, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
+Hero, Text, Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
 
 Text-like blocks support canvas editing and inspector editing. Text `value` and Hero `headline` can bind to page-scoped text variables or a field from the latest record or one creator-selected record in a collection while keeping their static props as fallbacks. Shape supports canvas placement/resizing and inspector-based visual styling. Button supports a static/no-action mode, page navigation, data submission, safe external URLs, or page-variable updates plus inspector-based styling for colors, padding, and corner radius.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
 Icon and Image can optionally execute Navigate, Open URL, or Set Page Variable actions in web and Android preview.
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
 Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dedicated App Data page can review stored records for each saved Form source.
-Button configured with Submit Data is a second schema-backed submission path. In web preview it submits the same-page Input, Textarea, Checkbox, and Toggle fields explicitly selected in the button inspector.
-Input and Textarea can also supply live values to Set Page Variable actions through stable block IDs. Input, Textarea, Checkbox, and Toggle can act as live submission fields when nested inside a Form block or selected by a Submit Data button. In web and Android preview, these controls collect runtime values and the button posts only its selected fields to the hosted app-data API. In the editor they still behave as mockup controls.
+Text is display-only by default. The inspector can make it app-editable, choose single-line or multiline input, configure field metadata and appearance, and expose its live value through the block's stable ID.
+Button configured with Submit Data is a second schema-backed submission path. In web and Android preview it submits the same-page editable Text, Checkbox, and Toggle fields explicitly selected in the button inspector. Editable Text can also supply live values to Set Page Variable actions.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
 Project-level data collections define stable record sources and typed fields. Submit Data buttons can map selected field values into a collection. When public reads are enabled, Text and Hero can directly display a field from either the latest record or one record selected by the app creator in web and Android preview.
 
@@ -130,8 +128,6 @@ Implemented primitives:
 - Icon
 - Progress Bar
 - Form
-- Input
-- Textarea
 - Image
 - Checkbox
 - Toggle

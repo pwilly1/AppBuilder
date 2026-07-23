@@ -13,9 +13,48 @@ export const GRID_DENSITY_SCHEMA_VERSION = 2
 export const CONTAINER_SCHEMA_VERSION = 3
 export const UNIFIED_BUTTON_SCHEMA_VERSION = 4
 export const EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5
-export const CURRENT_SCHEMA_VERSION = EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION
+export const UNIFIED_TEXT_FIELD_SCHEMA_VERSION = 6
+export const CURRENT_SCHEMA_VERSION = UNIFIED_TEXT_FIELD_SCHEMA_VERSION
 
-const SUBMISSION_FIELD_TYPES = new Set(['input', 'textarea', 'checkbox', 'toggle'])
+function migrateLegacyTextField(block: Block): Block {
+  const legacyType = String(block.type)
+  if (legacyType !== 'input' && legacyType !== 'textarea') return block
+
+  const oldProps = { ...(block.props as Record<string, any>) }
+  const fieldLabel = typeof oldProps.label === 'string' && oldProps.label.trim()
+    ? oldProps.label.trim()
+    : legacyType === 'textarea' ? 'Message' : 'Label'
+  const props: Record<string, any> = {
+    value: typeof oldProps.value === 'string' ? oldProps.value : '',
+    fontSize: Number(oldProps.fontSize) || 14,
+    contentPadding: 8,
+    textColor: typeof oldProps.textColor === 'string' ? oldProps.textColor : '#0f172a',
+    editable: true,
+    textInputMode: legacyType === 'textarea' ? 'multiline' : 'singleLine',
+    inputType: legacyType === 'input' && typeof oldProps.inputType === 'string' ? oldProps.inputType : 'text',
+    fieldLabel,
+    showFieldLabel: true,
+    fieldKey: typeof oldProps.fieldKey === 'string' ? oldProps.fieldKey : '',
+    required: Boolean(oldProps.required),
+    placeholder: typeof oldProps.placeholder === 'string'
+      ? oldProps.placeholder
+      : legacyType === 'textarea' ? 'Write something...' : 'Placeholder',
+    backgroundColor: typeof oldProps.backgroundColor === 'string' ? oldProps.backgroundColor : '#ffffff',
+    placeholderColor: typeof oldProps.placeholderColor === 'string' ? oldProps.placeholderColor : '#94a3b8',
+    borderColor: typeof oldProps.borderColor === 'string' ? oldProps.borderColor : '#cbd5e1',
+    borderWidth: 1,
+    borderRadius: Math.max(0, Number(oldProps.borderRadius) || 0),
+  }
+  if (typeof oldProps.submitGroupId === 'string') props.submitGroupId = oldProps.submitGroupId
+
+  return { ...block, type: 'text', props }
+}
+
+function isSubmissionFieldBlock(block: Block): boolean {
+  return block.type === 'checkbox'
+    || block.type === 'toggle'
+    || (block.type === 'text' && block.props.editable === true)
+}
 
 function migrateLegacyButton(block: Block): Block {
   const legacyType = String(block.type)
@@ -68,7 +107,7 @@ function migrateExplicitSubmitFields(blocks: Block[]): Block[] {
       const fields = existingFields.length > 0
         ? existingFields
         : blocks
-            .filter((candidate) => SUBMISSION_FIELD_TYPES.has(candidate.type))
+            .filter(isSubmissionFieldBlock)
             .filter((candidate) => {
               const candidateGroup = typeof candidate.props.submitGroupId === 'string' && candidate.props.submitGroupId.trim()
                 ? candidate.props.submitGroupId.trim()
@@ -96,7 +135,7 @@ function migrateExplicitSubmitFields(blocks: Block[]): Block[] {
       delete props.collectionId
     }
 
-    if (SUBMISSION_FIELD_TYPES.has(block.type)) delete props.submitGroupId
+    if (isSubmissionFieldBlock(block)) delete props.submitGroupId
     return { ...block, props }
   })
 }
@@ -137,7 +176,8 @@ export function migratePageToGridLayout(
   page: Page,
   options: { scaleLegacyGridDensity?: boolean; migrateLegacySubmissionGroups?: boolean } = {},
 ): Page {
-  const legacyButtonsMigrated = page.blocks.map(migrateLegacyButton)
+  const textFieldsMigrated = page.blocks.map(migrateLegacyTextField)
+  const legacyButtonsMigrated = textFieldsMigrated.map(migrateLegacyButton)
   const convertedBlocks = options.migrateLegacySubmissionGroups
     ? migrateExplicitSubmitFields(legacyButtonsMigrated)
     : legacyButtonsMigrated
