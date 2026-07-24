@@ -160,8 +160,8 @@ These are important to the long-term product vision but should wait until the ed
 | Completed | Schema-backed Set Page Variable actions on Button, Icon, and Image across web and Android. |
 | Completed | Editable Text runtime values as stable-ID sources for Set Page Variable and Submit Data actions. |
 | Planned | Page parameters and app-state actions. |
-| Completed | Direct Text/Hero bindings to either the latest record or one creator-selected specific record in a publicly readable collection, with safe fallback in web and Android. |
-| Planned | Record selectors driven by current-user identity, filters, and sorting. |
+| Completed | Direct Text/Hero bindings to the latest public record, one creator-selected public record, or the signed-in user's newest owned record, with safe fallback in web and Android. |
+| Planned | Record selectors driven by filters, sorting, and end-user selection. |
 | In Progress | Record update/delete: builder and generated-app owner-scoped APIs are complete; block actions are still planned. |
 | In Progress | Generated app user accounts; signup/login/logout and stable identity are complete, while profiles and password recovery remain. |
 | Completed | Collection access rules for runtime create/read/update/delete plus owner-scoped backend enforcement and web/Android clients. |

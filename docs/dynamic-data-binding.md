@@ -8,7 +8,7 @@ Dynamic binding lets a block display runtime data without replacing its saved de
 - bindings read values and display them
 - static block props remain the visual fallback
 
-The implementation intentionally starts small. Text `value` and Hero `headline` can currently read either a page variable or a field from the latest record or one creator-selected record in a project collection. The same saved schema is resolved by web preview and Android preview.
+The implementation intentionally starts small. Text `value` and Hero `headline` can currently read a page variable or a collection field from the latest public record, one creator-selected public record, or the signed-in generated-app user's newest owned record. The same saved schema is resolved by web preview and Android preview.
 
 ## Current Status
 
@@ -17,7 +17,7 @@ Implemented:
 - page-scoped text variables
 - `setPageState` actions with static or editable-Text values
 - direct Text/Hero bindings to project collections
-- latest-record and creator-selected specific-record collection selection
+- latest-record, creator-selected specific-record, and signed-in-user newest-record selection
 - page-level collection request deduplication
 - loading, empty, missing, permission, and error fallback to static content
 - matching web and Android schema/runtime behavior
@@ -27,9 +27,7 @@ Implemented:
 Not implemented:
 
 - end-user-selected records and record selection passed through navigation
-- current-user record selectors in the page runtime
 - filters, sorting, or arbitrary collection queries
-- current-user display bindings
 - generated-app record update/delete block actions
 - formulas, conditional visibility, or a general expression language
 
@@ -57,6 +55,7 @@ type RuntimeValueRef =
       fieldId: string
       record?:
         | { mode: 'latest' }
+        | { mode: 'currentUser' }
         | { mode: 'specific'; recordId: string }
       fallback?: string
     }
@@ -67,7 +66,7 @@ The sources have distinct responsibilities:
 
 - `static` stores a fixed action value.
 - `pageState` reads a page-scoped runtime variable.
-- `collection` reads a field from the latest record or one creator-selected record in a project collection.
+- `collection` reads a field from the latest public record, one creator-selected public record, or the signed-in generated-app user's newest owned record.
 - `formValue` reads a live editable-Text value for an action.
 
 `formValue` is currently an action-value source, not a display binding exposed for Text/Hero.
@@ -172,7 +171,7 @@ Open page
   -> initialize page variables
   -> scan block bindings for collection IDs
   -> deduplicate collection-and-selector requests
-  -> request each latest or specific record once
+  -> request each latest, specific, or current-user record once
   -> map record keys to stable field IDs
   -> expose collection states in RuntimeContext
   -> resolve each block property
@@ -182,11 +181,12 @@ This design prevents ten blocks bound to one collection from making ten network 
 
 ## Record Selection
 
-The app creator chooses one of two selectors in the Inspector:
+The app creator chooses one of three selectors in the Inspector:
 
 ```text
 selected collection -> latest submitted record -> selected field
 selected collection -> specific saved record -> selected field
+selected collection -> signed-in user's newest owned record -> selected field
 ```
 
 Web and Android call:
@@ -194,6 +194,7 @@ Web and Android call:
 ```text
 GET /public/projects/:projectId/app-data/collections/:collectionId/records/latest
 GET /public/projects/:projectId/app-data/collections/:collectionId/records/:recordId
+GET /public/projects/:projectId/app-data/collections/:collectionId/records/mine
 ```
 
 The latest endpoint returns:
@@ -205,14 +206,15 @@ The latest endpoint returns:
 
 The specific-record endpoint returns the selected record or `404` when it no longer exists in that project and collection. Both endpoints return `403` when public reads are disabled. The specific record is chosen by the app creator while configuring the block; the generated-app user does not choose it at runtime.
 
-These selectors cover fixed profiles, highlighted records, recent announcements, latest status, and similar first-version use cases. They are not a complete querying system.
+The current-user endpoint requires the project-scoped generated-app JWT and applies ownership in the database query. The collection must allow `read: "own"` or `read: "public"`. It returns that user's records newest first; the page runtime uses the first record. Login and logout invalidate the page's collection-data cache so bound Text/Hero values refresh without reloading the project. When no user is signed in or the user has no owned record, the block displays its static fallback.
+
+These selectors cover fixed profiles, highlighted records, recent announcements, latest status, and simple signed-in-user dashboards. They are not a complete querying system.
 
 Future selectors should extend the binding contract explicitly rather than reintroducing a separate page-source model. Likely selectors are:
 
 ```text
 latest
 record selected by a generated-app user
-current user's record
 first matching filter
 ```
 
@@ -244,12 +246,14 @@ Value source
 
 Collection data
   Collection: Tasks
-  Record: Latest record | Specific record
+  Record: Latest record | Specific record | Signed-in user's newest record
   Specific record: Inspection #1042
   Field: Title
 ```
 
-The UI displays collection, record, and field labels, while the schema saves stable IDs. The creator-only record picker loads records through the authenticated owner API. Runtime rendering still reads through the public collection endpoints, so the Inspector tells the creator to enable `Show records inside the app` when the selected collection is private.
+The UI displays collection, record, and field labels, while the schema saves stable IDs. The creator-only record picker loads records through the authenticated owner API. Latest and specific runtime rendering use public collection endpoints, so the Inspector tells the creator to enable public reads for those selectors.
+
+The signed-in-user selector does not expose a record picker. Generated-app identity determines the record at runtime. The Inspector instead warns when the collection allows neither own-record reads nor public reads.
 
 Bound text-like blocks disable inline editing because their displayed value is runtime-controlled. Their static fallback remains editable in the Inspector.
 
@@ -276,9 +280,9 @@ End-user record selection and record-aware navigation can be designed later usin
 
 ## Security Boundary
 
-Public Text/Hero bindings require `access.read = "public"` because those selectors make anonymous collection-read requests. A binding is presentation configuration, not authorization.
+Latest and specific Text/Hero bindings require `access.read = "public"` because those selectors make anonymous collection-read requests. Current-user bindings require a valid generated-app session and `access.read = "own"` or `access.read = "public"`. A binding is presentation configuration, not authorization.
 
-Builder authentication and generated-app user authentication are separate concerns. Before Apptura supports private current-user data, it needs:
+Builder authentication and generated-app user authentication are separate concerns. Private current-user data depends on:
 
 - generated-app signup/login/session behavior - implemented
 - a stable project-scoped app-user ID - implemented
@@ -286,7 +290,7 @@ Builder authentication and generated-app user authentication are separate concer
 - backend read/write policies for every collection operation - implemented
 - owner-scoped database filters that prevent cross-user record reads or mutations - implemented
 
-Generated-app authentication uses `signUpAppUser`, `loginAppUser`, and `logoutAppUser` Button actions. The actions read editable Text fields by stable block ID. Builder JWTs and generated-app JWTs use separate payload contracts, and production may configure a separate `APP_USER_JWT_SECRET`. Owner-scoped APIs are now enforced, but current-user selectors still need to be connected to the page-owned runtime context before blocks can display private records.
+Generated-app authentication uses `signUpAppUser`, `loginAppUser`, and `logoutAppUser` Button actions. The actions read editable Text fields by stable block ID. Builder JWTs and generated-app JWTs use separate payload contracts, and production may configure a separate `APP_USER_JWT_SECRET`. Owner-scoped APIs and current-user display bindings use the same server-derived generated-app identity. The client supplies a runtime JWT, but it never supplies the ownership ID used by the database filter.
 
 Client-side hidden fields, missing blocks, or guessed IDs must never be treated as access control.
 
@@ -297,7 +301,8 @@ Both runtimes must:
 - decode the same `RuntimeValueRef`
 - scan the same page bindings
 - deduplicate collection-and-selector requests
-- call the matching latest-record or specific-record route
+- call the matching latest-record, specific-record, or owner-scoped route
+- refresh current-user bindings after generated-app login or logout
 - map stored field keys to stable field IDs
 - render boolean values consistently as `Yes` or `No`
 - preserve static fallback for loading, empty, missing, and error states
@@ -319,7 +324,7 @@ Shared contract tests cover:
 
 - supported reference normalization
 - malformed reference rejection
-- latest and specific selector normalization
+- latest, specific, and current-user selector normalization
 - distinct cache keys for different records in the same collection
 - stable field-ID resolution
 - static fallback while loading
@@ -335,14 +340,16 @@ Release checks also require:
 - manual parity check in Android preview
 - specific-record deletion fallback verification
 - `403` verification when public reads are disabled
+- signed-in-user newest-owned-record verification with two generated-app users
+- login/logout refresh and signed-out fallback verification
 - empty-collection fallback verification
 
 ## Decision Summary
 
 1. Text and Hero can display hosted collection data directly.
-2. The creator can choose the latest record or one specific record; generated-app users cannot select records yet.
+2. The creator can choose the latest record, one specific record, or the signed-in user's newest owned record; generated-app users cannot manually select records yet.
 3. Pages coordinate data loading; blocks do not fetch independently.
 4. Bindings store stable collection and field IDs.
 5. Static content remains the fallback and design-time representation.
 6. Web and Android implement the same persisted contract.
-7. End-user-selected, current-user, filtered, and sorted record selectors remain later milestones.
+7. End-user-selected, filtered, and sorted record selectors remain later milestones.

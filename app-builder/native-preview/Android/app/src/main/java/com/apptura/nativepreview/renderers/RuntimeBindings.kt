@@ -49,10 +49,11 @@ fun rememberPageRuntimeContext(
     project: Project,
     projectId: String?,
     baseUrl: String,
+    appUserToken: String? = null,
 ): RuntimeContext {
     val context = remember(page.id, page.stateVariables) { createPageRuntimeContext(page) }
 
-    LaunchedEffect(page.id, page.blocks, project.dataCollections, projectId, baseUrl) {
+    LaunchedEffect(page.id, page.blocks, project.dataCollections, projectId, baseUrl, appUserToken) {
         val requests = page.blocks
             .flatMap { it.bindings.values }
             .mapNotNull(::collectionDataRequest)
@@ -68,19 +69,26 @@ fun rememberPageRuntimeContext(
 
             context.collectionData[request.key] = RuntimeDataState.Loading
             context.collectionData[request.key] = try {
-                val record = if (request.mode == "specific") {
-                    ProjectLoader.getPublicCollectionRecord(
-                        baseUrl = baseUrl,
-                        projectId = projectId,
-                        collectionId = request.collectionId,
-                        recordId = requireNotNull(request.recordId),
-                    )
-                } else {
-                    ProjectLoader.getLatestPublicCollectionRecord(
-                        baseUrl = baseUrl,
-                        projectId = projectId,
-                        collectionId = request.collectionId,
-                    )
+                val record = when (request.mode) {
+                    "specific" -> ProjectLoader.getPublicCollectionRecord(
+                            baseUrl = baseUrl,
+                            projectId = projectId,
+                            collectionId = request.collectionId,
+                            recordId = requireNotNull(request.recordId),
+                        )
+                    "currentUser" -> appUserToken?.let { token ->
+                        ProjectLoader.listCurrentAppUserCollectionRecords(
+                            baseUrl = baseUrl,
+                            projectId = projectId,
+                            collectionId = request.collectionId,
+                            appUserToken = token,
+                        ).firstOrNull()
+                    }
+                    else -> ProjectLoader.getLatestPublicCollectionRecord(
+                            baseUrl = baseUrl,
+                            projectId = projectId,
+                            collectionId = request.collectionId,
+                        )
                 }
                 if (record == null) {
                     RuntimeDataState.Empty
@@ -138,6 +146,11 @@ private fun collectionDataRequest(reference: RuntimeValueRef): CollectionDataReq
             key = "$collectionId::latest",
             collectionId = collectionId,
             mode = "latest",
+        )
+        "currentUser" -> CollectionDataRequest(
+            key = "$collectionId::currentUser",
+            collectionId = collectionId,
+            mode = "currentUser",
         )
         "specific" -> selector?.recordId
             ?.trim()

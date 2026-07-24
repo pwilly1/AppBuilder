@@ -139,6 +139,7 @@ private fun JsonObject.collectionRecordSelector(): CollectionRecordSelector? {
     val value = get("record") as? JsonObject ?: return null
     return when (val mode = value.stringValue("mode")) {
         "latest" -> CollectionRecordSelector(mode = mode)
+        "currentUser" -> CollectionRecordSelector(mode = mode)
         "specific" -> value.stringValue("recordId")
             .takeIf(String::isNotBlank)
             ?.let { CollectionRecordSelector(mode = mode, recordId = it) }

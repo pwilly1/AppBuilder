@@ -575,3 +575,18 @@ Representative areas:
 - `frontend/src/components/behaviorBuilderUtils.ts`
 - `frontend/src/components/Inspector.tsx`
 - `frontend/src/index.css`
+
+## Phase 31: Current-User Display Bindings
+
+Date range: July 2026
+
+Text and Hero collection bindings gained a `currentUser` record selector alongside the existing latest and creator-selected specific selectors. In web and Android preview, the page runtime uses the project-scoped generated-app session to load only records owned by the signed-in user and displays the newest owned record. Login and logout now invalidate session-dependent page data immediately, while signed-out, empty, denied, and failed reads continue displaying the block's static fallback. Latest and specific selectors remain public-read-only, and the current-user selector requires own-record or public read access.
+
+Representative areas:
+
+- `frontend/src/shared/schema/types.ts`
+- `frontend/src/shared/runtime/runtimeBindings.ts`
+- `frontend/src/shared/runtime/useCollectionDataRuntime.ts`
+- `frontend/src/components/Inspector.tsx`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeAppUserSessionStore.kt`

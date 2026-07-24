@@ -63,6 +63,17 @@ test('runtime references normalize supported sources and reject malformed values
     source: 'collection',
     collectionId: 'tasks',
     fieldId: 'title',
+    record: { mode: 'currentUser' },
+  }), {
+    source: 'collection',
+    collectionId: 'tasks',
+    fieldId: 'title',
+    record: { mode: 'currentUser' },
+  })
+  assert.deepEqual(normalizeRuntimeValueRef({
+    source: 'collection',
+    collectionId: 'tasks',
+    fieldId: 'title',
     record: { mode: 'specific', recordId: ' record-1 ' },
   }), {
     source: 'collection',
@@ -184,7 +195,7 @@ test('collection prop resolution does not mutate saved block content', () => {
   assert.equal(hasDynamicBinding(block, 'headline'), true)
 })
 
-test('page runtime deduplicates identical selectors and separates different records', () => {
+test('page runtime deduplicates identical selectors and separates record scopes', () => {
   const page: Pick<Page, 'blocks'> = {
     blocks: [
       {
@@ -225,13 +236,41 @@ test('page runtime deduplicates identical selectors and separates different reco
           },
         },
       },
+      {
+        id: 'text-4',
+        type: 'text',
+        props: { value: 'Fallback' },
+        bindings: {
+          value: {
+            source: 'collection',
+            collectionId: 'tasks',
+            fieldId: 'field-title',
+            record: { mode: 'currentUser' },
+          },
+        },
+      },
+      {
+        id: 'hero-2',
+        type: 'hero',
+        props: { headline: 'Fallback' },
+        bindings: {
+          headline: {
+            source: 'collection',
+            collectionId: 'tasks',
+            fieldId: 'field-status',
+            record: { mode: 'currentUser' },
+          },
+        },
+      },
     ],
   }
 
+  assert.equal(getCollectionDataKey('tasks', { mode: 'currentUser' }), 'tasks::currentUser')
   assert.deepEqual(collectBoundCollectionRequests(page), [
     { key: 'tasks::latest', collectionId: 'tasks', record: { mode: 'latest' } },
     { key: 'tasks::specific:record-1', collectionId: 'tasks', record: { mode: 'specific', recordId: 'record-1' } },
     { key: 'tasks::specific:record-2', collectionId: 'tasks', record: { mode: 'specific', recordId: 'record-2' } },
+    { key: 'tasks::currentUser', collectionId: 'tasks', record: { mode: 'currentUser' } },
   ])
 })
 

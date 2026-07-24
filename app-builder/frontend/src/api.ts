@@ -17,16 +17,36 @@ function appUserTokenKey(projectId: string) {
   return `apptura_app_user_token:${projectId}`;
 }
 
+type AppUserSessionListener = () => void;
+const appUserSessionListeners = new Map<string, Set<AppUserSessionListener>>();
+
 export function getAppUserToken(projectId: string): string | null {
   return localStorage.getItem(appUserTokenKey(projectId));
 }
 
 export function setAppUserToken(projectId: string, token: string) {
   localStorage.setItem(appUserTokenKey(projectId), token);
+  notifyAppUserSessionChanged(projectId);
 }
 
 export function clearAppUserToken(projectId: string) {
   localStorage.removeItem(appUserTokenKey(projectId));
+  notifyAppUserSessionChanged(projectId);
+}
+
+export function subscribeToAppUserSession(projectId: string, listener: AppUserSessionListener) {
+  const listeners = appUserSessionListeners.get(projectId) ?? new Set<AppUserSessionListener>();
+  listeners.add(listener);
+  appUserSessionListeners.set(projectId, listeners);
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) appUserSessionListeners.delete(projectId);
+  };
+}
+
+function notifyAppUserSessionChanged(projectId: string) {
+  for (const listener of appUserSessionListeners.get(projectId) ?? []) listener();
 }
 
 async function request(path: string, options: RequestInit = {}) {

@@ -70,6 +70,7 @@ export type PageAppearance = {
 
 export type CollectionRecordSelector =
   | { mode: 'latest' }
+  | { mode: 'currentUser' }
   | { mode: 'specific'; recordId: string };
 
 export type RuntimeValueRef =

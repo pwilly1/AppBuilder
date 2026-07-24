@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.apptura.nativepreview.layout.GRID_DEFAULT_ROW_COUNT
 import com.apptura.nativepreview.layout.GRID_GAP
@@ -44,6 +45,7 @@ import com.apptura.nativepreview.models.Block
 import com.apptura.nativepreview.models.Project
 import com.apptura.nativepreview.renderers.BlockRenderer
 import com.apptura.nativepreview.renderers.FormRuntimeState
+import com.apptura.nativepreview.renderers.RuntimeAppUserSessionStore
 import com.apptura.nativepreview.renderers.RuntimeContext
 import com.apptura.nativepreview.renderers.rememberPageRuntimeContext
 
@@ -63,11 +65,13 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
         val page = pages[pageIndex.value]
         val pageBackgroundColor = parsePageBackgroundColor(page.appearance?.backgroundColor)
         val formRuntime = remember(project.id, page.id) { FormRuntimeState() }
+        val appUserToken = RuntimeAppUserSessionStore.observeToken(LocalContext.current, project.id)
         val runtimeContext = rememberPageRuntimeContext(
             page = page,
             project = project,
             projectId = project.id,
             baseUrl = baseUrl,
+            appUserToken = appUserToken,
         )
         val containerIds = page.blocks
             .filter { it.type == "container" || it.type == "form" }

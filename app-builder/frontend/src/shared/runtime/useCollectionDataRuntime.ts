@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import { getLatestPublicCollectionRecord, getPublicCollectionRecord } from '../../api'
+import {
+  getAppUserToken,
+  getLatestPublicCollectionRecord,
+  getPublicCollectionRecord,
+  listCurrentAppUserCollectionRecords,
+  subscribeToAppUserSession,
+} from '../../api'
 import type { AppDataCollection, Page } from '../schema/types'
 import { collectBoundCollectionRequests, type RuntimeDataState } from './runtimeBindings'
 
@@ -17,6 +23,14 @@ export function useCollectionDataRuntime({
   enabled = false,
 }: Options): Record<string, RuntimeDataState> {
   const [collectionData, setCollectionData] = useState<Record<string, RuntimeDataState>>({})
+  const [appUserSessionRevision, setAppUserSessionRevision] = useState(0)
+
+  useEffect(() => {
+    if (!projectId) return
+    return subscribeToAppUserSession(projectId, () => {
+      setAppUserSessionRevision((revision) => revision + 1)
+    })
+  }, [projectId])
 
   useEffect(() => {
     const requests = collectBoundCollectionRequests(page)
@@ -47,7 +61,9 @@ export function useCollectionDataRuntime({
       try {
         const record = request.record.mode === 'specific'
           ? await getPublicCollectionRecord(projectId, request.collectionId, request.record.recordId)
-          : await getLatestPublicCollectionRecord(projectId, request.collectionId)
+          : request.record.mode === 'currentUser'
+            ? await getCurrentAppUserRecord(projectId, request.collectionId)
+            : await getLatestPublicCollectionRecord(projectId, request.collectionId)
         if (!record) return [request.key, { status: 'empty' } as RuntimeDataState] as const
         return [request.key, {
           status: 'ready',
@@ -65,9 +81,15 @@ export function useCollectionDataRuntime({
     })
 
     return () => { active = false }
-  }, [dataCollections, enabled, page, projectId])
+  }, [appUserSessionRevision, dataCollections, enabled, page, projectId])
 
   return collectionData
+}
+
+async function getCurrentAppUserRecord(projectId: string, collectionId: string) {
+  if (!getAppUserToken(projectId)) return null
+  const records = await listCurrentAppUserCollectionRecords(projectId, collectionId)
+  return records[0] ?? null
 }
 
 function mapRecordValuesByFieldId(

@@ -109,9 +109,9 @@ export function getCollectionDataKey(
   collectionId: string,
   record: CollectionRecordSelector = { mode: 'latest' },
 ): string {
-  return record.mode === 'specific'
-    ? `${collectionId}::specific:${record.recordId}`
-    : `${collectionId}::latest`
+  if (record.mode === 'specific') return `${collectionId}::specific:${record.recordId}`
+  if (record.mode === 'currentUser') return `${collectionId}::currentUser`
+  return `${collectionId}::latest`
 }
 
 export function normalizeRuntimeValueRef(value: unknown): RuntimeValueRef | null {
@@ -159,6 +159,7 @@ function normalizeCollectionRecordSelector(value: unknown): CollectionRecordSele
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
   const selector = value as Record<string, unknown>
   if (selector.mode === 'latest') return { mode: 'latest' }
+  if (selector.mode === 'currentUser') return { mode: 'currentUser' }
   if (selector.mode === 'specific' && typeof selector.recordId === 'string' && selector.recordId.trim()) {
     return { mode: 'specific', recordId: selector.recordId.trim() }
   }

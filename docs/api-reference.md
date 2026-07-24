@@ -347,7 +347,7 @@ Does not require authentication. Returns one specific record only when it belong
 
 ### `GET /public/projects/:id/app-data/collections/:collectionId/records/mine`
 
-Requires a generated-app JWT. Returns only records whose server-derived owner matches the authenticated app user. The collection must allow `read: "own"` or `read: "public"`. Internal ownership IDs are omitted from the response.
+Requires a generated-app JWT. Returns only records whose server-derived owner matches the authenticated app user, newest first. The collection must allow `read: "own"` or `read: "public"`. Internal ownership IDs are omitted from the response. Web and Android use the first result for Text/Hero bindings configured as the signed-in user's newest record.
 
 ### `PATCH /public/projects/:id/app-data/collections/:collectionId/records/:recordId`
 

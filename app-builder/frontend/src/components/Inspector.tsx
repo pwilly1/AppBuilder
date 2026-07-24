@@ -18,7 +18,7 @@ type TextBindingDraft =
       source: 'collection';
       collectionId: string;
       fieldId: string;
-      recordMode: 'latest' | 'specific';
+      recordMode: 'latest' | 'currentUser' | 'specific';
       recordId: string;
     };
 
@@ -240,7 +240,7 @@ export default function Inspector({
           fieldId: textBinding.fieldId,
           record: textBinding.recordMode === 'specific'
             ? { mode: 'specific', recordId: textBinding.recordId }
-            : { mode: 'latest' },
+            : { mode: textBinding.recordMode },
         };
       } else {
         delete bindings[bindingProperty];
@@ -347,6 +347,8 @@ export default function Inspector({
       && !bindingRecordsLoading
       && !bindingRecordsError
       && !selectedRecord;
+    const collectionReadAccess = selectedCollection?.access?.read
+      ?? (selectedCollection?.publicRead ? 'public' : 'none');
 
     return (
       <FormSection title="Data binding" description={`Choose where this ${propertyLabel} gets its value at runtime.`}>
@@ -430,7 +432,11 @@ export default function Inspector({
                 className="inspector-input"
                 value={textBinding.recordMode}
                 onChange={(event) => {
-                  const recordMode = event.target.value === 'specific' ? 'specific' : 'latest';
+                  const recordMode = event.target.value === 'specific'
+                    ? 'specific'
+                    : event.target.value === 'currentUser'
+                      ? 'currentUser'
+                      : 'latest';
                   setTextBinding({
                     ...textBinding,
                     recordMode,
@@ -441,6 +447,7 @@ export default function Inspector({
                 disabled={!selectedCollection}
               >
                 <option value="latest">Latest record</option>
+                <option value="currentUser">Signed-in user's newest record</option>
                 <option value="specific">Specific record</option>
               </select>
             </div>
@@ -491,7 +498,12 @@ export default function Inspector({
                 ))}
               </select>
             </div>
-            {selectedCollection && !selectedCollection.publicRead ? (
+            {selectedCollection && textBinding.recordMode === 'currentUser' && collectionReadAccess === 'none' ? (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                Allow signed-in users to read their own records, or make this collection publicly readable, before testing this binding.
+              </p>
+            ) : null}
+            {selectedCollection && textBinding.recordMode !== 'currentUser' && collectionReadAccess !== 'public' ? (
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
                 Enable public reads for this collection before testing the binding in web or Android preview.
               </p>
@@ -1437,11 +1449,16 @@ function getTextBindingDraft(block?: Block | null): TextBindingDraft {
   }
   if (reference?.source === 'collection') {
     const specificRecordId = reference.record?.mode === 'specific' ? reference.record.recordId : '';
+    const recordMode = reference.record?.mode === 'currentUser'
+      ? 'currentUser'
+      : specificRecordId
+        ? 'specific'
+        : 'latest';
     return {
       source: 'collection',
       collectionId: reference.collectionId,
       fieldId: reference.fieldId,
-      recordMode: specificRecordId ? 'specific' : 'latest',
+      recordMode,
       recordId: specificRecordId,
     };
   }
