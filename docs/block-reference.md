@@ -30,6 +30,10 @@ type Page = {
   id: string
   title?: string
   path?: string
+  access?: {
+    mode: 'public' | 'signedIn' | 'signedOut'
+    redirectPageId?: string
+  }
   appearance?: {
     backgroundColor?: string
   }
@@ -52,6 +56,7 @@ type Block = {
 `editorPlacement` is transitional compatibility data. New runtime behavior should use `layout.grid`, `render`, and `props`.
 `parentId` is ownership metadata for container children. Top-level blocks omit it.
 `Page.appearance.backgroundColor` stores an optional six-digit hex color for the full page surface. Web and Android preview normalize invalid or missing values back to white for older projects.
+`Page.access` controls preview/runtime navigation. Missing access defaults to `public`. A blocked page may point to another page through `redirectPageId`; invalid destinations and redirect cycles fall back to the first page accessible to the current generated-app session. Page access does not replace backend authorization.
 
 Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest public record, one specific public record, or the signed-in generated-app user's newest owned record; bindings without a selector default to latest for compatibility. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an editable Text block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, signed-out, permission-denied, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
 
@@ -198,7 +203,7 @@ The preferred production path is backend upload. The backend validates the file,
 
 ## Schema Version And Migration
 
-The current schema version is `6`.
+The current schema version is `7`.
 
 `gridMigration.ts` performs these important load-time operations:
 
@@ -209,8 +214,9 @@ The current schema version is `6`.
 5. converts retired Nav Button and Submit Button records into the unified Button action schema
 6. converts grouped submission fields into explicit button-owned field references
 7. converts retired Input and Textarea records into editable Text records without changing block IDs
+8. assigns public page access to projects saved before page guards existed
 
-The backend, frontend, and Android loader all normalize saved projects to schema version `6`. The Input/Textarea conversion preserves block IDs so existing Button actions still reference the same runtime fields. Any future schema-version change must be implemented and tested across all three surfaces.
+Frontend and backend migrations normalize saved projects to schema version `7`, while Android decodes the same optional access contract with public defaults. The Input/Textarea conversion preserves block IDs so existing Button actions still reference the same runtime fields. Any future schema-version change must be implemented and tested across all three surfaces.
 
 ## Related
 

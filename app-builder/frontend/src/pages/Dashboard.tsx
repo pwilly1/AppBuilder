@@ -109,7 +109,7 @@ function ProjectCard({
         <div className="mt-4 flex flex-wrap gap-2">
           <button className="btn-sm min-w-[88px]" onClick={() => onOpen(project)}>Open</button>
           <button className="ghost-btn !px-4 !py-2 !text-xs !font-semibold" onClick={() => onViewData(project)}>
-            App Data
+            Data
           </button>
           <button className="ghost-btn !px-4 !py-2 !text-xs !font-semibold !text-red-700" onClick={() => onDelete(project)}>
             Delete

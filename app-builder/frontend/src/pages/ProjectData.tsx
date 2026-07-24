@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownTrayIcon,
   ArrowLeftIcon,
   ArrowPathIcon,
   CircleStackIcon,
   MagnifyingGlassIcon,
+  TableCellsIcon,
 } from '@heroicons/react/24/outline';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -12,18 +13,19 @@ import {
   getProject,
   listProjectAppDataRecords,
   listProjectAppDataSources,
+  updateProject,
   type ProjectAppDataRecord,
   type ProjectAppDataSource,
 } from '../api';
+import DataCollectionsPanel from '../components/DataCollectionsPanel';
+import type { AppDataCollection, Project } from '../shared/schema/types';
 
-type ProjectSummary = {
-  id: string;
-  name: string;
-};
-
-type ProjectResponse = ProjectSummary & {
+type ProjectResponse = Project & {
   _id?: string;
 };
+
+type DataWorkspaceTab = 'collections' | 'records';
+type CollectionSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 const SOURCE_TYPE_LABELS: Record<ProjectAppDataSource['type'], string> = {
   collection: 'Collection',
@@ -105,11 +107,81 @@ function slugifyFilePart(value: string) {
   );
 }
 
+function CollectionsWorkspace({
+  collections,
+  saveStatus,
+  saveError,
+  onChange,
+  onOpenEditor,
+  onRetry,
+}: {
+  collections: AppDataCollection[];
+  saveStatus: CollectionSaveStatus;
+  saveError: string;
+  onChange: (collections: AppDataCollection[]) => void;
+  onOpenEditor: () => void;
+  onRetry: () => void;
+}) {
+  const fieldCount = collections.reduce((total, collection) => total + collection.fields.length, 0);
+
+  return (
+    <div className="grid min-h-[650px] lg:grid-cols-[minmax(0,620px)_minmax(320px,1fr)]">
+      <section className="border-b border-slate-200/80 bg-[#fffbf5]/70 p-5 lg:border-b-0 lg:border-r lg:p-6">
+        <DataCollectionsPanel collections={collections} onChange={onChange} />
+      </section>
+
+      <aside className="bg-white/65 p-6 lg:p-8">
+        <div className="max-w-xl">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">Project schema</div>
+          <h3 className="mt-2 text-2xl font-semibold text-slate-950">Shape the data your app can store</h3>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Collections define reusable records such as customers, tasks, inspections, or announcements. Blocks can submit values into these fields and display them later.
+          </p>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-[#fffbf5] p-4">
+              <div className="text-2xl font-semibold text-slate-950">{collections.length}</div>
+              <div className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                {collections.length === 1 ? 'Collection' : 'Collections'}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-[#fffbf5] p-4">
+              <div className="text-2xl font-semibold text-slate-950">{fieldCount}</div>
+              <div className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                {fieldCount === 1 ? 'Field' : 'Fields'}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+            <h4 className="text-sm font-semibold text-slate-900">How this connects to the editor</h4>
+            <p className="mt-2 text-xs leading-5 text-slate-600">
+              Create the collection here, then configure Text, Hero, or Button blocks in the editor to read or write its fields.
+            </p>
+            <button type="button" className="btn-sm mt-4" onClick={onOpenEditor}>Open editor</button>
+          </div>
+
+          <div className="mt-5 min-h-6 text-xs" aria-live="polite">
+            {saveStatus === 'saving' ? <span className="font-semibold text-blue-700">Saving collection changes...</span> : null}
+            {saveStatus === 'saved' ? <span className="font-semibold text-emerald-700">All collection changes saved.</span> : null}
+            {saveStatus === 'error' ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-red-700">
+                <p>{saveError}</p>
+                <button type="button" className="mt-2 font-semibold underline" onClick={onRetry}>Try again</button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export default function ProjectData() {
   const navigate = useNavigate();
   const { projectId = '' } = useParams<{ projectId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [project, setProject] = useState<ProjectSummary | null>(null);
+  const [project, setProject] = useState<Project | null>(null);
   const [sources, setSources] = useState<ProjectAppDataSource[]>([]);
   const [records, setRecords] = useState<ProjectAppDataRecord[]>([]);
   const [recordSearch, setRecordSearch] = useState('');
@@ -119,9 +191,14 @@ export default function ProjectData() {
   const [projectError, setProjectError] = useState('');
   const [recordsError, setRecordsError] = useState('');
   const [exportError, setExportError] = useState('');
+  const [collectionSaveStatus, setCollectionSaveStatus] = useState<CollectionSaveStatus>('idle');
+  const [collectionSaveError, setCollectionSaveError] = useState('');
   const [projectLoadAttempt, setProjectLoadAttempt] = useState(0);
   const [recordLoadAttempt, setRecordLoadAttempt] = useState(0);
+  const collectionSaveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const collectionSaveRevisionRef = useRef(0);
 
+  const activeTab: DataWorkspaceTab = searchParams.get('tab') === 'collections' ? 'collections' : 'records';
   const sourceParam = searchParams.get('source') || '';
   const recordParam = searchParams.get('record') || '';
   const selectedSource = useMemo(
@@ -150,8 +227,11 @@ export default function ProjectData() {
         if (cancelled) return;
 
         setProject({
+          ...projectResponse,
           id: projectResponse.id || projectResponse._id || projectId,
           name: projectResponse.name || 'Untitled project',
+          pages: projectResponse.pages || [],
+          dataCollections: projectResponse.dataCollections || [],
         });
         setSources(sourceResponse || []);
       } catch (error) {
@@ -171,16 +251,17 @@ export default function ProjectData() {
   }, [projectId, projectLoadAttempt]);
 
   useEffect(() => {
+    if (activeTab !== 'records') return;
     if (!selectedSource || sourceParam === selectedSource.sourceId) return;
 
     const next = new URLSearchParams(searchParams);
     next.set('source', selectedSource.sourceId);
     next.delete('record');
     setSearchParams(next, { replace: true });
-  }, [searchParams, selectedSource, setSearchParams, sourceParam]);
+  }, [activeTab, searchParams, selectedSource, setSearchParams, sourceParam]);
 
   useEffect(() => {
-    if (!projectId || !selectedSourceId) {
+    if (activeTab !== 'records' || !projectId || !selectedSourceId) {
       setRecords([]);
       setRecordsError('');
       setLoadingRecords(false);
@@ -210,7 +291,7 @@ export default function ProjectData() {
     return () => {
       cancelled = true;
     };
-  }, [projectId, recordLoadAttempt, selectedSourceId]);
+  }, [activeTab, projectId, recordLoadAttempt, selectedSourceId]);
 
   const sortedRecords = useMemo(
     () => [...records].sort((left, right) => new Date(right.submittedAt).getTime() - new Date(left.submittedAt).getTime()),
@@ -242,6 +323,45 @@ export default function ProjectData() {
     setRecordsError('');
     setSearchParams(next);
     setRecordSearch('');
+  }
+
+  function selectTab(tab: DataWorkspaceTab) {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    if (tab === 'collections') {
+      next.delete('source');
+      next.delete('record');
+    }
+    setSearchParams(next);
+  }
+
+  function updateCollections(dataCollections: AppDataCollection[]) {
+    if (!projectId || !project) return;
+
+    setProject((current) => current ? { ...current, dataCollections } : current);
+    setCollectionSaveStatus('saving');
+    setCollectionSaveError('');
+    const revision = ++collectionSaveRevisionRef.current;
+
+    const save = collectionSaveQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        await updateProject(projectId, { dataCollections });
+        return listProjectAppDataSources(projectId);
+      });
+
+    collectionSaveQueueRef.current = save.then(
+      (nextSources) => {
+        if (revision !== collectionSaveRevisionRef.current) return;
+        setSources(nextSources || []);
+        setCollectionSaveStatus('saved');
+      },
+      (error: unknown) => {
+        if (revision !== collectionSaveRevisionRef.current) return;
+        setCollectionSaveStatus('error');
+        setCollectionSaveError(error instanceof Error ? error.message : 'Failed to save collection changes.');
+      },
+    );
   }
 
   function selectRecord(recordId: string) {
@@ -300,47 +420,88 @@ export default function ProjectData() {
 
         <header className="mt-4 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100/70">Hosted records</div>
-            <h2 className="section-heading mt-1 text-4xl font-semibold text-white">App Data</h2>
+            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-100/70">Project data</div>
+            <h2 className="section-heading mt-1 text-4xl font-semibold text-white">Data</h2>
             <p className="mt-2 text-sm text-blue-100/70">
-              {project ? `Review and export data collected by ${project.name}.` : 'Review data collected by this project.'}
+              {project ? `Design and review the data used by ${project.name}.` : 'Design and review this project data.'}
             </p>
           </div>
           {!loadingProject && !projectError ? (
             <div className="flex flex-wrap gap-2 text-sm">
               <span className="rounded-full border border-blue-200/15 bg-white/8 px-4 py-2 text-blue-50">
-                {sources.length} {sources.length === 1 ? 'source' : 'sources'}
+                {project?.dataCollections?.length || 0} {(project?.dataCollections?.length || 0) === 1 ? 'collection' : 'collections'}
               </span>
               <span className="rounded-full border border-blue-200/15 bg-white/8 px-4 py-2 text-blue-50">
                 {totalRecords} {totalRecords === 1 ? 'record' : 'records'}
               </span>
+              <button
+                type="button"
+                className="rounded-full border border-blue-200/20 bg-white/10 px-4 py-2 font-semibold text-white transition hover:bg-white/15"
+                onClick={() => navigate(`/editor/${projectId}`)}
+              >
+                Open editor
+              </button>
             </div>
           ) : null}
         </header>
 
-        <div className="shell-panel mt-6 overflow-hidden rounded-[1.9rem]">
+        <nav className="mt-6 inline-flex rounded-2xl border border-white/10 bg-white/8 p-1.5" aria-label="Project data sections">
+          <button
+            type="button"
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+              activeTab === 'collections' ? 'bg-[#fffbf5] text-blue-800 shadow-sm' : 'text-blue-100 hover:bg-white/10 hover:text-white'
+            }`}
+            onClick={() => selectTab('collections')}
+            aria-current={activeTab === 'collections' ? 'page' : undefined}
+          >
+            <CircleStackIcon className="h-4 w-4" />
+            Collections
+          </button>
+          <button
+            type="button"
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+              activeTab === 'records' ? 'bg-[#fffbf5] text-blue-800 shadow-sm' : 'text-blue-100 hover:bg-white/10 hover:text-white'
+            }`}
+            onClick={() => selectTab('records')}
+            aria-current={activeTab === 'records' ? 'page' : undefined}
+          >
+            <TableCellsIcon className="h-4 w-4" />
+            Records
+          </button>
+        </nav>
+
+        <div className="shell-panel mt-4 overflow-hidden rounded-[1.9rem]">
           {loadingProject ? (
             <div className="flex min-h-[420px] items-center justify-center p-8 text-sm text-slate-500" aria-live="polite">
-              Loading app data...
+              Loading project data...
             </div>
           ) : projectError ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center">
               <CircleStackIcon className="h-10 w-10 text-slate-400" />
-              <h3 className="mt-4 text-lg font-semibold text-slate-900">App data could not be loaded</h3>
+              <h3 className="mt-4 text-lg font-semibold text-slate-900">Project data could not be loaded</h3>
               <p className="mt-2 max-w-md text-sm text-slate-500">{projectError}</p>
               <button type="button" className="btn mt-5" onClick={() => setProjectLoadAttempt((attempt) => attempt + 1)}>
                 Try again
               </button>
             </div>
+          ) : activeTab === 'collections' && project ? (
+            <CollectionsWorkspace
+              collections={project.dataCollections || []}
+              saveStatus={collectionSaveStatus}
+              saveError={collectionSaveError}
+              onChange={updateCollections}
+              onOpenEditor={() => navigate(`/editor/${projectId}`)}
+              onRetry={() => updateCollections(project.dataCollections || [])}
+            />
           ) : sources.length === 0 ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center">
               <CircleStackIcon className="h-10 w-10 text-slate-400" />
               <h3 className="mt-4 text-lg font-semibold text-slate-900">No data sources yet</h3>
               <p className="mt-2 max-w-lg text-sm text-slate-500">
-                Add a collection, form, or Submit Data button to this project. Its records will appear here after the app receives data.
+                Create a collection or configure a Submit Data button. Records will appear here after the app receives data.
               </p>
-              <button type="button" className="btn mt-5" onClick={() => navigate(`/editor/${projectId}`)}>
-                Open editor
+              <button type="button" className="btn mt-5" onClick={() => selectTab('collections')}>
+                Create a collection
               </button>
             </div>
           ) : (

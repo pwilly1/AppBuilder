@@ -4,6 +4,7 @@ package com.apptura.nativepreview.navigation
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -22,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -52,6 +54,7 @@ import com.apptura.nativepreview.renderers.rememberPageRuntimeContext
 @Composable
 fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit = {}) {
     val pageIndex = remember { mutableStateOf(0) }
+    val pendingProtectedPageId = remember(project.id) { mutableStateOf<String?>(null) }
     val pages = project.pages
 
     if (pages.isEmpty()) {
@@ -62,10 +65,52 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
             Text("No pages in project")
         }
     } else {
-        val page = pages[pageIndex.value]
+        val context = LocalContext.current
+        val appUserToken = RuntimeAppUserSessionStore.observeToken(context, project.id)
+        val appUserSignedIn = !appUserToken.isNullOrBlank()
+        val selectedPage = pages.getOrNull(pageIndex.value)
+        val requestedPageId = if (appUserSignedIn && pendingProtectedPageId.value != null) {
+            pendingProtectedPageId.value
+        } else {
+            selectedPage?.id
+        }
+        val resolvedPageIndex = resolveAccessiblePageIndex(pages, requestedPageId, appUserSignedIn)
+
+        LaunchedEffect(
+            appUserSignedIn,
+            pageIndex.value,
+            pendingProtectedPageId.value,
+            resolvedPageIndex,
+        ) {
+            if (
+                !appUserSignedIn
+                && selectedPage != null
+                && selectedPage.access?.mode == "signedIn"
+            ) {
+                pendingProtectedPageId.value = selectedPage.id
+            }
+            if (resolvedPageIndex != null && pageIndex.value != resolvedPageIndex) {
+                pageIndex.value = resolvedPageIndex
+            }
+            if (appUserSignedIn && pendingProtectedPageId.value != null) {
+                pendingProtectedPageId.value = null
+            }
+        }
+
+        if (resolvedPageIndex == null) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("Page unavailable")
+                ExitPreviewButton(onExit = onExit)
+            }
+            return
+        }
+
+        val page = pages[resolvedPageIndex]
         val pageBackgroundColor = parsePageBackgroundColor(page.appearance?.backgroundColor)
         val formRuntime = remember(project.id, page.id) { FormRuntimeState() }
-        val appUserToken = RuntimeAppUserSessionStore.observeToken(LocalContext.current, project.id)
         val runtimeContext = rememberPageRuntimeContext(
             page = page,
             project = project,
@@ -87,6 +132,19 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
             it.layout?.grid == null && (it.parentId == null || !containerIds.contains(it.parentId))
         }
         val scroll = rememberScrollState()
+        val navigateToPage: (String) -> Unit = { targetPageId ->
+            val targetPage = pages.find { it.id == targetPageId }
+            if (
+                !appUserSignedIn
+                && targetPage != null
+                && targetPage.access?.mode == "signedIn"
+            ) {
+                pendingProtectedPageId.value = targetPage.id
+            }
+            resolveAccessiblePageIndex(pages, targetPageId, appUserSignedIn)?.let { index ->
+                pageIndex.value = index
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -136,10 +194,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                                 baseUrl = baseUrl,
                                 formRuntime = formRuntime,
                                 runtimeContext = runtimeContext,
-                                onNavigate = { targetPageId ->
-                                    val idx = pages.indexOfFirst { it.id == targetPageId }
-                                    if (idx >= 0) pageIndex.value = idx
-                                }
+                                onNavigate = navigateToPage,
                             )
                         }
                     }
@@ -157,10 +212,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                                     baseUrl = baseUrl,
                                     formRuntime = formRuntime,
                                     runtimeContext = runtimeContext,
-                                    onNavigate = { targetPageId ->
-                                    val idx = pages.indexOfFirst { it.id == targetPageId }
-                                    if (idx >= 0) pageIndex.value = idx
-                                    },
+                                    onNavigate = navigateToPage,
                                 )
                             }
                         }
@@ -168,21 +220,26 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                 }
             }
 
-            IconButton(
-                onClick = onExit,
-                modifier = Modifier
-                    .statusBarsPadding()
-                    .padding(12.dp)
-                    .align(Alignment.TopStart)
-                    .background(Color(0xCCFFFFFF), CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Exit preview",
-                    tint = Color(0xFF0F172A),
-                )
-            }
+            ExitPreviewButton(onExit = onExit)
         }
+    }
+}
+
+@Composable
+private fun BoxScope.ExitPreviewButton(onExit: () -> Unit) {
+    IconButton(
+        onClick = onExit,
+        modifier = Modifier
+            .statusBarsPadding()
+            .padding(12.dp)
+            .align(Alignment.TopStart)
+            .background(Color(0xCCFFFFFF), CircleShape)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "Exit preview",
+            tint = Color(0xFF0F172A),
+        )
     }
 }
 

@@ -21,6 +21,7 @@ This roadmap tracks completed foundations, current priorities, and future work.
 | Completed | Image asset upload path | Saved projects can upload image files through the backend and store returned asset URLs in schema. |
 | Completed | Dashboard | Users can manage projects from the dashboard. |
 | Completed | Multi-page projects | Pages can be created, selected, renamed, deleted, and navigated. |
+| Completed | Generated-app page access | Pages can be public, signed-in-only, or signed-out-only with redirect/fallback handling in web and Android preview. |
 | Completed | Basic editor shell | Three-column editor with left panel, canvas, inspector, and toolbar. |
 | Completed | Grid-based layout model | Canonical placement uses `layout.grid`; render metadata uses `render`. |
 | Completed | Web preview | Preview mode renders project pages without editor controls. |
@@ -154,6 +155,7 @@ These are important to the long-term product vision but should wait until the ed
 | Completed | Schema-backed form and grouped submit-button records tied to project schema. |
 | Completed | Apptura-hosted app-data source listing, record viewing, CSV export, and web/Android submission. |
 | Completed | App-level data collections with typed field definitions and stable IDs. |
+| Completed | Dedicated project Data workspace with separate collection-schema and hosted-record tabs, direct schema persistence, and an editor-side summary link. |
 | Completed | Canonical mutable `AppDataRecord` persistence with legacy submission compatibility and builder-owner update/delete APIs. |
 | Later | Richer app-level relational data collections. |
 | Completed | Page-scoped text variables and Text/Hero bindings with matching web/Android resolution and editor sample values. |

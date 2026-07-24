@@ -92,3 +92,21 @@ test('migration preserves optional page appearance settings', () => {
 
   assert.deepEqual(migrated.appearance, { backgroundColor: '#eff6ff' })
 })
+
+test('migration defaults legacy page access to public and preserves valid guards', () => {
+  const legacyPage = migratePageToGridLayout({
+    id: 'legacy-page',
+    blocks: [],
+  })
+  const protectedPage = migratePageToGridLayout({
+    id: 'private-page',
+    access: { mode: 'signedIn', redirectPageId: 'login-page' },
+    blocks: [],
+  })
+
+  assert.deepEqual(legacyPage.access, { mode: 'public' })
+  assert.deepEqual(protectedPage.access, {
+    mode: 'signedIn',
+    redirectPageId: 'login-page',
+  })
+})

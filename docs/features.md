@@ -28,7 +28,8 @@ The current editor includes:
 - left workspace rail with Pages, Blocks, and Data tabs
 - page structure panel inside the Pages tab
 - block palette inside the Blocks tab
-- page-variable and collection tools inside the Data tab
+- page-variable tools and a compact project-collection summary inside the Data tab
+- dedicated project Data workspace with separate Collections and Records tabs
 - central phone-style canvas
 - right-side inspector
 - editor toolbar for save, undo, redo, web preview, Android preview setup note, and active-container exit
@@ -41,13 +42,17 @@ Projects support multiple pages:
 
 - each page can store a solid background color from the Pages workspace
 - page colors render consistently in the web editor, web preview, and Android preview
-
 - add page
 - select page
 - rename page
 - delete page
+- mark a page as public, signed-in-only, or signed-out-only
+- choose a redirect page for blocked sessions, with safe fallback when a redirect is missing or cyclic
+- return a signed-in user to the private page they originally attempted to open
 - define page-scoped text variables with stable IDs and initial preview values
 - configure shared tap actions through a guided Behavior Builder for page navigation, hosted app-data submission, app-user accounts, page data, and safe external URLs
+
+Page access is enforced during web and Android preview navigation. It is a runtime navigation guard, not a replacement for backend collection access policies or API authorization.
 
 ### Core Blocks
 
@@ -72,7 +77,7 @@ Text-like blocks support canvas editing and inspector editing. Text `value` and 
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
 Icon and Image can optionally execute Navigate, Open URL, or Set Page Variable actions in web and Android preview.
 Image supports URL-based images and local file uploads through backend asset storage, with fit, focal-point, border, radius, and opacity controls in both web preview and Android preview. The saved block schema stores the resulting image URL in `props.src`.
-Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the dedicated App Data page can review stored records for each saved Form source.
+Form is a schema-backed submission surface. In web preview it posts dynamic child-field data to the backend, and the Records tab in the dedicated Data workspace can review stored records for each saved Form source.
 Text is display-only by default. The inspector can make it app-editable, choose single-line or multiline input, configure field metadata and appearance, and expose its live value through the block's stable ID.
 Button configured with Save Data is a second schema-backed submission path. It persists the existing `submitData` schema action, so web and Android preview continue submitting the same-page editable Text, Checkbox, and Toggle fields explicitly selected in the Behavior Builder. Eligible inputs are selected automatically for a new Save Data behavior, collection targets are mapped when possible, and incomplete mappings are blocked from saving. Editable Text can also supply live values to Change Page Data actions.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
@@ -178,10 +183,11 @@ Planned runtime work:
 Current demo support:
 
 - one-click reviewer entry without creating an account
-- four-screen `FieldReady` workflow covering a daily route, inspection checklist, live field-note binding, and completion summary
-- polished use of existing atomic blocks, containers, navigation actions, page state, and page backgrounds
+- five-screen `FieldReady` workflow covering a signed-out welcome screen, operations dashboard, inspection checklist, live field-note binding, and completion summary
+- polished use of portable atomic blocks, containers, navigation actions, page state, page access, page backgrounds, and a project collection schema
 - editable in-memory sample project using the normal project schema and the same web and Android-compatible runtime contract
 - clear temporary-mode messaging with persistence disabled
+- backend-dependent account and hosted-submission actions are intentionally excluded because the temporary demo is not a persisted backend project
 
 Planned demo improvements:
 

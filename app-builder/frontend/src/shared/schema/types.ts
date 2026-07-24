@@ -68,6 +68,13 @@ export type PageAppearance = {
   backgroundColor?: string;
 };
 
+export type PageAccessMode = 'public' | 'signedIn' | 'signedOut';
+
+export type PageAccess = {
+  mode: PageAccessMode;
+  redirectPageId?: string;
+};
+
 export type CollectionRecordSelector =
   | { mode: 'latest' }
   | { mode: 'currentUser' }
@@ -188,6 +195,7 @@ export type Page = {
   title?: string;
   path?: string;
   appearance?: PageAppearance;
+  access?: PageAccess;
   stateVariables?: PageStateVariable[];
   blocks: Block[];
 };

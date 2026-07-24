@@ -1,7 +1,8 @@
 import type { ProjectRecord } from '../repositories/ProjectRepository.js';
+import type { ProjectPageAccess } from '../models/Project.js';
 
 const EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5;
-const CURRENT_SCHEMA_VERSION = 6;
+const CURRENT_SCHEMA_VERSION = 7;
 
 export function migrateProjectRecord(project: ProjectRecord): ProjectRecord {
   const migrateLegacySubmissionGroups = (project.schemaVersion || 1) < EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION;
@@ -13,11 +14,27 @@ export function migrateProjectRecord(project: ProjectRecord): ProjectRecord {
       const legacyButtonsMigrated = textFieldsMigrated.map(migrateButtonBlock);
       return {
         ...page,
+        access: normalizePageAccess(page.access),
         blocks: migrateLegacySubmissionGroups
           ? migrateExplicitSubmitFields(legacyButtonsMigrated)
           : legacyButtonsMigrated,
       };
     }),
+  };
+}
+
+function normalizePageAccess(value: unknown): ProjectPageAccess {
+  if (!isRecord(value)) return { mode: 'public' as const };
+  const mode: ProjectPageAccess['mode'] = value.mode === 'signedIn' || value.mode === 'signedOut'
+    ? value.mode
+    : 'public';
+  const redirectPageId = typeof value.redirectPageId === 'string'
+    ? value.redirectPageId.trim()
+    : '';
+
+  return {
+    mode,
+    ...(redirectPageId ? { redirectPageId } : {}),
   };
 }
 

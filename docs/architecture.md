@@ -58,6 +58,18 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 5. Block changes update frontend state and are saved back through `PATCH /projects/:id`.
 6. MongoDB stores the project schema.
 
+### Managing project data
+
+Project data is split by scope:
+
+- The editor Data tab owns page-scoped Text variables and shows a compact summary of project collections.
+- The project Data workspace owns persistent collection schemas and hosted records.
+- Its Collections tab reuses `DataCollectionsPanel` and saves collection changes through `PATCH /projects/:id`.
+- Collection saves are serialized so rapid edits cannot overwrite newer collection state with an older request.
+- Its Records tab uses the existing app-data APIs for source navigation, record review, search, and CSV export.
+
+This keeps page-local runtime values near the canvas while moving larger project-level data administration out of the narrow editor sidebar.
+
 ### Uploading image assets
 
 1. The image inspector sends a selected file to `POST /projects/:id/assets/images`.
@@ -107,6 +119,10 @@ type Page = {
   id: string
   title?: string
   path?: string
+  access?: {
+    mode: 'public' | 'signedIn' | 'signedOut'
+    redirectPageId?: string
+  }
   appearance?: {
     backgroundColor?: string
   }
@@ -114,6 +130,10 @@ type Page = {
   blocks: Block[]
 }
 ```
+
+Page access is optional for compatibility and defaults to `public`. Web and Android resolve navigation through the same rules: follow a configured redirect, reject redirect cycles, fall back to the first accessible page, and show a controlled unavailable state when no page can be opened. A blocked signed-in page is remembered while the generated-app user visits a login page, then restored after login.
+
+This is a presentation and navigation boundary only. Protected app data still requires backend-generated-app authentication and collection access policies; hiding a page does not authorize an API request.
 
 Project-level app-data collections have stable IDs, names, operation-specific access rules, and typed field definitions. Access rules independently control runtime create, read, update, and delete behavior. Buttons configured with Submit Data can target a collection while selecting same-page fields explicitly; each selection can map to a collection field through `targetFieldKey`. Records use the canonical `AppDataRecord` contract: `collectionId`, optional `ownerAppUserId`, optional source block/page metadata, `data`, `createdAt`, and `updatedAt`. Text and Hero collection bindings read the latest public record, one creator-selected public record, or the newest record owned by the signed-in generated-app user.
 
@@ -275,6 +295,8 @@ logoutAppUser -> no additional configuration
 
 Button supports no action, navigation, submission, generated-app authentication, URL, and page-variable actions; Icon and Image support their applicable tap actions. Generated-app accounts are stored separately from builder accounts and scoped by project ID. Web stores one runtime token per project in local storage; Android stores the matching token in app preferences. `setPageState` can assign a fixed text value or the current value of an editable Text block referenced by stable block ID. A Submit Data button remains the app-data source identity. Web and Android have separate executors over the same action JSON.
 
+Navigate actions do not select pages directly in preview runtimes. They pass through the shared page-access resolver so buttons cannot bypass signed-in or signed-out page rules. Editor page selection remains unrestricted so creators can configure every page.
+
 ### Dynamic Data Binding Foundation
 
 The page-state and first collection-binding slices are implemented. Pages can define stable text state variables, and Text/Hero can bind content either to a variable or directly to a project collection field. A collection binding selects the latest public record, one specific public record chosen by the app creator, or the newest record owned by the signed-in generated-app user. Each page runtime finds all referenced collection-and-selector pairs, deduplicates them, and loads each requested record once; blocks only resolve values from the resulting context. Web and Android use the same schema and fall back to static properties for missing, loading, empty, permission-denied, signed-out, or failed data. Existing bindings without a selector continue using the latest record.
@@ -297,6 +319,7 @@ Key files:
 | `hooks/project/useProjectPersistence.ts` | Project loading, saving, autosave, auth/session checks |
 | `hooks/project/projectUtils.ts` | Initial project creation, normalization, path helpers, and project-id persistence |
 | `layout/EditorLayout.tsx` | Editor shell: toolbar, left panel, canvas, inspector |
+| `shared/runtime/pageAccess.ts` | Portable page-access normalization, redirects, and fallback resolution |
 | `components/BehaviorBuilder.tsx` | Guided creator UI for configuring block tap behavior without exposing schema-level action details |
 | `components/behaviorBuilderUtils.ts` | Pure action validation, eligible-input discovery, and collection-field auto-mapping |
 | `editor/PageRenderer.tsx` | Canvas rendering and editor interactions |

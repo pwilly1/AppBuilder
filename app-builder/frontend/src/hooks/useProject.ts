@@ -49,6 +49,7 @@ export default function useProject(setAuthed: (authed: boolean) => void) {
     renamePage: pages.renamePage,
     deletePage: pages.deletePage,
     setPageBackgroundColor: pages.setPageBackgroundColor,
+    setPageAccess: pages.setPageAccess,
     openProject: persistence.openProject,
     openDemoProject,
     loadProjectById: persistence.loadProjectById,

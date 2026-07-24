@@ -3,10 +3,16 @@ import { Schema, model, Document } from 'mongoose';
 
 // Lightweight types for stored pages/blocks. We store them as plain mixed objects
 // so the frontend can evolve block schemas without requiring a strict backend model.
+export interface ProjectPageAccess {
+  mode: 'public' | 'signedIn' | 'signedOut';
+  redirectPageId?: string;
+}
+
 export interface ProjectPage {
   id: string;
   title?: string;
   path?: string;
+  access?: ProjectPageAccess;
   appearance?: {
     backgroundColor?: string;
   };
@@ -49,7 +55,7 @@ export interface Project extends Document {
 const ProjectSchema = new Schema<Project>(
   {
     ownerId: { type: String, required: true, index: true },
-    schemaVersion: { type: Number, default: 2 },
+    schemaVersion: { type: Number, default: 7 },
     name:    { type: String, required: true, trim: true },
     pages:   { type: Array as any, default: [] },
     dataCollections: { type: Array as any, default: [] },

@@ -590,3 +590,50 @@ Representative areas:
 - `frontend/src/components/Inspector.tsx`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeAppUserSessionStore.kt`
+
+## Phase 32: Project Data Workspace
+
+Date range: July 2026
+
+Project-level data administration moved from the narrow editor sidebar into a dedicated Data workspace. The workspace separates collection schema and access-rule configuration from hosted record review, while preserving the existing record source navigation, search, detail, and CSV export behavior. Collection edits save through the existing project update endpoint and are serialized so rapid changes cannot allow an older request to replace newer state.
+
+The editor Data tab remains focused on page-scoped Text variables and now presents a compact collection summary with a direct link to the project Data workspace. Dashboard project cards use the broader Data label to reflect both schema design and stored-record management.
+
+Representative areas:
+
+- `frontend/src/pages/ProjectData.tsx`
+- `frontend/src/components/DataCollectionsPanel.tsx`
+- `frontend/src/components/ProjectDataSummary.tsx`
+- `frontend/src/layout/EditorLayout.tsx`
+- `frontend/src/pages/Dashboard.tsx`
+
+## Phase 33: Generated-App Page Access
+
+Date range: July 2026
+
+Pages gained a portable access contract for public, signed-in-only, and signed-out-only screens. The Pages workspace exposes the guard and optional redirect destination, while web and Android preview route all navigation through matching redirect, cycle-detection, and accessible-page fallback rules. When a signed-out app user attempts to open a private page, the runtime remembers that destination and returns to it after login. Existing projects migrate to explicit public access under schema version 7.
+
+Page access controls runtime navigation and presentation only. Backend app-user authentication and collection access policies remain the authorization boundary for hosted data.
+
+Representative areas:
+
+- `frontend/src/components/PagesPanel.tsx`
+- `frontend/src/shared/runtime/pageAccess.ts`
+- `frontend/src/layout/EditorLayout.tsx`
+- `frontend/src/shared/schema/gridMigration.ts`
+- `backend/src/services/ProjectSchemaMigration.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/PageAccess.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`
+
+## Phase 34: Public Demo Showcase Refresh
+
+Date range: July 2026
+
+The temporary `FieldReady` project was rebuilt as a more complete five-screen field-operations app. The demo now includes a signed-out welcome screen, an operations dashboard, an inspection checklist, a live field-note workflow, and a completion summary. A consistent visual system replaces the earlier collection of isolated examples while still using the normal schema, grid, editor, preview, history, action, container, page-state, and page-access paths.
+
+The fixture also defines a realistic Inspection Reports collection and demonstrates the portable block inventory without pretending that the temporary, unsaved demo has a backend project identity. Hosted account and submission actions remain excluded until a persisted demo-project strategy is introduced. Contract tests protect the page inventory, access redirect, collection schema, grid bounds, top-level collision rules, container relationships, actions, and bindings.
+
+Representative areas:
+
+- `frontend/src/demo/demoProject.ts`
+- `backend/test/demoProject.test.ts`

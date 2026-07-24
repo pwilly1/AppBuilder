@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getAppUserToken, subscribeToAppUserSession } from '../api'
 import { PageRenderer } from '../editor/PageRenderer'
 import { AddBlock } from '../AddBlock'
 import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'
-import DataCollectionsPanel from '../components/DataCollectionsPanel'
 import PageVariablesPanel from '../components/PageVariablesPanel'
-import type { Block, Page, PageStateVariable, Project } from '../shared/schema/types'
+import ProjectDataSummary from '../components/ProjectDataSummary'
+import type { Block, Page, PageAccess, PageStateVariable, Project } from '../shared/schema/types'
+import { normalizePageAccess, resolvePageAccess } from '../shared/runtime/pageAccess'
 import type { TemplateDefinition } from '../shared/schema/templates'
 import { instantiateSectionTemplate, instantiateTemplatePage, isSectionTemplate } from '../shared/schema/templates'
 import {
@@ -30,7 +32,7 @@ type Props = {
   project: Project
   projectId?: string
   page: any
-  pages?: Array<{ id: string; title?: string; path?: string; blocks?: any[] }>
+  pages?: Page[]
   selectedPageId?: string
   addBlock: (b: any) => void
   applyBlockTransaction?: (mutator: (blocks: Block[]) => Block[], options?: { pageId?: string }) => void
@@ -55,6 +57,7 @@ type Props = {
   renamePage?: (id: string, title: string) => void
   deletePage?: (id: string) => void
   setPageBackgroundColor?: (id: string, color: string) => void
+  setPageAccess?: (id: string, access: PageAccess) => void
   previewMode?: boolean
   onPreviewModeChange?: (previewMode: boolean) => void
 }
@@ -91,6 +94,7 @@ export default function EditorLayout(props: Props) {
     renamePage,
     deletePage,
     setPageBackgroundColor,
+    setPageAccess,
     previewMode = false,
     onPreviewModeChange,
   } = props as any
@@ -106,6 +110,19 @@ export default function EditorLayout(props: Props) {
   const [pendingContainerDelete, setPendingContainerDelete] = useState<Block | null>(null)
   const [templateInsertError, setTemplateInsertError] = useState<string | null>(null)
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('blocks')
+  const [, setAppUserSessionRevision] = useState(0)
+  const [pendingProtectedPageId, setPendingProtectedPageId] = useState<string | null>(null)
+  const appUserSignedIn = Boolean(projectId && getAppUserToken(projectId))
+  const runtimeRequestedPageId = appUserSignedIn && pendingProtectedPageId
+    ? pendingProtectedPageId
+    : selectedPageId
+  const runtimePageResolution = useMemo(
+    () => resolvePageAccess(pages, runtimeRequestedPageId, appUserSignedIn),
+    [appUserSignedIn, pages, runtimeRequestedPageId],
+  )
+  const runtimePage = previewMode
+    ? pages.find((candidate: Page) => candidate.id === runtimePageResolution.pageId)
+    : page
   const activeContainer = useMemo(
     () => (page?.blocks || []).find((block: Block) => block.id === activeContainerId && isContainerBlock(block)) ?? null,
     [activeContainerId, page?.blocks],
@@ -123,6 +140,59 @@ export default function EditorLayout(props: Props) {
   useEffect(() => {
     if (previewMode) setActiveContainerId(null)
   }, [previewMode])
+
+  useEffect(() => {
+    if (!projectId) return
+    return subscribeToAppUserSession(projectId, () => {
+      setAppUserSessionRevision((revision) => revision + 1)
+    })
+  }, [projectId])
+
+  useEffect(() => {
+    if (!previewMode) {
+      setPendingProtectedPageId(null)
+      return
+    }
+
+    const selectedPage = pages.find((candidate: Page) => candidate.id === selectedPageId)
+    if (
+      !appUserSignedIn
+      && selectedPage
+      && normalizePageAccess(selectedPage.access).mode === 'signedIn'
+    ) {
+      setPendingProtectedPageId(selectedPage.id)
+    }
+
+    if (runtimePageResolution.pageId && runtimePageResolution.pageId !== selectedPageId) {
+      selectPage?.(runtimePageResolution.pageId)
+    }
+
+    if (appUserSignedIn && pendingProtectedPageId) {
+      setPendingProtectedPageId(null)
+    }
+  }, [
+    appUserSignedIn,
+    pages,
+    pendingProtectedPageId,
+    previewMode,
+    runtimePageResolution.pageId,
+    selectedPageId,
+  ])
+
+  function navigateInPreview(targetPageId: string) {
+    if (!previewMode) return
+    const targetPage = pages.find((candidate: Page) => candidate.id === targetPageId)
+    if (
+      !appUserSignedIn
+      && targetPage
+      && normalizePageAccess(targetPage.access).mode === 'signedIn'
+    ) {
+      setPendingProtectedPageId(targetPage.id)
+    }
+
+    const resolution = resolvePageAccess(pages, targetPageId, appUserSignedIn)
+    if (resolution.pageId) selectPage?.(resolution.pageId)
+  }
 
   function handleAddBlock(block: Block) {
     setTemplateInsertError(null)
@@ -643,6 +713,7 @@ export default function EditorLayout(props: Props) {
                 onRename={(id, title) => renamePage?.(id, title)}
                 onDelete={(id) => deletePage?.(id)}
                 onBackgroundColorChange={(id, color) => setPageBackgroundColor?.(id, color)}
+                onAccessChange={(id, access) => setPageAccess?.(id, access)}
               />
             </div>
 
@@ -681,7 +752,7 @@ export default function EditorLayout(props: Props) {
             >
               <div className="editor-workspace-intro">
                 <div className="editor-section-title">Runtime data</div>
-                <p>Define page values and collections used by interactive blocks.</p>
+                <p>Define page values here and manage persistent collections in the project Data workspace.</p>
               </div>
               <PageVariablesPanel
                 variables={page?.stateVariables || []}
@@ -693,9 +764,13 @@ export default function EditorLayout(props: Props) {
                   }))
                 }}
               />
-              <DataCollectionsPanel
+              <ProjectDataSummary
                 collections={project?.dataCollections || []}
-                onChange={(dataCollections) => applyProjectTransaction?.((current: Project) => ({ ...current, dataCollections }))}
+                disabled={!isAuthenticated || isDemoMode || !project?.id}
+                onOpen={() => {
+                  if (!project?.id) return
+                  navigate(`/app-data/${project.id}?tab=collections`)
+                }}
               />
             </div>
           </div>
@@ -717,18 +792,15 @@ export default function EditorLayout(props: Props) {
             </div>
           </div>
 
-          {page ? (
+          {runtimePage ? (
             <PageRenderer
-              page={page}
+              page={runtimePage}
               projectId={projectId}
               dataCollections={project?.dataCollections || []}
               selectedBlockId={selectedBlock?.id}
               activeContainerId={activeContainerId}
               previewMode={previewMode}
-              onNavigate={(targetPageId: string) => {
-                if (!previewMode) return
-                selectPage?.(targetPageId)
-              }}
+              onNavigate={navigateInPreview}
               onSelectBlock={(block: any) => handleSelectBlock(block)}
               onEnterContainer={(block: any) => enterContainer(block)}
               onExitContainer={exitContainer}
@@ -737,6 +809,16 @@ export default function EditorLayout(props: Props) {
               onDropNewBlock={handleDropNewBlock}
               onReorder={(newBlocks: any[]) => onReorder(newBlocks)}
             />
+          ) : previewMode && runtimePageResolution.unavailable ? (
+            <div className="editor-stage mt-5 flex items-center justify-center p-8">
+              <div className="max-w-md text-center">
+                <div className="editor-section-title">Page unavailable</div>
+                <h3 className="mt-2 text-2xl font-semibold text-slate-900">No page is available for this session</h3>
+                <p className="mt-2 text-sm text-slate-500">
+                  Update page access settings or change the app-user sign-in state.
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="editor-stage mt-5 flex items-center justify-center p-8">
               <div className="max-w-md text-center">

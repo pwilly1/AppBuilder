@@ -7,6 +7,7 @@ import {
 } from './gridLayout'
 import { getBlockEditorPlacement } from './runtimeLayout'
 import { repairBlockHierarchy } from './blockHierarchy'
+import { normalizePageAccess } from '../runtime/pageAccess'
 import type { Block, GridPlacement, Page, Project } from './types'
 
 export const GRID_DENSITY_SCHEMA_VERSION = 2
@@ -14,7 +15,8 @@ export const CONTAINER_SCHEMA_VERSION = 3
 export const UNIFIED_BUTTON_SCHEMA_VERSION = 4
 export const EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5
 export const UNIFIED_TEXT_FIELD_SCHEMA_VERSION = 6
-export const CURRENT_SCHEMA_VERSION = UNIFIED_TEXT_FIELD_SCHEMA_VERSION
+export const PAGE_ACCESS_SCHEMA_VERSION = 7
+export const CURRENT_SCHEMA_VERSION = PAGE_ACCESS_SCHEMA_VERSION
 
 function migrateLegacyTextField(block: Block): Block {
   const legacyType = String(block.type)
@@ -176,15 +178,23 @@ export function migratePageToGridLayout(
   page: Page,
   options: { scaleLegacyGridDensity?: boolean; migrateLegacySubmissionGroups?: boolean } = {},
 ): Page {
-  const textFieldsMigrated = page.blocks.map(migrateLegacyTextField)
+  const pageWithAccess = {
+    ...page,
+    access: normalizePageAccess(page.access),
+  }
+  const textFieldsMigrated = pageWithAccess.blocks.map(migrateLegacyTextField)
   const legacyButtonsMigrated = textFieldsMigrated.map(migrateLegacyButton)
   const convertedBlocks = options.migrateLegacySubmissionGroups
     ? migrateExplicitSubmitFields(legacyButtonsMigrated)
     : legacyButtonsMigrated
   const supportedBlocks = convertedBlocks.filter((block) => isSupportedBlockType(block.type))
-  if (!supportedBlocks.length) return supportedBlocks.length === convertedBlocks.length ? { ...page, blocks: convertedBlocks } : { ...page, blocks: [] }
+  if (!supportedBlocks.length) {
+    return supportedBlocks.length === convertedBlocks.length
+      ? { ...pageWithAccess, blocks: convertedBlocks }
+      : { ...pageWithAccess, blocks: [] }
+  }
 
-  const supportedPage = { ...page, blocks: supportedBlocks }
+  const supportedPage = { ...pageWithAccess, blocks: supportedBlocks }
 
   const migratedById = new Map<string, Block>()
   const placedBlocks: Block[] = []

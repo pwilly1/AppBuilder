@@ -400,7 +400,8 @@ test('backend project migration exposes only unified button records', () => {
     }],
   })
 
-  assert.equal(migrated.schemaVersion, 6)
+  assert.equal(migrated.schemaVersion, 7)
+  assert.deepEqual(migrated.pages?.[0].access, { mode: 'public' })
   assert.equal(migrated.pages?.[0].blocks?.[0].type, 'button')
   assert.deepEqual(migrated.pages?.[0].blocks?.[0].props.action, {
     type: 'submitData',

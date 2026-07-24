@@ -78,8 +78,9 @@ props.scaleY
 - Project-level `dataCollections` are part of the saved schema. Submit Data buttons may target a collection, while Text and Hero may read the latest public record, one creator-selected public record, or the signed-in generated-app user's newest owned record in web and Android preview.
 - Pages may define text `stateVariables`, while Text/Hero bindings may resolve either a stable variable ID or a stable project collection/field ID in web and Android. Collection bindings use `latest`, `specific`, or `currentUser` selectors; bindings without a selector default to latest. Set Page Variable can use a fixed value or a live editable-Text value referenced by block ID. Generated-app users have project-scoped signup/login/logout Button actions and separate runtime JWT sessions; authenticated submissions store optional app-user ownership. Current-user bindings require `read: "own"` or `read: "public"` and resolve the newest owned record. End-user record selection, profile editing, and password recovery remain planned.
 - Pages may also define `appearance.backgroundColor`; keep page-surface color behavior aligned across the Pages workspace, web canvas, web preview, and Android preview, with white fallback behavior preserved for older or malformed data.
+- Pages may define `access.mode` as `public`, `signedIn`, or `signedOut`, plus an optional redirect page. Web and Android preview navigation must use the shared access rules, preserve login return targets, and fail safely on invalid/cyclic redirects. Treat this as a navigation guard only; backend access policies remain the security boundary.
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
-- The public `/editor/demo` route is now a four-screen `FieldReady` sample app that exercises containers, page backgrounds, navigation, checkbox/toggle state, and live page-variable binding with persistence intentionally disabled.
+- The public `/editor/demo` route is now a five-screen `FieldReady` sample app that exercises portable atomic blocks, containers, page backgrounds, page access, navigation, checkbox/toggle state, live page-variable binding, and a project collection schema with persistence intentionally disabled.
 
 ## Current Block Inventory
 
@@ -130,12 +131,15 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/frontend/src/hooks/project/useProjectPersistence.ts` | Load/save/autosave behavior plus auth/session checks |
 | `app-builder/frontend/src/hooks/project/projectUtils.ts` | Initial-project setup, normalization, path helpers, and remembered project ids |
 | `app-builder/frontend/src/shared/schema/pageAppearance.ts` | Shared page background-color normalization and default fallback |
+| `app-builder/frontend/src/shared/runtime/pageAccess.ts` | Shared page-access normalization, redirect, and fallback rules |
 | `app-builder/frontend/src/layout/EditorLayout.tsx` | Editor shell and toolbar |
 | `app-builder/frontend/src/editor/PageRenderer.tsx` | Canvas rendering and interactions |
 | `app-builder/frontend/src/editor/DraggableBlock.tsx` | Block movement/resizing behavior |
 | `app-builder/frontend/src/editor/InlineBlockEditor.tsx` | Direct text editing behavior |
 | `app-builder/frontend/src/editor/Preview.tsx` | Web preview renderer |
-| `app-builder/frontend/src/components/DataCollectionsPanel.tsx` | Project-level collection editor and public-read settings |
+| `app-builder/frontend/src/pages/ProjectData.tsx` | Project Data workspace with collection-schema and hosted-record tabs |
+| `app-builder/frontend/src/components/DataCollectionsPanel.tsx` | Reusable project collection schema and access-rule editor |
+| `app-builder/frontend/src/components/ProjectDataSummary.tsx` | Compact editor-side collection summary and Data workspace link |
 | `app-builder/frontend/src/shared/runtime/useCollectionDataRuntime.ts` | Web page-level loading for directly bound collections |
 | `app-builder/frontend/src/shared/schema/gridLayout.ts` | Grid math and collision logic |
 | `app-builder/frontend/src/shared/schema/registry.ts` | Block defaults and constraints |
@@ -177,6 +181,7 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt` | Kotlin schema models |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/layout/GridLayout.kt` | Android grid math |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt` | Android page preview |
+| `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/PageAccess.kt` | Android page-access resolver matching web behavior |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/*View.kt` | Compose block renderers |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/BlockActions.kt` | Android shared block-action resolution and execution |
 | `app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RenderScale.kt` | Android content scaling helper |

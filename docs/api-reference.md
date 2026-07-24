@@ -204,7 +204,7 @@ Typical editor request:
 ```json
 {
   "name": "Updated App",
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "pages": []
 }
 ```

@@ -59,6 +59,12 @@ data class PageAppearance(
 )
 
 @Serializable
+data class PageAccess(
+    val mode: String = "public",
+    val redirectPageId: String? = null,
+)
+
+@Serializable
 data class AppDataCollectionField(
     val id: String,
     val key: String,
@@ -121,6 +127,7 @@ data class Page(
     val title: String? = null,
     val name: String? = null,
     val path: String? = null,
+    val access: PageAccess? = null,
     val appearance: PageAppearance? = null,
     val stateVariables: List<PageStateVariable> = emptyList(),
     val blocks: List<Block> = emptyList()

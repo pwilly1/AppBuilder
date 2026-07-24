@@ -34,6 +34,7 @@ export default function App() {
     renamePage,
     deletePage,
     setPageBackgroundColor,
+    setPageAccess,
     openProject,
     openDemoProject,
     loadProjectById,
@@ -78,6 +79,7 @@ export default function App() {
           renamePage={renamePage}
           deletePage={deletePage}
           setPageBackgroundColor={setPageBackgroundColor}
+          setPageAccess={setPageAccess}
           openProject={openProject}
           openDemoProject={openDemoProject}
           loadProjectById={loadProjectById}
@@ -121,6 +123,7 @@ function AppContent(props: any) {
     renamePage,
     deletePage,
     setPageBackgroundColor,
+    setPageAccess,
     openProject,
     openDemoProject,
     loadProjectById,
@@ -169,6 +172,7 @@ function AppContent(props: any) {
       renamePage={renamePage}
       deletePage={deletePage}
       setPageBackgroundColor={setPageBackgroundColor}
+      setPageAccess={setPageAccess}
       loadProjectById={loadProjectById}
       openDemoProject={openDemoProject}
       previewMode={previewMode}
@@ -314,6 +318,7 @@ function EditorScreen(props: any) {
     renamePage,
     deletePage,
     setPageBackgroundColor,
+    setPageAccess,
     previewMode,
     onPreviewModeChange,
   } = props
@@ -365,6 +370,7 @@ function EditorScreen(props: any) {
       renamePage={renamePage}
       deletePage={deletePage}
       setPageBackgroundColor={setPageBackgroundColor}
+      setPageAccess={setPageAccess}
       previewMode={previewMode}
       onPreviewModeChange={onPreviewModeChange}
     />

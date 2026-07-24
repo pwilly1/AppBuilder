@@ -14,9 +14,10 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 
 - JWT signup/login and protected project APIs
 - Separate project-scoped generated-app user signup/login sessions in web and Android preview
-- One-click interactive `FieldReady` demo with a temporary four-screen schema-backed sample project
+- One-click interactive `FieldReady` demo with a temporary five-screen schema-backed sample project
 - Project dashboard with create/open/delete flows
 - Multi-page app projects
+- Per-page public, signed-in-only, or signed-out-only access with safe redirects in web and Android preview
 - Per-page solid background colors with matching web and Android rendering
 - Visual editor with tabbed workspace tools for pages, blocks, and data, plus a drag-aware block palette, canvas, and inspector
 - 16-column grid-based block placement and resizing
@@ -32,7 +33,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Buttons configured with Submit Data explicitly select which same-page editable Text, Checkbox, and Toggle fields they submit, either to their own source or to a selected project collection
 - Project-level data collections define stable typed record sources with public or signed-in-user-owned read access for Text and Hero bindings
 - Container blocks can group supported atomic child blocks including Image, expose container styling in the inspector, and render in both web and Android preview
-- Dashboard project cards link to a dedicated App Data page for navigating collection, Contact Form, Form, and Submit Data button sources, reviewing saved records, searching submissions, and exporting CSV files
+- Dashboard project cards link to a dedicated Data workspace with separate Collections and Records tabs for configuring project schemas and access rules, navigating submission sources, reviewing saved records, searching data, and exporting CSV files
 - Web preview mode with page navigation
 - Android native preview runtime connected to backend project data
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending

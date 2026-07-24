@@ -26,7 +26,13 @@ test('demo project uses the current schema and stays inside the editor grid', ()
 
   assert.equal(project.id, DEMO_PROJECT_ID)
   assert.equal(project.schemaVersion, CURRENT_SCHEMA_VERSION)
-  assert.deepEqual(project.pages.map((page) => page.title), ['Today', 'Inspection', 'Notes', 'Summary'])
+  assert.deepEqual(project.pages.map((page) => page.title), [
+    'Welcome',
+    'Today',
+    'Inspection',
+    'Field Note',
+    'Summary',
+  ])
 
   for (const page of project.pages) {
     assert.ok(page.blocks.length > 0)
@@ -83,5 +89,34 @@ test('demo actions and bindings only reference IDs that exist in the demo schema
         if (binding.source === 'formValue') assert.ok(blockIds.has(binding.fieldBlockId))
       }
     }
+
+    if (page.access?.redirectPageId) assert.ok(pageIds.has(page.access.redirectPageId))
   }
+})
+
+test('demo showcases the stable portable block and data foundations', () => {
+  const project = createDemoProject()
+  const blockTypes = new Set(project.pages.flatMap((page) => page.blocks.map((block) => block.type)))
+
+  for (const blockType of [
+    'hero',
+    'text',
+    'button',
+    'badge',
+    'icon',
+    'shape',
+    'image',
+    'progressBar',
+    'checkbox',
+    'toggle',
+    'container',
+  ] as const) {
+    assert.ok(blockTypes.has(blockType), `demo should showcase ${blockType}`)
+  }
+
+  assert.equal(project.pages[0]?.access?.mode, 'signedOut')
+  assert.equal(project.pages[0]?.access?.redirectPageId, project.pages[1]?.id)
+  assert.equal(project.dataCollections?.length, 1)
+  assert.equal(project.dataCollections?.[0]?.name, 'Inspection Reports')
+  assert.equal(project.dataCollections?.[0]?.access?.read, 'own')
 })

@@ -19,12 +19,76 @@ import {
 } from '../../frontend/src/shared/actions/blockActions.js'
 import type { Block, Page } from '../../frontend/src/shared/schema/types.js'
 import { normalizePageBackgroundColor } from '../../frontend/src/shared/schema/pageAppearance.js'
+import {
+  isPageAccessible,
+  normalizePageAccess,
+  resolvePageAccess,
+} from '../../frontend/src/shared/runtime/pageAccess.js'
 
 test('page background colors normalize to portable six-digit hex values', () => {
   assert.equal(normalizePageBackgroundColor('#EFF6FF'), '#eff6ff')
   assert.equal(normalizePageBackgroundColor('  #fffbf5  '), '#fffbf5')
   assert.equal(normalizePageBackgroundColor('red'), '#ffffff')
   assert.equal(normalizePageBackgroundColor(null), '#ffffff')
+})
+
+test('page access defaults to public and respects app-user session state', () => {
+  const publicPage = { id: 'public', access: { mode: 'public' as const } }
+  const signedInPage = { id: 'private', access: { mode: 'signedIn' as const } }
+  const signedOutPage = { id: 'login', access: { mode: 'signedOut' as const } }
+
+  assert.deepEqual(normalizePageAccess(undefined), { mode: 'public' })
+  assert.deepEqual(normalizePageAccess({
+    mode: 'signedIn',
+    redirectPageId: ' login ',
+  }), {
+    mode: 'signedIn',
+    redirectPageId: 'login',
+  })
+  assert.equal(isPageAccessible(publicPage, false), true)
+  assert.equal(isPageAccessible(publicPage, true), true)
+  assert.equal(isPageAccessible(signedInPage, false), false)
+  assert.equal(isPageAccessible(signedInPage, true), true)
+  assert.equal(isPageAccessible(signedOutPage, false), true)
+  assert.equal(isPageAccessible(signedOutPage, true), false)
+})
+
+test('page access follows configured redirects and falls back safely', () => {
+  const pages = [
+    { id: 'home', access: { mode: 'signedIn' as const, redirectPageId: 'login' } },
+    { id: 'login', access: { mode: 'signedOut' as const, redirectPageId: 'home' } },
+  ]
+
+  assert.deepEqual(resolvePageAccess(pages, 'home', false), {
+    pageId: 'login',
+    redirected: true,
+    unavailable: false,
+  })
+  assert.deepEqual(resolvePageAccess(pages, 'login', true), {
+    pageId: 'home',
+    redirected: true,
+    unavailable: false,
+  })
+})
+
+test('page access handles redirect cycles and no-access projects', () => {
+  const cycle = [
+    { id: 'private-a', access: { mode: 'signedIn' as const, redirectPageId: 'private-b' } },
+    { id: 'private-b', access: { mode: 'signedIn' as const, redirectPageId: 'private-a' } },
+    { id: 'login', access: { mode: 'signedOut' as const } },
+  ]
+  assert.deepEqual(resolvePageAccess(cycle, 'private-a', false), {
+    pageId: 'login',
+    redirected: true,
+    unavailable: false,
+  })
+
+  const unavailable = cycle.slice(0, 2)
+  assert.deepEqual(resolvePageAccess(unavailable, 'private-a', false), {
+    pageId: null,
+    redirected: false,
+    unavailable: true,
+  })
 })
 
 test('page runtime context initializes valid text variables', () => {
