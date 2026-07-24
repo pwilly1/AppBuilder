@@ -1,11 +1,13 @@
 import React from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import type { AppDataCollection, Block, PageStateVariable, SubmitDataFieldRef } from '../shared/schema/types';
+import type { AppDataCollection, Block, PageStateVariable } from '../shared/schema/types';
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout';
 import { getBlockContentScale } from '../shared/schema/contentScale';
 import { listProjectAppDataRecords, uploadProjectImage, type ProjectAppDataRecord } from '../api';
 import { normalizeBlockAction, resolveBlockAction } from '../shared/actions/blockActions';
 import { BlockRegistry } from '../shared/schema/registry';
+import BehaviorBuilder from './BehaviorBuilder';
+import { validateBehaviorDraft } from './behaviorBuilderUtils';
 
 type PageLite = { id: string; title?: string; path?: string };
 
@@ -118,35 +120,9 @@ export default function Inspector({
   const [bindingRecordsLoading, setBindingRecordsLoading] = React.useState(false);
   const [bindingRecordsError, setBindingRecordsError] = React.useState<string | null>(null);
   const [textBindingError, setTextBindingError] = React.useState<string | null>(null);
-  const actionType = watch('action.type') as string | undefined;
-  const actionValueSource = watch('action.value.source') as string | undefined;
-  const selectedActionFieldBlockId = watch('action.value.fieldBlockId') as string | undefined;
+  const [behaviorError, setBehaviorError] = React.useState<string | null>(null);
   const textEditable = block?.type === 'text' && Boolean(watch('editable'));
   const textInputMode = watch('textInputMode') as string | undefined;
-  const watchedSubmitFields = watch('action.fields');
-  const selectedSubmitFields = Array.isArray(watchedSubmitFields)
-    ? watchedSubmitFields as SubmitDataFieldRef[]
-    : [];
-  const selectedSubmitCollectionId = watch('action.collectionId') as string | undefined;
-  const stateValueFieldBlocks = React.useMemo(() => {
-    const formIds = new Set(pageBlocks.filter((candidate) => candidate.type === 'form').map((candidate) => candidate.id));
-    const actionFormScope = block?.parentId && formIds.has(block.parentId) ? block.parentId : null;
-    return pageBlocks.filter((candidate) => {
-      if (candidate.type !== 'text' || candidate.props.editable !== true) return false;
-      const candidateFormScope = candidate.parentId && formIds.has(candidate.parentId) ? candidate.parentId : null;
-      return candidateFormScope === actionFormScope;
-    });
-  }, [block?.parentId, pageBlocks]);
-  const submitFieldBlocks = React.useMemo(() => {
-    const activeFormId = findOwningFormId(block, pageBlocks);
-    return pageBlocks.filter((candidate) => (
-      isSubmissionField(candidate)
-      && findOwningFormId(candidate, pageBlocks) === activeFormId
-    ));
-  }, [block, pageBlocks]);
-  const selectedSubmitCollection = dataCollections.find(
-    (collection) => collection.id === selectedSubmitCollectionId,
-  ) ?? null;
 
   React.useEffect(() => {
     if (previewedPropsRef.current === block?.props) {
@@ -157,6 +133,7 @@ export default function Inspector({
     setTextBinding(getTextBindingDraft(block));
     setImageUploadError(null);
     setTextBindingError(null);
+    setBehaviorError(null);
   }, [block, reset]);
 
   const bindingCollectionId = textBinding.source === 'collection' ? textBinding.collectionId : '';
@@ -204,6 +181,19 @@ export default function Inspector({
   }
 
   const submit = (vals: any) => {
+    const nextBehaviorError = validateBehaviorDraft(vals.action, {
+      block,
+      pages,
+      pageBlocks,
+      pageStateVariables,
+      dataCollections,
+      allowDataActions: block.type === 'button',
+    });
+    if (nextBehaviorError) {
+      setBehaviorError(nextBehaviorError);
+      return;
+    }
+    setBehaviorError(null);
     if (textBinding.source === 'collection' && textBinding.recordMode === 'specific' && !textBinding.recordId) {
       setTextBindingError('Choose a specific record before saving this binding.');
       return;
@@ -261,230 +251,6 @@ export default function Inspector({
     onSave?.(nextBlock);
   };
 
-  function renderActionControls(allowSubmit = false) {
-    return (
-      <FormSection title="When tapped" description="Choose what happens when a user taps this block in preview or the Android runtime.">
-        <div className="grid gap-2">
-          <FieldLabel>Action type</FieldLabel>
-          <select className="inspector-input" {...register('action.type')}>
-            <option value="">No action</option>
-            <option value="navigate">Navigate to page</option>
-            {allowSubmit ? <option value="submitData">Submit data</option> : null}
-            {allowSubmit ? <option value="signUpAppUser">Sign up app user</option> : null}
-            {allowSubmit ? <option value="loginAppUser">Log in app user</option> : null}
-            {allowSubmit ? <option value="logoutAppUser">Log out app user</option> : null}
-            <option value="openUrl">Open URL</option>
-            <option value="setPageState">Set page variable</option>
-          </select>
-        </div>
-        {actionType === 'navigate' ? (
-          <div className="grid gap-2">
-            <FieldLabel>Target page</FieldLabel>
-            <select className="inspector-input" {...register('action.targetPageId')}>
-              <option value="">Select a page...</option>
-              {(pages || []).map((page) => (
-                <option key={page.id} value={page.id}>{page.title || page.id}</option>
-              ))}
-            </select>
-          </div>
-        ) : null}
-        {actionType === 'openUrl' ? (
-          <div className="grid gap-2">
-            <FieldLabel>URL</FieldLabel>
-            <TextInput type="url" placeholder="https://example.com" {...register('action.url')} />
-            <p className="text-xs text-slate-500">Only HTTP and HTTPS links are supported.</p>
-          </div>
-        ) : null}
-        {allowSubmit && actionType === 'submitData' ? (
-          <>
-            <div className="grid gap-2">
-              <FieldLabel>Data source name</FieldLabel>
-              <TextInput placeholder="Contact Requests" {...register('dataSourceName')} />
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Store records in</FieldLabel>
-              <select
-                className="inspector-input"
-                {...register('action.collectionId', {
-                  onChange: () => clearSubmitFieldTargets(),
-                })}
-              >
-                <option value="">This button's own data source</option>
-                {dataCollections.map((collection) => (
-                  <option key={collection.id} value={collection.id}>{collection.name}</option>
-                ))}
-              </select>
-              <p className="text-xs text-slate-500">Choose a collection when these records should be reusable by data-bound Text or Hero blocks.</p>
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Fields to submit</FieldLabel>
-              {submitFieldBlocks.length > 0 ? (
-                <div className="grid gap-2">
-                  {submitFieldBlocks.map((field) => {
-                    const selectedField = selectedSubmitFields.find((entry) => entry.fieldBlockId === field.id);
-                    const compatibleCollectionFields = selectedSubmitCollection?.fields.filter((target) => (
-                      isBooleanSubmissionField(field) ? target.type === 'boolean' : target.type !== 'boolean'
-                    )) ?? [];
-                    return (
-                      <div key={field.id} className="rounded-xl border border-slate-200 bg-white/80 px-3 py-3">
-                        <label className="flex items-center gap-3 text-sm font-medium text-slate-800">
-                          <ToggleInput
-                            type="checkbox"
-                            checked={Boolean(selectedField)}
-                            onChange={(event) => updateSubmitField(field.id, event.currentTarget.checked)}
-                          />
-                          {getSubmissionFieldLabel(field)}
-                        </label>
-                        {selectedField && selectedSubmitCollection ? (
-                          <div className="mt-3 grid gap-2 pl-7">
-                            <FieldLabel>Save to collection field</FieldLabel>
-                            <select
-                              className="inspector-input"
-                              value={selectedField.targetFieldKey ?? ''}
-                              onChange={(event) => updateSubmitFieldTarget(field.id, event.currentTarget.value)}
-                            >
-                              <option value="">Choose a field...</option>
-                              {compatibleCollectionFields.map((target) => (
-                                <option key={target.id} value={target.key}>
-                                  {target.label} ({friendlyFieldType(target.type)})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                  Add an editable Text, Checkbox, or Toggle block to this page first.
-                </p>
-              )}
-              <p className="text-xs text-slate-500">Only the checked fields are included when this button is tapped.</p>
-              {selectedSubmitCollection && selectedSubmitFields.some((field) => !field.targetFieldKey) ? (
-                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                  Choose a collection field for every checked field before testing this button.
-                </p>
-              ) : null}
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Success message</FieldLabel>
-              <TextInput {...register('successMessage')} />
-            </div>
-          </>
-        ) : null}
-        {allowSubmit && (actionType === 'signUpAppUser' || actionType === 'loginAppUser') ? (
-          <>
-            {actionType === 'signUpAppUser' ? (
-              <div className="grid gap-2">
-                <FieldLabel>Display name field (optional)</FieldLabel>
-                <select className="inspector-input" {...register('action.displayNameFieldBlockId')}>
-                  <option value="">No display name</option>
-                  {stateValueFieldBlocks.map((field) => (
-                    <option key={field.id} value={field.id}>
-                      {getSubmissionFieldLabel(field)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : null}
-            <div className="grid gap-2">
-              <FieldLabel>Email field</FieldLabel>
-              <select className="inspector-input" {...register('action.emailFieldBlockId')}>
-                <option value="">Select an editable Text block...</option>
-                {stateValueFieldBlocks.map((field) => (
-                  <option key={field.id} value={field.id}>
-                    {getSubmissionFieldLabel(field)}
-                    {field.props.inputType === 'email' ? ' (email)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Password field</FieldLabel>
-              <select className="inspector-input" {...register('action.passwordFieldBlockId')}>
-                <option value="">Select an editable Text block...</option>
-                {stateValueFieldBlocks.map((field) => (
-                  <option key={field.id} value={field.id}>
-                    {getSubmissionFieldLabel(field)}
-                    {field.props.inputType === 'password' ? ' (password)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className="text-xs leading-5 text-slate-500">
-              App users are separate from Apptura builder accounts. Use editable Text blocks for these fields and set the password field keyboard type to Password.
-            </p>
-            {stateValueFieldBlocks.length === 0 ? (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                Add editable Text blocks for email and password first.
-              </p>
-            ) : null}
-          </>
-        ) : null}
-        {allowSubmit && actionType === 'logoutAppUser' ? (
-          <p className="text-xs leading-5 text-slate-500">
-            This clears the current generated-app user session for this project.
-          </p>
-        ) : null}
-        {actionType === 'setPageState' ? (
-          <>
-            <div className="grid gap-2">
-              <FieldLabel>Page variable</FieldLabel>
-              <select className="inspector-input" {...register('action.variableId')}>
-                <option value="">Select a variable...</option>
-                {pageStateVariables.map((variable) => (
-                  <option key={variable.id} value={variable.id}>{variable.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="grid gap-2">
-              <FieldLabel>Value source</FieldLabel>
-              <select className="inspector-input" defaultValue="static" {...register('action.value.source')}>
-                <option value="static">Fixed value</option>
-                <option value="formValue">Editable text</option>
-              </select>
-            </div>
-            {actionValueSource === 'formValue' ? (
-              <div className="grid gap-2">
-                <FieldLabel>Source field</FieldLabel>
-                <select className="inspector-input" {...register('action.value.fieldBlockId')}>
-                  <option value="">Select a field...</option>
-                  {selectedActionFieldBlockId && !stateValueFieldBlocks.some((field) => field.id === selectedActionFieldBlockId) ? (
-                    <option value={selectedActionFieldBlockId}>Missing field</option>
-                  ) : null}
-                  {stateValueFieldBlocks.map((field) => (
-                    <option key={field.id} value={field.id}>
-                      {getSubmissionFieldLabel(field)}
-                    </option>
-                  ))}
-                </select>
-                {stateValueFieldBlocks.length === 0 ? (
-                  <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                    Turn on Editable in app for a Text block on this page first.
-                  </p>
-                ) : null}
-              </div>
-            ) : (
-              <div className="grid gap-2">
-                <FieldLabel>New value</FieldLabel>
-                <TextInput placeholder="Value to set when tapped" {...register('action.value.value')} />
-              </div>
-            )}
-            {pageStateVariables.length === 0 ? (
-              <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
-                Add a page variable in the left sidebar before configuring this action.
-              </p>
-            ) : (
-              <p className="text-xs text-slate-500">The value changes for this preview session and resets when the page reloads.</p>
-            )}
-          </>
-        ) : null}
-      </FormSection>
-    );
-  }
-
   function renderDataFieldControls() {
     return (
       <div className="grid gap-2">
@@ -493,33 +259,6 @@ export default function Inspector({
         <p className="text-xs text-slate-500">Buttons choose this field from their own Submit Data settings.</p>
       </div>
     );
-  }
-
-  function updateSubmitField(fieldBlockId: string, selected: boolean) {
-    const currentValue = getValues('action.fields');
-    const current = Array.isArray(currentValue) ? currentValue as SubmitDataFieldRef[] : [];
-    const next = selected
-      ? current.some((field) => field.fieldBlockId === fieldBlockId)
-        ? current
-        : [...current, { fieldBlockId }]
-      : current.filter((field) => field.fieldBlockId !== fieldBlockId);
-    setValue('action.fields', next, { shouldDirty: true });
-  }
-
-  function updateSubmitFieldTarget(fieldBlockId: string, targetFieldKey: string) {
-    const currentValue = getValues('action.fields');
-    const current = Array.isArray(currentValue) ? currentValue as SubmitDataFieldRef[] : [];
-    setValue('action.fields', current.map((field) => (
-      field.fieldBlockId === fieldBlockId
-        ? { fieldBlockId, ...(targetFieldKey ? { targetFieldKey } : {}) }
-        : field
-    )), { shouldDirty: true });
-  }
-
-  function clearSubmitFieldTargets() {
-    const currentValue = getValues('action.fields');
-    const current = Array.isArray(currentValue) ? currentValue as SubmitDataFieldRef[] : [];
-    setValue('action.fields', current.map((field) => ({ fieldBlockId: field.fieldBlockId })), { shouldDirty: true });
   }
 
   function candidateTextFits(nextText: string) {
@@ -1179,7 +918,20 @@ export default function Inspector({
                 <TextInput {...registerLiveText('label')} />
               </div>
             </FormSection>
-            {renderActionControls(true)}
+            <BehaviorBuilder
+              block={block}
+              pages={pages}
+              pageBlocks={pageBlocks}
+              pageStateVariables={pageStateVariables}
+              dataCollections={dataCollections}
+              allowDataActions
+              control={control}
+              register={register}
+              getValues={getValues}
+              setValue={setValue}
+              error={behaviorError}
+              onClearError={() => setBehaviorError(null)}
+            />
             <FormSection title="Button style" description="Tune the button appearance without changing its action.">
               <div className="grid gap-2">
                 <FieldLabel>Font size (px)</FieldLabel>
@@ -1315,7 +1067,19 @@ export default function Inspector({
                 <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
               </div>
             </FormSection>
-            {renderActionControls()}
+            <BehaviorBuilder
+              block={block}
+              pages={pages}
+              pageBlocks={pageBlocks}
+              pageStateVariables={pageStateVariables}
+              dataCollections={dataCollections}
+              control={control}
+              register={register}
+              getValues={getValues}
+              setValue={setValue}
+              error={behaviorError}
+              onClearError={() => setBehaviorError(null)}
+            />
           </>
         )}
 
@@ -1498,7 +1262,19 @@ export default function Inspector({
                 <TextInput type="number" min={0} max={1} step={0.05} className="max-w-[120px]" {...register('opacity')} />
               </div>
             </FormSection>
-            {renderActionControls()}
+            <BehaviorBuilder
+              block={block}
+              pages={pages}
+              pageBlocks={pageBlocks}
+              pageStateVariables={pageStateVariables}
+              dataCollections={dataCollections}
+              control={control}
+              register={register}
+              getValues={getValues}
+              setValue={setValue}
+              error={behaviorError}
+              onClearError={() => setBehaviorError(null)}
+            />
           </>
         )}
 
@@ -1644,42 +1420,6 @@ export default function Inspector({
       </form>
     </div>
   );
-}
-
-function friendlyFieldType(type: AppDataCollection['fields'][number]['type']) {
-  if (type === 'boolean') return 'Yes / No';
-  return type.charAt(0).toUpperCase() + type.slice(1);
-}
-
-function isSubmissionField(block: Block) {
-  return block.type === 'checkbox'
-    || block.type === 'toggle'
-    || (block.type === 'text' && block.props.editable === true);
-}
-
-function isBooleanSubmissionField(block: Block) {
-  return block.type === 'checkbox' || block.type === 'toggle';
-}
-
-function getSubmissionFieldLabel(block: Block) {
-  return String(block.props.fieldLabel || block.props.label || block.props.placeholder || block.props.value || block.type);
-}
-
-function findOwningFormId(block: Block | null | undefined, pageBlocks: Block[]) {
-  if (!block) return null;
-  const blocksById = new Map(pageBlocks.map((candidate) => [candidate.id, candidate]));
-  let parentId = block.parentId;
-  const visited = new Set<string>();
-
-  while (parentId && !visited.has(parentId)) {
-    visited.add(parentId);
-    const parent = blocksById.get(parentId);
-    if (!parent) return null;
-    if (parent.type === 'form') return parent.id;
-    parentId = parent.parentId;
-  }
-
-  return null;
 }
 
 function getBindableTextProperty(block?: Block | null): 'value' | 'headline' | null {

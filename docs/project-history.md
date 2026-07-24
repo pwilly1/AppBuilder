@@ -562,3 +562,16 @@ Representative areas:
 - `backend/src/controllers/AppDataController.ts`
 - `backend/src/routes/AppDataRoutes.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/models/SchemaModels.kt`
+
+## Phase 30: Guided Block Behaviors
+
+Date range: July 2026
+
+The Inspector now presents Button, Icon, and Image tap actions through a task-oriented Behavior Builder instead of exposing a flat technical action form. Creators choose plain-language behaviors, see an immediate configuration summary, and complete focused setup steps for navigation, data saving, generated-app accounts, web links, or page-data updates. New Save Data behaviors automatically select eligible inputs and attempt compatible collection-field mappings, while incomplete destinations, mappings, account fields, links, or page values are blocked from saving. The persisted `props.action` contract and web/Android runtime behavior remain unchanged.
+
+Representative areas:
+
+- `frontend/src/components/BehaviorBuilder.tsx`
+- `frontend/src/components/behaviorBuilderUtils.ts`
+- `frontend/src/components/Inspector.tsx`
+- `frontend/src/index.css`

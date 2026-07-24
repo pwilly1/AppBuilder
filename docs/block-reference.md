@@ -149,6 +149,8 @@ The exact defaults and constraints must be read from the registry rather than du
 
 Actions use a discriminated schema object in `props.action`. The `button` block may omit the action for static presentation or use `navigate`, `submitData`, `signUpAppUser`, `loginAppUser`, `logoutAppUser`, `openUrl`, or `setPageState`. Signup/login actions reference editable Text email/password fields by stable block ID, plus an optional display-name field for signup. Runtime account tokens are stored per project outside the saved schema. A `submitData` action owns an explicit `fields` list of stable block IDs and may include a stable project `collectionId`; collection writes map fields through optional `targetFieldKey` values. `setPageState` stores a target variable ID and a `RuntimeValueRef`; its current value sources are `static` and `formValue` for editable Text blocks. Only HTTP and HTTPS links are executable.
 
+The editor calls this configuration **Behavior** and presents `submitData` as **Save Data**, while preserving the schema names above for web and Android compatibility. The Behavior Builder automatically selects eligible inputs for a new Save Data behavior, attempts stable collection-field mapping by field names and compatible types, suggests email/password inputs for account actions, summarizes the resulting behavior, and prevents incomplete behavior configurations from being saved.
+
 ## Container Hierarchy Contract
 
 - `Page.blocks` stays flat even when containers or forms are present.

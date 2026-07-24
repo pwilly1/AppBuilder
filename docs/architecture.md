@@ -297,6 +297,8 @@ Key files:
 | `hooks/project/useProjectPersistence.ts` | Project loading, saving, autosave, auth/session checks |
 | `hooks/project/projectUtils.ts` | Initial project creation, normalization, path helpers, and project-id persistence |
 | `layout/EditorLayout.tsx` | Editor shell: toolbar, left panel, canvas, inspector |
+| `components/BehaviorBuilder.tsx` | Guided creator UI for configuring block tap behavior without exposing schema-level action details |
+| `components/behaviorBuilderUtils.ts` | Pure action validation, eligible-input discovery, and collection-field auto-mapping |
 | `editor/PageRenderer.tsx` | Canvas rendering and editor interactions |
 | `editor/DraggableBlock.tsx` | Per-block selection, movement, resizing behavior |
 | `editor/InlineBlockEditor.tsx` | Direct text editing on the canvas |

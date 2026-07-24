@@ -232,6 +232,107 @@
     accent-color: var(--accent);
   }
 
+  .behavior-summary {
+    @apply rounded-2xl border px-3.5 py-3;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
+  .behavior-summary-idle {
+    background: rgba(241, 245, 249, 0.74);
+    border-color: rgba(100, 116, 139, 0.16);
+  }
+
+  .behavior-summary-incomplete {
+    background: rgba(255, 247, 225, 0.82);
+    border-color: rgba(217, 119, 6, 0.22);
+  }
+
+  .behavior-summary-ready {
+    background: rgba(235, 247, 255, 0.9);
+    border-color: rgba(37, 99, 235, 0.2);
+  }
+
+  .behavior-summary-label {
+    @apply text-[10px] font-bold uppercase tracking-[0.18em];
+    color: rgba(54, 86, 136, 0.82);
+  }
+
+  .behavior-summary-text {
+    @apply mt-1 text-sm font-medium leading-5;
+    color: var(--text-strong);
+  }
+
+  .behavior-step {
+    @apply grid gap-3 rounded-2xl border p-3.5;
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(53, 80, 128, 0.12);
+  }
+
+  .behavior-step-heading {
+    @apply flex items-center gap-2 text-sm font-semibold;
+    color: var(--text-strong);
+  }
+
+  .behavior-step-number {
+    @apply inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold;
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--accent-deep);
+  }
+
+  .behavior-inline-actions {
+    @apply flex flex-wrap items-center justify-between gap-2 text-xs font-medium;
+    color: var(--text-soft);
+  }
+
+  .behavior-link-button {
+    @apply rounded-full px-2.5 py-1 text-xs font-semibold transition-colors;
+    color: var(--accent-deep);
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  .behavior-link-button:hover {
+    background: rgba(37, 99, 235, 0.14);
+  }
+
+  .behavior-field-card {
+    @apply rounded-xl border px-3 py-3 transition-colors;
+    background: rgba(248, 250, 252, 0.72);
+    border-color: rgba(100, 116, 139, 0.14);
+  }
+
+  .behavior-field-card.is-selected {
+    background: rgba(239, 246, 255, 0.9);
+    border-color: rgba(37, 99, 235, 0.22);
+  }
+
+  .behavior-field-type {
+    @apply shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em];
+    color: rgba(54, 86, 136, 0.84);
+    background: rgba(37, 99, 235, 0.08);
+  }
+
+  .behavior-notice {
+    @apply rounded-xl border px-3 py-2.5 text-xs leading-5;
+  }
+
+  .behavior-notice-info {
+    color: #1e3a8a;
+    background: rgba(239, 246, 255, 0.9);
+    border-color: rgba(37, 99, 235, 0.2);
+  }
+
+  .behavior-notice-warning {
+    color: #92400e;
+    background: rgba(255, 247, 225, 0.88);
+    border-color: rgba(217, 119, 6, 0.22);
+  }
+
+  .behavior-notice-error {
+    color: #991b1b;
+    background: rgba(254, 242, 242, 0.92);
+    border-color: rgba(220, 38, 38, 0.2);
+  }
+
   .editor-side-panel {
     display: flex;
     flex-direction: column;
