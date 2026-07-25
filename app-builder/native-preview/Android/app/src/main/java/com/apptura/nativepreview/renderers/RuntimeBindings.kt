@@ -2,8 +2,11 @@ package com.apptura.nativepreview.renderers
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.apptura.nativepreview.models.Block
 import com.apptura.nativepreview.models.Page
 import com.apptura.nativepreview.models.Project
@@ -29,9 +32,15 @@ sealed interface RuntimeDataState {
 class RuntimeContext(initialPageState: Map<String, String> = emptyMap()) {
     val pageState = mutableStateMapOf<String, String>().apply { putAll(initialPageState) }
     val collectionData = mutableStateMapOf<String, RuntimeDataState>()
+    var dataRevision by mutableIntStateOf(0)
+        private set
 
     fun setPageState(variableId: String, value: String) {
         if (pageState.containsKey(variableId)) pageState[variableId] = value
+    }
+
+    fun refreshCollectionData() {
+        dataRevision += 1
     }
 }
 
@@ -52,8 +61,9 @@ fun rememberPageRuntimeContext(
     appUserToken: String? = null,
 ): RuntimeContext {
     val context = remember(page.id, page.stateVariables) { createPageRuntimeContext(page) }
+    val dataRevision = context.dataRevision
 
-    LaunchedEffect(page.id, page.blocks, project.dataCollections, projectId, baseUrl, appUserToken) {
+    LaunchedEffect(page.id, page.blocks, project.dataCollections, projectId, baseUrl, appUserToken, dataRevision) {
         val requests = page.blocks
             .flatMap { it.bindings.values }
             .mapNotNull(::collectionDataRequest)

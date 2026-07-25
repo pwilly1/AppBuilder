@@ -49,18 +49,28 @@ export function ButtonBlock({
   const [errorMessage, setErrorMessage] = useState('')
   const safeScale = Math.max(0.1, Number(contentScale) || 1)
   const isSubmitAction = action?.type === 'submitData'
+  const isRecordMutationAction = action?.type === 'updateCurrentUserRecord'
+    || action?.type === 'deleteCurrentUserRecord'
+  const isUpdateAction = action?.type === 'updateCurrentUserRecord'
   const isAppAuthAction = action?.type === 'signUpAppUser'
     || action?.type === 'loginAppUser'
     || action?.type === 'logoutAppUser'
-  const showsStatus = isSubmitAction || isAppAuthAction
+  const showsStatus = isSubmitAction || isRecordMutationAction || isAppAuthAction
   const configured = isActionConfigured(action)
   const hasRequiredRuntimeIds = isSubmitAction
     ? Boolean(projectId && blockId)
-    : !isAppAuthAction || Boolean(projectId)
-  const canRun = Boolean(previewMode && action && configured && hasRequiredRuntimeIds)
+    : (isAppAuthAction || isRecordMutationAction) ? Boolean(projectId) : true
+  const hasRequiredFormRuntime = !isUpdateAction || Boolean(formRuntime)
+  const canRun = Boolean(previewMode && action && configured && hasRequiredRuntimeIds && hasRequiredFormRuntime)
 
   async function runAction() {
     if (!canRun || !action || status === 'submitting') return
+    if (
+      action.type === 'deleteCurrentUserRecord'
+      && !window.confirm('Delete your newest saved record? This cannot be undone.')
+    ) {
+      return
+    }
     if (showsStatus) {
       setStatus('submitting')
       setErrorMessage('')
@@ -136,6 +146,10 @@ function getActionSuccessMessage(action: BlockAction | null | undefined, submitM
   if (action?.type === 'signUpAppUser') return 'Account created.'
   if (action?.type === 'loginAppUser') return 'Signed in.'
   if (action?.type === 'logoutAppUser') return 'Signed out.'
+  if (action?.type === 'updateCurrentUserRecord') {
+    return !submitMessage || submitMessage === 'Submission received.' ? 'Changes saved.' : submitMessage
+  }
+  if (action?.type === 'deleteCurrentUserRecord') return 'Data deleted.'
   return submitMessage
 }
 
@@ -143,5 +157,7 @@ function getActionPendingMessage(action: BlockAction | null | undefined) {
   if (action?.type === 'signUpAppUser') return 'Creating account...'
   if (action?.type === 'loginAppUser') return 'Signing in...'
   if (action?.type === 'logoutAppUser') return 'Signing out...'
+  if (action?.type === 'updateCurrentUserRecord') return 'Updating...'
+  if (action?.type === 'deleteCurrentUserRecord') return 'Deleting...'
   return 'Submitting...'
 }

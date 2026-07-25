@@ -19,6 +19,7 @@ import {
   normalizeFieldRefs,
   readActionType,
   readString,
+  resolveCollectionAccess,
   validateBehaviorDraft,
   type ActionType,
   type PageLite,
@@ -50,6 +51,8 @@ const COMMON_ACTION_OPTIONS: Array<{ value: ActionType; label: string }> = [
 
 const BUTTON_ACTION_OPTIONS: Array<{ value: ActionType; label: string }> = [
   { value: 'submitData', label: 'Save data' },
+  { value: 'updateCurrentUserRecord', label: 'Update signed-in user data' },
+  { value: 'deleteCurrentUserRecord', label: 'Delete signed-in user data' },
   { value: 'signUpAppUser', label: 'Create an app account' },
   { value: 'loginAppUser', label: 'Sign in an app user' },
   { value: 'logoutAppUser', label: 'Sign out the app user' },
@@ -75,6 +78,14 @@ export default function BehaviorBuilder({
   const selectedSubmitFields = normalizeFieldRefs(actionDraft?.fields);
   const selectedCollectionId = readString(actionDraft?.collectionId);
   const selectedCollection = dataCollections.find((collection) => collection.id === selectedCollectionId) ?? null;
+  const updateCollections = dataCollections.filter((collection) => {
+    const access = resolveCollectionAccess(collection);
+    return (access.read === 'own' || access.read === 'public') && access.update === 'own';
+  });
+  const deleteCollections = dataCollections.filter((collection) => {
+    const access = resolveCollectionAccess(collection);
+    return (access.read === 'own' || access.read === 'public') && access.delete === 'own';
+  });
   const actionValue = readRecord(actionDraft?.value);
   const actionValueSource = readString(actionValue?.source) || 'static';
   const selectedValueFieldId = readString(actionValue?.fieldBlockId);
@@ -113,6 +124,10 @@ export default function BehaviorBuilder({
     clearError();
 
     if (nextType === 'submitData') {
+      const successMessage = readString(getValues('successMessage'));
+      if (!successMessage || successMessage === 'Changes saved.') {
+        setValue('successMessage', 'Submission received.', { shouldDirty: true });
+      }
       const current = normalizeFieldRefs(getValues('action.fields'));
       const selected = current.length > 0
         ? current
@@ -124,6 +139,30 @@ export default function BehaviorBuilder({
           : selected,
         { shouldDirty: true },
       );
+    }
+
+    if (nextType === 'updateCurrentUserRecord') {
+      const successMessage = readString(getValues('successMessage'));
+      if (!successMessage || successMessage === 'Submission received.') {
+        setValue('successMessage', 'Changes saved.', { shouldDirty: true });
+      }
+      const collectionId = readString(getValues('action.collectionId')) || updateCollections[0]?.id || '';
+      const collection = dataCollections.find((candidate) => candidate.id === collectionId) ?? null;
+      if (collectionId) setValue('action.collectionId', collectionId, { shouldDirty: true });
+      const current = normalizeFieldRefs(getValues('action.fields'));
+      const selected = current.length > 0
+        ? current
+        : submissionFields.map((field) => ({ fieldBlockId: field.id }));
+      setValue(
+        'action.fields',
+        collection ? autoMapSubmissionFields(selected, collection, submissionFields) : selected,
+        { shouldDirty: true },
+      );
+    }
+
+    if (nextType === 'deleteCurrentUserRecord') {
+      const collectionId = readString(getValues('action.collectionId')) || deleteCollections[0]?.id || '';
+      if (collectionId) setValue('action.collectionId', collectionId, { shouldDirty: true });
     }
 
     if (nextType === 'signUpAppUser' || nextType === 'loginAppUser') {
@@ -394,6 +433,135 @@ export default function BehaviorBuilder({
           </>
         ) : null}
 
+        {allowDataActions && actionType === 'updateCurrentUserRecord' ? (
+          <>
+            <BehaviorStep number="1" title="Choose the saved data to update">
+              <FieldLabel>Collection</FieldLabel>
+              <select
+                className="inspector-input"
+                {...register('action.collectionId', {
+                  onChange: (event) => handleCollectionChange(event.currentTarget.value),
+                })}
+              >
+                <option value="">Select a collection...</option>
+                {selectedCollectionId && !dataCollections.some((collection) => collection.id === selectedCollectionId) ? (
+                  <option value={selectedCollectionId}>Missing collection</option>
+                ) : null}
+                {updateCollections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>{collection.name}</option>
+                ))}
+              </select>
+              <p className="text-xs leading-5 text-slate-500">
+                This updates the newest record owned by the signed-in app user.
+              </p>
+              {updateCollections.length === 0 ? (
+                <Notice tone="warning">
+                  In the Data workspace, enable own-record reads and updates for a collection first.
+                </Notice>
+              ) : null}
+            </BehaviorStep>
+
+            <BehaviorStep number="2" title="Choose the information to update">
+              <div className="behavior-inline-actions">
+                <span>{selectedSubmitFields.length} of {submissionFields.length} inputs selected</span>
+                <div className="flex gap-2">
+                  <button type="button" className="behavior-link-button" onClick={selectAllSubmissionFields}>
+                    Select all
+                  </button>
+                  <button type="button" className="behavior-link-button" onClick={clearSubmissionFields}>
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              {submissionFields.length > 0 ? (
+                <div className="grid gap-2">
+                  {submissionFields.map((field) => {
+                    const selectedField = selectedSubmitFields.find((entry) => entry.fieldBlockId === field.id);
+                    const compatibleCollectionFields = selectedCollection?.fields.filter((target) => (
+                      isBooleanSubmissionField(field) ? target.type === 'boolean' : target.type !== 'boolean'
+                    )) ?? [];
+                    return (
+                      <div key={field.id} className={`behavior-field-card ${selectedField ? 'is-selected' : ''}`}>
+                        <label className="flex items-center gap-3 text-sm font-semibold text-slate-800">
+                          <input
+                            type="checkbox"
+                            className="inspector-toggle"
+                            checked={Boolean(selectedField)}
+                            onChange={(event) => updateSubmitField(field.id, event.currentTarget.checked)}
+                          />
+                          <span className="min-w-0 flex-1 truncate">{getSubmissionFieldLabel(field)}</span>
+                          <span className="behavior-field-type">
+                            {isBooleanSubmissionField(field) ? 'Yes / No' : 'Text'}
+                          </span>
+                        </label>
+                        {selectedField && selectedCollection ? (
+                          <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3">
+                            <FieldLabel>Update field</FieldLabel>
+                            <select
+                              className="inspector-input"
+                              value={selectedField.targetFieldKey ?? ''}
+                              onChange={(event) => updateSubmitFieldTarget(field.id, event.currentTarget.value)}
+                            >
+                              <option value="">Choose a collection field...</option>
+                              {compatibleCollectionFields.map((target) => (
+                                <option key={target.id} value={target.key}>
+                                  {target.label} ({friendlyFieldType(target.type)})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <Notice tone="warning">
+                  Add an editable Text, Checkbox, or Toggle block to this page first.
+                </Notice>
+              )}
+
+              {selectedCollection && selectedSubmitFields.length > 0 ? (
+                <button type="button" className="ghost-btn !justify-center !px-3 !py-2 text-xs" onClick={remapSubmissionFields}>
+                  Map fields automatically
+                </button>
+              ) : null}
+            </BehaviorStep>
+
+            <BehaviorStep number="3" title="Choose the success feedback">
+              <FieldLabel>Message shown after updating</FieldLabel>
+              <TextInput
+                placeholder="Your changes were saved."
+                {...register('successMessage', { onChange: clearError })}
+              />
+            </BehaviorStep>
+          </>
+        ) : null}
+
+        {allowDataActions && actionType === 'deleteCurrentUserRecord' ? (
+          <BehaviorStep number="1" title="Choose the saved data to delete">
+            <FieldLabel>Collection</FieldLabel>
+            <select className="inspector-input" {...register('action.collectionId', { onChange: clearError })}>
+              <option value="">Select a collection...</option>
+              {selectedCollectionId && !dataCollections.some((collection) => collection.id === selectedCollectionId) ? (
+                <option value={selectedCollectionId}>Missing collection</option>
+              ) : null}
+              {deleteCollections.map((collection) => (
+                <option key={collection.id} value={collection.id}>{collection.name}</option>
+              ))}
+            </select>
+            <Notice tone="warning">
+              The app will ask for confirmation, then permanently delete the signed-in user&apos;s newest record.
+            </Notice>
+            {deleteCollections.length === 0 ? (
+              <Notice tone="warning">
+                In the Data workspace, enable own-record reads and deletes for a collection first.
+              </Notice>
+            ) : null}
+          </BehaviorStep>
+        ) : null}
+
         {allowDataActions && (actionType === 'signUpAppUser' || actionType === 'loginAppUser') ? (
           <BehaviorStep number="1" title="Connect the account fields">
             {actionType === 'signUpAppUser' ? (
@@ -577,6 +745,23 @@ function getBehaviorSummary(
       submissionFields.some((candidate) => candidate.id === field.fieldBlockId)
     )).length;
     return `Saves ${validSelectedCount} ${validSelectedCount === 1 ? 'input' : 'inputs'} to ${destination}.`;
+  }
+
+  if (actionType === 'updateCurrentUserRecord') {
+    const selected = normalizeFieldRefs(rawAction?.fields);
+    const collectionId = readString(rawAction?.collectionId);
+    const collection = dataCollections.find((candidate) => candidate.id === collectionId);
+    return collection
+      ? `Updates ${selected.length} ${selected.length === 1 ? 'field' : 'fields'} on the signed-in user's newest ${collection.name} record.`
+      : 'Choose which collection record should be updated.';
+  }
+
+  if (actionType === 'deleteCurrentUserRecord') {
+    const collectionId = readString(rawAction?.collectionId);
+    const collection = dataCollections.find((candidate) => candidate.id === collectionId);
+    return collection
+      ? `Deletes the signed-in user's newest ${collection.name} record after confirmation.`
+      : 'Choose which collection record should be deleted.';
   }
 
   if (actionType === 'signUpAppUser') return 'Creates an account using connected email and password inputs.';

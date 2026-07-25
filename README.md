@@ -25,7 +25,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Page-scoped variables plus latest, creator-selected, or signed-in-user-owned collection records can drive Text and Hero content through schema-backed bindings in web and Android preview
 - Button, Icon, and Image actions can update page-scoped text variables from fixed values or live editable-Text values in web and Android preview
 - Lightweight primitive blocks: Text, Button, Shape, Badge, Icon, Image, Progress Bar, Form, Checkbox, Toggle, and Container
-- Button supports no action, page navigation, hosted-data submission, generated-app signup/login/logout, safe external URLs, or page-variable updates through the shared block-action contract
+- Button supports no action, page navigation, hosted-data submission, signed-in-user record updates/deletes, generated-app signup/login/logout, safe external URLs, or page-variable updates through the shared block-action contract
 - Icon and Image can optionally run shared Navigate, Open URL, or Set Page Variable actions in web and Android preview
 - Image supports pasted URLs and uploaded files stored through backend asset storage, with fit, focal-point, border, radius, and opacity controls
 - Text blocks can remain display-only or become single-line/multiline app inputs while preserving the same block identity, bindings, and styling model

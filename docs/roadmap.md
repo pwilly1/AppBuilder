@@ -26,7 +26,7 @@ This roadmap tracks completed foundations, current priorities, and future work.
 | Completed | Grid-based layout model | Canonical placement uses `layout.grid`; render metadata uses `render`. |
 | Completed | Web preview | Preview mode renders project pages without editor controls. |
 | Completed | Android preview foundation | Kotlin/Compose app can load backend projects and render schema data. |
-| Completed | Shared action foundation | Button, Icon, and Image consume applicable schema-backed Navigate, Submit Data, Open URL, and Set Page Variable actions across web and Android. |
+| Completed | Shared action foundation | Button, Icon, and Image consume applicable schema-backed navigation, submission, current-user record mutation, URL, and page-variable actions across web and Android. |
 | Completed | Generated-app identity foundation | Project-scoped app-user signup/login/logout, separate runtime JWTs, and authenticated submission ownership work in web and Android preview. |
 | Completed | Azure deployment | Frontend and backend are deployed with GitHub Actions. |
 
@@ -164,7 +164,7 @@ These are important to the long-term product vision but should wait until the ed
 | Planned | Page parameters and app-state actions. |
 | Completed | Direct Text/Hero bindings to the latest public record, one creator-selected public record, or the signed-in user's newest owned record, with safe fallback in web and Android. |
 | Planned | Record selectors driven by filters, sorting, and end-user selection. |
-| In Progress | Record update/delete: builder and generated-app owner-scoped APIs are complete; block actions are still planned. |
+| Completed | Record update/delete: Button can update or confirm deletion of the signed-in user's newest owned record in web and Android using owner-scoped APIs. |
 | In Progress | Generated app user accounts; signup/login/logout and stable identity are complete, while profiles and password recovery remain. |
 | Completed | Collection access rules for runtime create/read/update/delete plus owner-scoped backend enforcement and web/Android clients. |
 

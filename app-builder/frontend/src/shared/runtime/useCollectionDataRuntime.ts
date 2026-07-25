@@ -4,6 +4,7 @@ import {
   getLatestPublicCollectionRecord,
   getPublicCollectionRecord,
   listCurrentAppUserCollectionRecords,
+  subscribeToAppDataChanges,
   subscribeToAppUserSession,
 } from '../../api'
 import type { AppDataCollection, Page } from '../schema/types'
@@ -24,11 +25,19 @@ export function useCollectionDataRuntime({
 }: Options): Record<string, RuntimeDataState> {
   const [collectionData, setCollectionData] = useState<Record<string, RuntimeDataState>>({})
   const [appUserSessionRevision, setAppUserSessionRevision] = useState(0)
+  const [appDataRevision, setAppDataRevision] = useState(0)
 
   useEffect(() => {
     if (!projectId) return
     return subscribeToAppUserSession(projectId, () => {
       setAppUserSessionRevision((revision) => revision + 1)
+    })
+  }, [projectId])
+
+  useEffect(() => {
+    if (!projectId) return
+    return subscribeToAppDataChanges(projectId, () => {
+      setAppDataRevision((revision) => revision + 1)
     })
   }, [projectId])
 
@@ -81,7 +90,7 @@ export function useCollectionDataRuntime({
     })
 
     return () => { active = false }
-  }, [appUserSessionRevision, dataCollections, enabled, page, projectId])
+  }, [appDataRevision, appUserSessionRevision, dataCollections, enabled, page, projectId])
 
   return collectionData
 }

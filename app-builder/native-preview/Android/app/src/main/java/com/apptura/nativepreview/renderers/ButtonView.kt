@@ -1,5 +1,6 @@
 package com.apptura.nativepreview.renderers
 
+import android.app.AlertDialog
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,6 +38,9 @@ fun ButtonView(
     val label = (block.props["label"] as? JsonPrimitive)?.content ?: "Button"
     val action = resolveBlockAction(block)
     val submitAction = action as? BlockAction.SubmitData
+    val updateAction = action as? BlockAction.UpdateCurrentUserRecord
+    val deleteAction = action as? BlockAction.DeleteCurrentUserRecord
+    val isRecordMutationAction = updateAction != null || deleteAction != null
     val isAppAuthAction = action is BlockAction.SignUpAppUser
         || action is BlockAction.LoginAppUser
         || action is BlockAction.LogoutAppUser
@@ -54,15 +58,126 @@ fun ButtonView(
         && submitAction.fields.isNotEmpty()
         && (submitAction.collectionId == null || submitAction.fields.all { !it.targetFieldKey.isNullOrBlank() })
     val canSubmit = submitFieldsConfigured && !projectId.isNullOrBlank() && !baseUrl.isNullOrBlank() && formRuntime != null
+    val updateFieldsConfigured = updateAction != null
+        && updateAction.collectionId.isNotBlank()
+        && updateAction.fields.isNotEmpty()
+        && updateAction.fields.all { !it.targetFieldKey.isNullOrBlank() }
+    val canMutate = isRecordMutationAction
+        && !projectId.isNullOrBlank()
+        && !baseUrl.isNullOrBlank()
+        && (deleteAction != null || (updateFieldsConfigured && formRuntime != null))
     val canAuthenticate = isAppAuthAction
         && !projectId.isNullOrBlank()
         && !baseUrl.isNullOrBlank()
         && (action is BlockAction.LogoutAppUser || formRuntime != null)
-    val showsStatus = submitAction != null || isAppAuthAction
+    val showsStatus = submitAction != null || isRecordMutationAction || isAppAuthAction
+    val isAsyncAction = submitAction != null || isRecordMutationAction || isAppAuthAction
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember(block.id) { mutableStateOf(ButtonStatus.IDLE) }
     var errorMessage by remember(block.id) { mutableStateOf("") }
+    val runAsyncAction = {
+        if (projectId != null && baseUrl != null) {
+            status = ButtonStatus.SUBMITTING
+            errorMessage = ""
+            scope.launch {
+                try {
+                    when (action) {
+                        is BlockAction.SubmitData -> {
+                            ProjectLoader.submitPublicAppDataRecord(
+                                baseUrl = baseUrl,
+                                projectId = projectId,
+                                sourceId = block.id,
+                                values = requireNotNull(formRuntime).getFieldValues(action.fields),
+                                appUserToken = RuntimeAppUserSessionStore.getToken(context, projectId),
+                            )
+                            runtimeContext.refreshCollectionData()
+                        }
+                        is BlockAction.UpdateCurrentUserRecord -> {
+                            val token = RuntimeAppUserSessionStore.getToken(context, projectId)
+                                ?: throw IllegalStateException("Sign in before changing saved data.")
+                            val record = ProjectLoader.listCurrentAppUserCollectionRecords(
+                                baseUrl = baseUrl,
+                                projectId = projectId,
+                                collectionId = action.collectionId,
+                                appUserToken = token,
+                            ).firstOrNull() ?: throw IllegalStateException("No saved data was found for this app user.")
+                            ProjectLoader.updateCurrentAppUserCollectionRecord(
+                                baseUrl = baseUrl,
+                                projectId = projectId,
+                                collectionId = action.collectionId,
+                                recordId = record.id,
+                                values = requireNotNull(formRuntime).getFieldValues(action.fields),
+                                appUserToken = token,
+                            )
+                            runtimeContext.refreshCollectionData()
+                        }
+                        is BlockAction.DeleteCurrentUserRecord -> {
+                            val token = RuntimeAppUserSessionStore.getToken(context, projectId)
+                                ?: throw IllegalStateException("Sign in before changing saved data.")
+                            val record = ProjectLoader.listCurrentAppUserCollectionRecords(
+                                baseUrl = baseUrl,
+                                projectId = projectId,
+                                collectionId = action.collectionId,
+                                appUserToken = token,
+                            ).firstOrNull() ?: throw IllegalStateException("No saved data was found for this app user.")
+                            ProjectLoader.deleteCurrentAppUserCollectionRecord(
+                                baseUrl = baseUrl,
+                                projectId = projectId,
+                                collectionId = action.collectionId,
+                                recordId = record.id,
+                                appUserToken = token,
+                            )
+                            runtimeContext.refreshCollectionData()
+                        }
+                        is BlockAction.SignUpAppUser -> {
+                            val runtime = requireNotNull(formRuntime)
+                            val email = runtime.getString(action.emailFieldBlockId)?.trim().orEmpty()
+                            val password = runtime.getString(action.passwordFieldBlockId).orEmpty()
+                            if (email.isBlank() || password.isBlank()) {
+                                throw IllegalArgumentException("Enter an email and password.")
+                            }
+                            val displayName = action.displayNameFieldBlockId
+                                ?.let(runtime::getString)
+                                ?.trim()
+                                .orEmpty()
+                            val result = ProjectLoader.signupRuntimeAppUser(
+                                baseUrl = baseUrl,
+                                projectId = projectId,
+                                displayName = displayName,
+                                email = email,
+                                password = password,
+                            )
+                            RuntimeAppUserSessionStore.setToken(context, projectId, result.token)
+                        }
+                        is BlockAction.LoginAppUser -> {
+                            val runtime = requireNotNull(formRuntime)
+                            val email = runtime.getString(action.emailFieldBlockId)?.trim().orEmpty()
+                            val password = runtime.getString(action.passwordFieldBlockId).orEmpty()
+                            if (email.isBlank() || password.isBlank()) {
+                                throw IllegalArgumentException("Enter an email and password.")
+                            }
+                            val result = ProjectLoader.loginRuntimeAppUser(
+                                baseUrl = baseUrl,
+                                projectId = projectId,
+                                email = email,
+                                password = password,
+                            )
+                            RuntimeAppUserSessionStore.setToken(context, projectId, result.token)
+                        }
+                        BlockAction.LogoutAppUser -> {
+                            RuntimeAppUserSessionStore.clear(context, projectId)
+                        }
+                        else -> Unit
+                    }
+                    status = ButtonStatus.SUCCESS
+                } catch (error: Exception) {
+                    status = ButtonStatus.ERROR
+                    errorMessage = error.message ?: "Action failed."
+                }
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -72,76 +187,27 @@ fun ButtonView(
         Button(
             enabled = when {
                 submitAction != null -> canSubmit && status != ButtonStatus.SUBMITTING
+                isRecordMutationAction -> canMutate && status != ButtonStatus.SUBMITTING
                 isAppAuthAction -> canAuthenticate && status != ButtonStatus.SUBMITTING
                 else -> true
             },
             onClick = {
-                if (submitAction == null && !isAppAuthAction) {
+                if (!isAsyncAction) {
                     action?.let { executeBlockTapAction(context, it, onNavigate, runtimeContext, formRuntime) }
                     return@Button
                 }
-                if (projectId == null || baseUrl == null) return@Button
-                if (submitAction != null && (!canSubmit || formRuntime == null)) return@Button
+                if (submitAction != null && !canSubmit) return@Button
+                if (isRecordMutationAction && !canMutate) return@Button
                 if (isAppAuthAction && !canAuthenticate) return@Button
-                status = ButtonStatus.SUBMITTING
-                errorMessage = ""
-                scope.launch {
-                    try {
-                        when (action) {
-                            is BlockAction.SubmitData -> {
-                                ProjectLoader.submitPublicAppDataRecord(
-                                    baseUrl = baseUrl,
-                                    projectId = projectId,
-                                    sourceId = block.id,
-                                    values = requireNotNull(formRuntime).getFieldValues(action.fields),
-                                    appUserToken = RuntimeAppUserSessionStore.getToken(context, projectId),
-                                )
-                            }
-                            is BlockAction.SignUpAppUser -> {
-                                val runtime = requireNotNull(formRuntime)
-                                val email = runtime.getString(action.emailFieldBlockId)?.trim().orEmpty()
-                                val password = runtime.getString(action.passwordFieldBlockId).orEmpty()
-                                if (email.isBlank() || password.isBlank()) {
-                                    throw IllegalArgumentException("Enter an email and password.")
-                                }
-                                val displayName = action.displayNameFieldBlockId
-                                    ?.let(runtime::getString)
-                                    ?.trim()
-                                    .orEmpty()
-                                val result = ProjectLoader.signupRuntimeAppUser(
-                                    baseUrl = baseUrl,
-                                    projectId = projectId,
-                                    displayName = displayName,
-                                    email = email,
-                                    password = password,
-                                )
-                                RuntimeAppUserSessionStore.setToken(context, projectId, result.token)
-                            }
-                            is BlockAction.LoginAppUser -> {
-                                val runtime = requireNotNull(formRuntime)
-                                val email = runtime.getString(action.emailFieldBlockId)?.trim().orEmpty()
-                                val password = runtime.getString(action.passwordFieldBlockId).orEmpty()
-                                if (email.isBlank() || password.isBlank()) {
-                                    throw IllegalArgumentException("Enter an email and password.")
-                                }
-                                val result = ProjectLoader.loginRuntimeAppUser(
-                                    baseUrl = baseUrl,
-                                    projectId = projectId,
-                                    email = email,
-                                    password = password,
-                                )
-                                RuntimeAppUserSessionStore.setToken(context, projectId, result.token)
-                            }
-                            BlockAction.LogoutAppUser -> {
-                                RuntimeAppUserSessionStore.clear(context, projectId)
-                            }
-                            else -> Unit
-                        }
-                        status = ButtonStatus.SUCCESS
-                    } catch (error: Exception) {
-                        status = ButtonStatus.ERROR
-                        errorMessage = error.message ?: "Action failed."
-                    }
+                if (deleteAction != null) {
+                    AlertDialog.Builder(context)
+                        .setTitle("Delete saved data?")
+                        .setMessage("This permanently deletes your newest saved record.")
+                        .setNegativeButton("Cancel", null)
+                        .setPositiveButton("Delete") { _, _ -> runAsyncAction() }
+                        .show()
+                } else {
+                    runAsyncAction()
                 }
             },
             contentPadding = PaddingValues(
@@ -162,6 +228,8 @@ fun ButtonView(
                         is BlockAction.SignUpAppUser -> "Creating account..."
                         is BlockAction.LoginAppUser -> "Signing in..."
                         BlockAction.LogoutAppUser -> "Signing out..."
+                        is BlockAction.UpdateCurrentUserRecord -> "Updating..."
+                        is BlockAction.DeleteCurrentUserRecord -> "Deleting..."
                         else -> "Submitting..."
                     }
                 } else {
@@ -178,6 +246,12 @@ fun ButtonView(
                     is BlockAction.SignUpAppUser -> "Account created."
                     is BlockAction.LoginAppUser -> "Signed in."
                     BlockAction.LogoutAppUser -> "Signed out."
+                    is BlockAction.UpdateCurrentUserRecord -> if (successMessage == "Submission received.") {
+                        "Changes saved."
+                    } else {
+                        successMessage
+                    }
+                    is BlockAction.DeleteCurrentUserRecord -> "Data deleted."
                     else -> successMessage
                 },
                 fontSize = previewSp(12f),

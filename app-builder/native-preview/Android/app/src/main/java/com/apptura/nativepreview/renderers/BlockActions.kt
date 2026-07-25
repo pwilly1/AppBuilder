@@ -15,6 +15,11 @@ data class SubmitDataFieldRef(val fieldBlockId: String, val targetFieldKey: Stri
 sealed interface BlockAction {
     data class Navigate(val targetPageId: String) : BlockAction
     data class SubmitData(val fields: List<SubmitDataFieldRef>, val collectionId: String? = null) : BlockAction
+    data class UpdateCurrentUserRecord(
+        val collectionId: String,
+        val fields: List<SubmitDataFieldRef>,
+    ) : BlockAction
+    data class DeleteCurrentUserRecord(val collectionId: String) : BlockAction
     data class OpenUrl(val url: String) : BlockAction
     data class SetPageState(val variableId: String, val value: RuntimeValueRef) : BlockAction
     data class SignUpAppUser(
@@ -36,6 +41,13 @@ fun resolveBlockAction(block: Block): BlockAction? {
         "submitData" -> return BlockAction.SubmitData(
             fields = action.submitFields(),
             collectionId = action.stringValue("collectionId").ifBlank { null },
+        )
+        "updateCurrentUserRecord" -> return BlockAction.UpdateCurrentUserRecord(
+            collectionId = action.stringValue("collectionId"),
+            fields = action.submitFields(),
+        )
+        "deleteCurrentUserRecord" -> return BlockAction.DeleteCurrentUserRecord(
+            collectionId = action.stringValue("collectionId"),
         )
         "openUrl" -> return BlockAction.OpenUrl(action.stringValue("url"))
         "setPageState" -> return BlockAction.SetPageState(
@@ -61,6 +73,10 @@ fun isTapActionConfigured(action: BlockAction?): Boolean = when (action) {
     is BlockAction.Navigate -> action.targetPageId.isNotBlank()
     is BlockAction.OpenUrl -> isSupportedExternalUrl(action.url)
     is BlockAction.SetPageState -> action.variableId.isNotBlank()
+    is BlockAction.UpdateCurrentUserRecord -> action.collectionId.isNotBlank()
+        && action.fields.isNotEmpty()
+        && action.fields.all { !it.targetFieldKey.isNullOrBlank() }
+    is BlockAction.DeleteCurrentUserRecord -> action.collectionId.isNotBlank()
     is BlockAction.SignUpAppUser -> action.emailFieldBlockId.isNotBlank()
         && action.passwordFieldBlockId.isNotBlank()
     is BlockAction.LoginAppUser -> action.emailFieldBlockId.isNotBlank()
@@ -87,6 +103,8 @@ fun executeBlockTapAction(
             }
         }
         is BlockAction.SubmitData -> Unit
+        is BlockAction.UpdateCurrentUserRecord,
+        is BlockAction.DeleteCurrentUserRecord -> Unit
         is BlockAction.SetPageState -> {
             if (action.variableId.isNotBlank()) {
                 runtimeContext.setPageState(

@@ -81,6 +81,34 @@ export function validateBehaviorDraft(
     }
   }
 
+  if (action.type === 'updateCurrentUserRecord') {
+    if (!allowDataActions) return 'This block cannot update app data.';
+    const collection = dataCollections.find((candidate) => candidate.id === action.collectionId);
+    if (!collection) return 'Choose the collection whose newest signed-in-user record should be updated.';
+    const access = resolveCollectionAccess(collection);
+    if (access.read !== 'own' && access.read !== 'public') {
+      return 'The selected collection must allow app users to read their own records.';
+    }
+    if (access.update !== 'own') {
+      return 'Enable own-record updates for this collection in the Data workspace.';
+    }
+    const fieldError = validateMappedFields(action.fields, block, pageBlocks, collection);
+    if (fieldError) return fieldError;
+  }
+
+  if (action.type === 'deleteCurrentUserRecord') {
+    if (!allowDataActions) return 'This block cannot delete app data.';
+    const collection = dataCollections.find((candidate) => candidate.id === action.collectionId);
+    if (!collection) return 'Choose the collection whose newest signed-in-user record should be deleted.';
+    const access = resolveCollectionAccess(collection);
+    if (access.read !== 'own' && access.read !== 'public') {
+      return 'The selected collection must allow app users to read their own records.';
+    }
+    if (access.delete !== 'own') {
+      return 'Enable own-record deletes for this collection in the Data workspace.';
+    }
+  }
+
   if (action.type === 'signUpAppUser' || action.type === 'loginAppUser') {
     if (!allowDataActions) return 'This block cannot manage app-user accounts.';
     const editableFieldIds = new Set(getAvailableEditableTextFields(block, pageBlocks).map((field) => field.id));
@@ -221,6 +249,8 @@ export function readActionType(value: unknown): ActionType {
   if (
     type === 'navigate'
     || type === 'submitData'
+    || type === 'updateCurrentUserRecord'
+    || type === 'deleteCurrentUserRecord'
     || type === 'openUrl'
     || type === 'setPageState'
     || type === 'signUpAppUser'
@@ -230,6 +260,49 @@ export function readActionType(value: unknown): ActionType {
     return type;
   }
   return '';
+}
+
+function validateMappedFields(
+  fields: SubmitDataFieldRef[],
+  block: Block,
+  pageBlocks: Block[],
+  collection: AppDataCollection,
+) {
+  const availableFields = getAvailableSubmissionFields(block, pageBlocks);
+  const availableFieldsById = new Map(availableFields.map((field) => [field.id, field]));
+  if (fields.length === 0) return 'Select at least one input to update.';
+  if (fields.some((field) => !availableFieldsById.has(field.fieldBlockId))) {
+    return 'One selected input is missing or is no longer available to this button.';
+  }
+  if (fields.some((field) => !field.targetFieldKey)) {
+    return 'Choose a collection field for every selected input.';
+  }
+  const targetKeys = fields.map((field) => field.targetFieldKey as string);
+  if (new Set(targetKeys).size !== targetKeys.length) {
+    return 'Each selected input must update a different collection field.';
+  }
+  for (const field of fields) {
+    const source = availableFieldsById.get(field.fieldBlockId);
+    const target = collection.fields.find((candidate) => candidate.key === field.targetFieldKey);
+    if (!target) return 'One selected collection field no longer exists.';
+    if (source && isBooleanSubmissionField(source) !== (target.type === 'boolean')) {
+      return `${getSubmissionFieldLabel(source)} is mapped to an incompatible collection field.`;
+    }
+  }
+  return null;
+}
+
+export function resolveCollectionAccess(collection: AppDataCollection) {
+  return {
+    create: collection.access?.create === 'authenticated' ? 'authenticated' as const : 'anyone' as const,
+    read: collection.access?.read === 'public'
+      || collection.access?.read === 'own'
+      || collection.access?.read === 'none'
+      ? collection.access.read
+      : collection.publicRead ? 'public' as const : 'none' as const,
+    update: collection.access?.update === 'own' ? 'own' as const : 'none' as const,
+    delete: collection.access?.delete === 'own' ? 'own' as const : 'none' as const,
+  };
 }
 
 export function readString(value: unknown) {

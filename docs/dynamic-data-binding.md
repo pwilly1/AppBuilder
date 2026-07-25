@@ -23,12 +23,13 @@ Implemented:
 - matching web and Android schema/runtime behavior
 - collection create/read/update/delete access rules
 - generated-app owner-scoped record list/update/delete APIs with web and Android clients
+- Button actions that update or confirm deletion of the signed-in user's newest owned record
 
 Not implemented:
 
 - end-user-selected records and record selection passed through navigation
 - filters, sorting, or arbitrary collection queries
-- generated-app record update/delete block actions
+- arbitrary end-user-selected record update/delete actions
 - formulas, conditional visibility, or a general expression language
 
 ## Core Rules
@@ -264,6 +265,8 @@ Current actions are:
 ```text
 navigate
 submitData
+updateCurrentUserRecord
+deleteCurrentUserRecord
 openUrl
 setPageState
 ```
@@ -272,7 +275,7 @@ setPageState
 
 `submitData` explicitly lists the field block IDs it submits. When it targets a project collection, those values are stored under the collection's stable field keys.
 
-Bindings do not submit or mutate data. A future `createRecord`, `updateRecord`, or `deleteRecord` capability belongs in the action system.
+`updateCurrentUserRecord` maps live same-page fields to collection keys and updates the signed-in user's newest owned record. `deleteCurrentUserRecord` confirms before deleting that newest owned record. Both require a readable own-record collection plus the matching own update/delete policy. Bindings remain read-only; mutations belong in the action system.
 
 ## Record Selection Boundary
 
@@ -303,6 +306,7 @@ Both runtimes must:
 - deduplicate collection-and-selector requests
 - call the matching latest-record, specific-record, or owner-scoped route
 - refresh current-user bindings after generated-app login or logout
+- refresh affected collection bindings after successful submission, update, or deletion
 - map stored field keys to stable field IDs
 - render boolean values consistently as `Yes` or `No`
 - preserve static fallback for loading, empty, missing, and error states

@@ -19,6 +19,7 @@ function appUserTokenKey(projectId: string) {
 
 type AppUserSessionListener = () => void;
 const appUserSessionListeners = new Map<string, Set<AppUserSessionListener>>();
+const appDataListeners = new Map<string, Set<AppUserSessionListener>>();
 
 export function getAppUserToken(projectId: string): string | null {
   return localStorage.getItem(appUserTokenKey(projectId));
@@ -45,8 +46,23 @@ export function subscribeToAppUserSession(projectId: string, listener: AppUserSe
   };
 }
 
+export function subscribeToAppDataChanges(projectId: string, listener: AppUserSessionListener) {
+  const listeners = appDataListeners.get(projectId) ?? new Set<AppUserSessionListener>();
+  listeners.add(listener);
+  appDataListeners.set(projectId, listeners);
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) appDataListeners.delete(projectId);
+  };
+}
+
 function notifyAppUserSessionChanged(projectId: string) {
   for (const listener of appUserSessionListeners.get(projectId) ?? []) listener();
+}
+
+function notifyAppDataChanged(projectId: string) {
+  for (const listener of appDataListeners.get(projectId) ?? []) listener();
 }
 
 async function request(path: string, options: RequestInit = {}) {
@@ -283,15 +299,17 @@ export function logoutRuntimeAppUser(projectId: string) {
   clearAppUserToken(projectId);
 }
 
-export function submitPublicAppDataRecord(
+export async function submitPublicAppDataRecord(
   projectId: string,
   sourceId: string,
   data: Record<string, string | boolean | undefined>
 ) {
-  return runtimeRequest(projectId, `/public/projects/${projectId}/app-data/sources/${sourceId}/records`, {
+  const record = await runtimeRequest(projectId, `/public/projects/${projectId}/app-data/sources/${sourceId}/records`, {
     method: 'POST',
     body: JSON.stringify(data),
   });
+  notifyAppDataChanged(projectId);
+  return record;
 }
 
 export function submitPublicProjectForm(
@@ -347,29 +365,32 @@ export function listCurrentAppUserCollectionRecords(projectId: string, collectio
   ) as Promise<ProjectAppDataRecord[]>;
 }
 
-export function updateCurrentAppUserCollectionRecord(
+export async function updateCurrentAppUserCollectionRecord(
   projectId: string,
   collectionId: string,
   recordId: string,
   data: Record<string, string | boolean | undefined>,
 ) {
-  return runtimeRequest(
+  const record = await runtimeRequest(
     projectId,
     `/public/projects/${projectId}/app-data/collections/${collectionId}/records/${recordId}`,
     { method: 'PATCH', body: JSON.stringify(data) },
-  ) as Promise<ProjectAppDataRecord>;
+  ) as ProjectAppDataRecord;
+  notifyAppDataChanged(projectId);
+  return record;
 }
 
-export function deleteCurrentAppUserCollectionRecord(
+export async function deleteCurrentAppUserCollectionRecord(
   projectId: string,
   collectionId: string,
   recordId: string,
 ) {
-  return runtimeRequest(
+  await runtimeRequest(
     projectId,
     `/public/projects/${projectId}/app-data/collections/${collectionId}/records/${recordId}`,
     { method: 'DELETE' },
-  ) as Promise<null>;
+  );
+  notifyAppDataChanged(projectId);
 }
 
 export function exportProjectAppDataCsv(projectId: string, sourceId: string) {

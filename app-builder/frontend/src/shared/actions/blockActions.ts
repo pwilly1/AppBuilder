@@ -16,6 +16,19 @@ export function normalizeBlockAction(value: unknown): BlockAction | null {
       ...(collectionId ? { collectionId } : {}),
     }
   }
+  if (action.type === 'updateCurrentUserRecord') {
+    return {
+      type: 'updateCurrentUserRecord',
+      collectionId: readString(action.collectionId),
+      fields: normalizeSubmitFields(action.fields),
+    }
+  }
+  if (action.type === 'deleteCurrentUserRecord') {
+    return {
+      type: 'deleteCurrentUserRecord',
+      collectionId: readString(action.collectionId),
+    }
+  }
   if (action.type === 'openUrl') {
     return { type: 'openUrl', url: readString(action.url) }
   }
@@ -63,6 +76,14 @@ export function isActionConfigured(action: BlockAction | null | undefined): bool
     return action.fields.length > 0
       && (!action.collectionId || action.fields.every((field) => Boolean(field.targetFieldKey)))
   }
+  if (action.type === 'updateCurrentUserRecord') {
+    return Boolean(
+      action.collectionId.trim()
+      && action.fields.length > 0
+      && action.fields.every((field) => Boolean(field.targetFieldKey)),
+    )
+  }
+  if (action.type === 'deleteCurrentUserRecord') return Boolean(action.collectionId.trim())
   if (action.type === 'openUrl') return isSupportedExternalUrl(action.url)
   if (action.type === 'setPageState') return Boolean(action.variableId.trim())
   if (action.type === 'signUpAppUser' || action.type === 'loginAppUser') {

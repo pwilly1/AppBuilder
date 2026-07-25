@@ -637,3 +637,20 @@ Representative areas:
 
 - `frontend/src/demo/demoProject.ts`
 - `backend/test/demoProject.test.ts`
+
+## Phase 35: Generated-App Record Mutation Actions
+
+Date range: July 2026
+
+Button gained guided Update Data and Delete Data behaviors for records owned by the signed-in generated-app user. The first mutation scope intentionally targets only that user's newest record in a selected collection. Update Data maps same-page editable Text, Checkbox, and Toggle values to stable collection field keys; Delete Data requires explicit confirmation before removing the record.
+
+Web and Android use the existing generated-app session and owner-scoped APIs, so clients never choose or submit an ownership ID. The Behavior Builder validates compatible read/update/delete collection policies and field mappings before saving. Successful submissions and mutations now invalidate collection data so current-user-bound Text and Hero content refresh without leaving the page.
+
+Representative areas:
+
+- `frontend/src/components/BehaviorBuilder.tsx`
+- `frontend/src/shared/actions/webActionExecutor.ts`
+- `frontend/src/shared/runtime/useCollectionDataRuntime.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
+- `backend/test/runtimeContracts.test.ts`

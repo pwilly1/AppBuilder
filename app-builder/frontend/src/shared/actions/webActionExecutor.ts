@@ -1,8 +1,12 @@
 import {
+  deleteCurrentAppUserCollectionRecord,
+  getAppUserToken,
+  listCurrentAppUserCollectionRecords,
   loginRuntimeAppUser,
   logoutRuntimeAppUser,
   signupRuntimeAppUser,
   submitPublicAppDataRecord,
+  updateCurrentAppUserCollectionRecord,
 } from '../../api'
 import type { FormRuntimeContextValue } from '../blocks/formRuntime'
 import type { BlockAction } from '../schema/types'
@@ -69,6 +73,28 @@ export async function executeWebBlockAction(action: BlockAction, context: WebAct
       ? readFieldString(context, action.displayNameFieldBlockId)
       : ''
     await signupRuntimeAppUser(context.projectId, { displayName, email, password })
+    return
+  }
+
+  if (action.type === 'updateCurrentUserRecord' || action.type === 'deleteCurrentUserRecord') {
+    if (!context.projectId) throw new Error('Save the project before changing app data.')
+    if (!getAppUserToken(context.projectId)) throw new Error('Sign in before changing saved data.')
+    const records = await listCurrentAppUserCollectionRecords(context.projectId, action.collectionId)
+    const record = records[0]
+    if (!record) throw new Error('No saved data was found for this app user.')
+
+    if (action.type === 'deleteCurrentUserRecord') {
+      await deleteCurrentAppUserCollectionRecord(context.projectId, action.collectionId, record.id)
+      return
+    }
+
+    const values = context.formRuntime?.getFieldValues(action.fields) || {}
+    await updateCurrentAppUserCollectionRecord(
+      context.projectId,
+      action.collectionId,
+      record.id,
+      values,
+    )
     return
   }
 

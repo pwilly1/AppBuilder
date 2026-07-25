@@ -24,6 +24,7 @@ import {
   normalizePageAccess,
   resolvePageAccess,
 } from '../../frontend/src/shared/runtime/pageAccess.js'
+import { validateBehaviorDraft } from '../../frontend/src/components/behaviorBuilderUtils.js'
 
 test('page background colors normalize to portable six-digit hex values', () => {
   assert.equal(normalizePageBackgroundColor('#EFF6FF'), '#eff6ff')
@@ -352,6 +353,22 @@ test('block actions normalize each supported action contract', () => {
     fields: [{ fieldBlockId: 'input-1', targetFieldKey: 'email' }],
     collectionId: 'records',
   })
+  assert.deepEqual(normalizeBlockAction({
+    type: 'updateCurrentUserRecord',
+    collectionId: ' profiles ',
+    fields: [{ fieldBlockId: ' name-input ', targetFieldKey: ' displayName ' }],
+  }), {
+    type: 'updateCurrentUserRecord',
+    collectionId: 'profiles',
+    fields: [{ fieldBlockId: 'name-input', targetFieldKey: 'displayName' }],
+  })
+  assert.deepEqual(normalizeBlockAction({
+    type: 'deleteCurrentUserRecord',
+    collectionId: ' profiles ',
+  }), {
+    type: 'deleteCurrentUserRecord',
+    collectionId: 'profiles',
+  })
   assert.deepEqual(normalizeBlockAction({ type: 'openUrl', url: ' https://example.com ' }), {
     type: 'openUrl',
     url: 'https://example.com',
@@ -383,11 +400,84 @@ test('configured action checks reject incomplete and unsafe actions', () => {
     fields: [{ fieldBlockId: 'input-1', targetFieldKey: 'email' }],
     collectionId: 'records',
   }), true)
+  assert.equal(isActionConfigured({
+    type: 'updateCurrentUserRecord',
+    collectionId: 'profiles',
+    fields: [{ fieldBlockId: 'name-input' }],
+  }), false)
+  assert.equal(isActionConfigured({
+    type: 'updateCurrentUserRecord',
+    collectionId: 'profiles',
+    fields: [{ fieldBlockId: 'name-input', targetFieldKey: 'displayName' }],
+  }), true)
+  assert.equal(isActionConfigured({ type: 'deleteCurrentUserRecord', collectionId: '' }), false)
+  assert.equal(isActionConfigured({ type: 'deleteCurrentUserRecord', collectionId: 'profiles' }), true)
   assert.equal(isActionConfigured({ type: 'openUrl', url: 'javascript:alert(1)' }), false)
   assert.equal(isActionConfigured({ type: 'openUrl', url: 'https://example.com' }), true)
   assert.equal(isSupportedExternalUrl('http://localhost:5173'), true)
   assert.equal(isSupportedExternalUrl('mailto:test@example.com'), false)
   assert.equal(isSupportedExternalUrl('not a url'), false)
+})
+
+test('record mutation behaviors require compatible fields and owner-scoped collection policies', () => {
+  const button: Block = {
+    id: 'update-button',
+    type: 'button',
+    props: {},
+  }
+  const nameInput: Block = {
+    id: 'name-input',
+    type: 'text',
+    props: { editable: true, fieldLabel: 'Display name' },
+  }
+  const collection = {
+    id: 'profiles',
+    name: 'Profiles',
+    publicRead: false,
+    access: {
+      create: 'authenticated' as const,
+      read: 'own' as const,
+      update: 'own' as const,
+      delete: 'own' as const,
+    },
+    fields: [
+      { id: 'display-name', key: 'displayName', label: 'Display name', type: 'text' as const },
+    ],
+  }
+  const context = {
+    block: button,
+    pages: [],
+    pageBlocks: [nameInput, button],
+    pageStateVariables: [],
+    dataCollections: [collection],
+    allowDataActions: true,
+  }
+
+  assert.equal(validateBehaviorDraft({
+    type: 'updateCurrentUserRecord',
+    collectionId: 'profiles',
+    fields: [{ fieldBlockId: 'name-input', targetFieldKey: 'displayName' }],
+  }, context), null)
+  assert.equal(validateBehaviorDraft({
+    type: 'deleteCurrentUserRecord',
+    collectionId: 'profiles',
+  }, context), null)
+  assert.equal(validateBehaviorDraft({
+    type: 'updateCurrentUserRecord',
+    collectionId: 'profiles',
+    fields: [{ fieldBlockId: 'name-input' }],
+  }, context), 'Choose a collection field for every selected input.')
+
+  assert.equal(validateBehaviorDraft({
+    type: 'deleteCurrentUserRecord',
+    collectionId: 'profiles',
+  }, {
+    ...context,
+    dataCollections: [{
+      ...collection,
+      access: { ...collection.access, delete: 'none' as const },
+    }],
+  }), 'Enable own-record deletes for this collection in the Data workspace.')
 })
 
 test('actions are read only from the unified props action field', () => {
