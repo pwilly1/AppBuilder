@@ -365,6 +365,20 @@ export function listCurrentAppUserCollectionRecords(projectId: string, collectio
   ) as Promise<ProjectAppDataRecord[]>;
 }
 
+export async function saveCurrentAppUserCollectionRecord(
+  projectId: string,
+  collectionId: string,
+  data: Record<string, string | boolean | undefined>,
+) {
+  const record = await runtimeRequest(
+    projectId,
+    `/public/projects/${projectId}/app-data/collections/${collectionId}/records/mine`,
+    { method: 'PUT', body: JSON.stringify(data) },
+  ) as ProjectAppDataRecord;
+  notifyAppDataChanged(projectId);
+  return record;
+}
+
 export async function updateCurrentAppUserCollectionRecord(
   projectId: string,
   collectionId: string,

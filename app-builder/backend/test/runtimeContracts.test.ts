@@ -358,7 +358,16 @@ test('block actions normalize each supported action contract', () => {
     collectionId: ' profiles ',
     fields: [{ fieldBlockId: ' name-input ', targetFieldKey: ' displayName ' }],
   }), {
-    type: 'updateCurrentUserRecord',
+    type: 'saveCurrentUserRecord',
+    collectionId: 'profiles',
+    fields: [{ fieldBlockId: 'name-input', targetFieldKey: 'displayName' }],
+  })
+  assert.deepEqual(normalizeBlockAction({
+    type: 'saveCurrentUserRecord',
+    collectionId: ' profiles ',
+    fields: [{ fieldBlockId: ' name-input ', targetFieldKey: ' displayName ' }],
+  }), {
+    type: 'saveCurrentUserRecord',
     collectionId: 'profiles',
     fields: [{ fieldBlockId: 'name-input', targetFieldKey: 'displayName' }],
   })
@@ -401,12 +410,12 @@ test('configured action checks reject incomplete and unsafe actions', () => {
     collectionId: 'records',
   }), true)
   assert.equal(isActionConfigured({
-    type: 'updateCurrentUserRecord',
+    type: 'saveCurrentUserRecord',
     collectionId: 'profiles',
     fields: [{ fieldBlockId: 'name-input' }],
   }), false)
   assert.equal(isActionConfigured({
-    type: 'updateCurrentUserRecord',
+    type: 'saveCurrentUserRecord',
     collectionId: 'profiles',
     fields: [{ fieldBlockId: 'name-input', targetFieldKey: 'displayName' }],
   }), true)
@@ -454,7 +463,7 @@ test('record mutation behaviors require compatible fields and owner-scoped colle
   }
 
   assert.equal(validateBehaviorDraft({
-    type: 'updateCurrentUserRecord',
+    type: 'saveCurrentUserRecord',
     collectionId: 'profiles',
     fields: [{ fieldBlockId: 'name-input', targetFieldKey: 'displayName' }],
   }, context), null)
@@ -463,7 +472,7 @@ test('record mutation behaviors require compatible fields and owner-scoped colle
     collectionId: 'profiles',
   }, context), null)
   assert.equal(validateBehaviorDraft({
-    type: 'updateCurrentUserRecord',
+    type: 'saveCurrentUserRecord',
     collectionId: 'profiles',
     fields: [{ fieldBlockId: 'name-input' }],
   }, context), 'Choose a collection field for every selected input.')

@@ -38,9 +38,9 @@ fun ButtonView(
     val label = (block.props["label"] as? JsonPrimitive)?.content ?: "Button"
     val action = resolveBlockAction(block)
     val submitAction = action as? BlockAction.SubmitData
-    val updateAction = action as? BlockAction.UpdateCurrentUserRecord
+    val saveCurrentUserAction = action as? BlockAction.SaveCurrentUserRecord
     val deleteAction = action as? BlockAction.DeleteCurrentUserRecord
-    val isRecordMutationAction = updateAction != null || deleteAction != null
+    val isRecordMutationAction = saveCurrentUserAction != null || deleteAction != null
     val isAppAuthAction = action is BlockAction.SignUpAppUser
         || action is BlockAction.LoginAppUser
         || action is BlockAction.LogoutAppUser
@@ -58,14 +58,14 @@ fun ButtonView(
         && submitAction.fields.isNotEmpty()
         && (submitAction.collectionId == null || submitAction.fields.all { !it.targetFieldKey.isNullOrBlank() })
     val canSubmit = submitFieldsConfigured && !projectId.isNullOrBlank() && !baseUrl.isNullOrBlank() && formRuntime != null
-    val updateFieldsConfigured = updateAction != null
-        && updateAction.collectionId.isNotBlank()
-        && updateAction.fields.isNotEmpty()
-        && updateAction.fields.all { !it.targetFieldKey.isNullOrBlank() }
+    val saveCurrentUserFieldsConfigured = saveCurrentUserAction != null
+        && saveCurrentUserAction.collectionId.isNotBlank()
+        && saveCurrentUserAction.fields.isNotEmpty()
+        && saveCurrentUserAction.fields.all { !it.targetFieldKey.isNullOrBlank() }
     val canMutate = isRecordMutationAction
         && !projectId.isNullOrBlank()
         && !baseUrl.isNullOrBlank()
-        && (deleteAction != null || (updateFieldsConfigured && formRuntime != null))
+        && (deleteAction != null || (saveCurrentUserFieldsConfigured && formRuntime != null))
     val canAuthenticate = isAppAuthAction
         && !projectId.isNullOrBlank()
         && !baseUrl.isNullOrBlank()
@@ -93,20 +93,13 @@ fun ButtonView(
                             )
                             runtimeContext.refreshCollectionData()
                         }
-                        is BlockAction.UpdateCurrentUserRecord -> {
+                        is BlockAction.SaveCurrentUserRecord -> {
                             val token = RuntimeAppUserSessionStore.getToken(context, projectId)
                                 ?: throw IllegalStateException("Sign in before changing saved data.")
-                            val record = ProjectLoader.listCurrentAppUserCollectionRecords(
+                            ProjectLoader.saveCurrentAppUserCollectionRecord(
                                 baseUrl = baseUrl,
                                 projectId = projectId,
                                 collectionId = action.collectionId,
-                                appUserToken = token,
-                            ).firstOrNull() ?: throw IllegalStateException("No saved data was found for this app user.")
-                            ProjectLoader.updateCurrentAppUserCollectionRecord(
-                                baseUrl = baseUrl,
-                                projectId = projectId,
-                                collectionId = action.collectionId,
-                                recordId = record.id,
                                 values = requireNotNull(formRuntime).getFieldValues(action.fields),
                                 appUserToken = token,
                             )
@@ -228,7 +221,7 @@ fun ButtonView(
                         is BlockAction.SignUpAppUser -> "Creating account..."
                         is BlockAction.LoginAppUser -> "Signing in..."
                         BlockAction.LogoutAppUser -> "Signing out..."
-                        is BlockAction.UpdateCurrentUserRecord -> "Updating..."
+                        is BlockAction.SaveCurrentUserRecord -> "Saving..."
                         is BlockAction.DeleteCurrentUserRecord -> "Deleting..."
                         else -> "Submitting..."
                     }
@@ -246,7 +239,7 @@ fun ButtonView(
                     is BlockAction.SignUpAppUser -> "Account created."
                     is BlockAction.LoginAppUser -> "Signed in."
                     BlockAction.LogoutAppUser -> "Signed out."
-                    is BlockAction.UpdateCurrentUserRecord -> if (successMessage == "Submission received.") {
+                    is BlockAction.SaveCurrentUserRecord -> if (successMessage == "Submission received.") {
                         "Changes saved."
                     } else {
                         successMessage

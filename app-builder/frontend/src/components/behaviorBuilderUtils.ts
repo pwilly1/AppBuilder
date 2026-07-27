@@ -81,14 +81,11 @@ export function validateBehaviorDraft(
     }
   }
 
-  if (action.type === 'updateCurrentUserRecord') {
-    if (!allowDataActions) return 'This block cannot update app data.';
+  if (action.type === 'saveCurrentUserRecord') {
+    if (!allowDataActions) return 'This block cannot save app-user data.';
     const collection = dataCollections.find((candidate) => candidate.id === action.collectionId);
-    if (!collection) return 'Choose the collection whose newest signed-in-user record should be updated.';
+    if (!collection) return 'Choose the collection where each signed-in user should save their data.';
     const access = resolveCollectionAccess(collection);
-    if (access.read !== 'own' && access.read !== 'public') {
-      return 'The selected collection must allow app users to read their own records.';
-    }
     if (access.update !== 'own') {
       return 'Enable own-record updates for this collection in the Data workspace.';
     }
@@ -246,10 +243,11 @@ export function normalizeFieldRefs(value: unknown): SubmitDataFieldRef[] {
 
 export function readActionType(value: unknown): ActionType {
   const type = readString(value);
+  if (type === 'updateCurrentUserRecord') return 'saveCurrentUserRecord';
   if (
     type === 'navigate'
     || type === 'submitData'
-    || type === 'updateCurrentUserRecord'
+    || type === 'saveCurrentUserRecord'
     || type === 'deleteCurrentUserRecord'
     || type === 'openUrl'
     || type === 'setPageState'
@@ -270,7 +268,7 @@ function validateMappedFields(
 ) {
   const availableFields = getAvailableSubmissionFields(block, pageBlocks);
   const availableFieldsById = new Map(availableFields.map((field) => [field.id, field]));
-  if (fields.length === 0) return 'Select at least one input to update.';
+  if (fields.length === 0) return 'Select at least one input to save.';
   if (fields.some((field) => !availableFieldsById.has(field.fieldBlockId))) {
     return 'One selected input is missing or is no longer available to this button.';
   }
@@ -279,7 +277,13 @@ function validateMappedFields(
   }
   const targetKeys = fields.map((field) => field.targetFieldKey as string);
   if (new Set(targetKeys).size !== targetKeys.length) {
-    return 'Each selected input must update a different collection field.';
+    return 'Each selected input must save to a different collection field.';
+  }
+  const missingRequiredFields = collection.fields
+    .filter((field) => field.required && !targetKeys.includes(field.key))
+    .map((field) => field.label);
+  if (missingRequiredFields.length > 0) {
+    return `Connect inputs to required fields: ${missingRequiredFields.join(', ')}.`;
   }
   for (const field of fields) {
     const source = availableFieldsById.get(field.fieldBlockId);

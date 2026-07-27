@@ -654,3 +654,20 @@ Representative areas:
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/RuntimeBindings.kt`
 - `backend/test/runtimeContracts.test.ts`
+
+## Phase 36: Unified Current-User Save
+
+Date range: July 2026
+
+The separate first-record submission and current-user update workflow was simplified into one Save signed-in user data behavior. Its owner-scoped `PUT` endpoint creates the authenticated app user's collection record when none exists and updates that user's newest owned record on later saves. This gives profile and settings screens one repeatable action instead of requiring separate create and update buttons.
+
+Web and Android now execute the same `saveCurrentUserRecord` schema action, refresh affected bindings after success, and preserve existing projects by normalizing legacy `updateCurrentUserRecord` actions into the new contract. General Submit Data remains available for collections that intentionally accept multiple records per user.
+
+Representative areas:
+
+- `backend/src/services/AppDataService.ts`
+- `backend/src/controllers/AppDataController.ts`
+- `backend/src/routes/AppDataRoutes.ts`
+- `frontend/src/components/BehaviorBuilder.tsx`
+- `frontend/src/shared/actions/webActionExecutor.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`

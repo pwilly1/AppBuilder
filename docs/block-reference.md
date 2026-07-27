@@ -60,7 +60,7 @@ type Block = {
 
 Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest public record, one specific public record, or the signed-in generated-app user's newest owned record; bindings without a selector default to latest for compatibility. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an editable Text block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, signed-out, permission-denied, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
 
-Collections without `access` retain the legacy behavior: anyone may create records, `publicRead` controls anonymous reads, and generated-app update/delete access is disabled. Current-user bindings and Button mutation actions require explicit compatible read and own-record mutation policies.
+Collections without `access` retain the legacy behavior: anyone may create records, `publicRead` controls anonymous reads, and generated-app save/delete access is disabled. Current-user bindings require compatible read access. Current-user save/delete Button actions require the corresponding own-record mutation policy.
 
 ## Layout Contract
 
@@ -136,7 +136,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 | --- | --- | --- | --- |
 | `hero` | `headline`, `headlineSize`, optional `bindings.headline` | 16 x 6 | Inline editable while static; supports page-state or latest/specific collection binding and content scaling |
 | `text` | `value`, `fontSize`, optional `bindings.value`; optional `editable`, `textInputMode`, `inputType`, `fieldLabel`, `fieldKey`, `required`, placeholder and field styling | 8 x 4 | Display-only by default; can become a single-line or multiline runtime field while preserving binding, submission, and stable-ID behavior |
-| `button` | `label`, optional `action`, submission/source/auth settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, submission, newest-owned-record update/delete, generated-app signup/login/logout, URL, page-state updates, inline editing, and content scaling |
+| `button` | `label`, optional `action`, submission/source/auth settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, repeatable submission, signed-in-user create-or-update/delete, generated-app signup/login/logout, URL, page-state updates, inline editing, and content scaling |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
 | `shape` | `shapeType`, fill/border/radius/opacity | 6 x 4 | Shape type is chosen before insertion |

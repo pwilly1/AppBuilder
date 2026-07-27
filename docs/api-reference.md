@@ -349,6 +349,10 @@ Does not require authentication. Returns one specific record only when it belong
 
 Requires a generated-app JWT. Returns only records whose server-derived owner matches the authenticated app user, newest first. The collection must allow `read: "own"` or `read: "public"`. Internal ownership IDs are omitted from the response. Web and Android use the first result for Text/Hero bindings configured as the signed-in user's newest record.
 
+### `PUT /public/projects/:id/app-data/collections/:collectionId/records/mine`
+
+Requires a generated-app JWT and `update: "own"`. Creates an owned collection record when the signed-in user has none, then updates that user's newest owned record on later calls. Field values are validated against the collection schema, ownership comes only from the verified runtime token, and successful responses omit internal ownership IDs. Returns `201` when created and `200` when updated.
+
 ### `PATCH /public/projects/:id/app-data/collections/:collectionId/records/:recordId`
 
 Requires a generated-app JWT and `update: "own"`. Updates only a record owned by that app user, validates the merged data against the collection fields, and returns the updated record. Another user's record is indistinguishable from a missing record and returns `404`.

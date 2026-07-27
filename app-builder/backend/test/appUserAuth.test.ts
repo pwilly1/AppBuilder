@@ -98,13 +98,13 @@ test('generated-app login hides unknown-account and wrong-password differences',
   const { service } = createService();
   await service.signup('project-1', '', 'person@example.com', 'password-123');
 
-  for (const attempt of [
-    service.login('project-1', 'missing@example.com', 'password-123'),
-    service.login('project-1', 'person@example.com', 'incorrect-password'),
-    service.login('project-2', 'person@example.com', 'password-123'),
+  for (const [projectId, email, password] of [
+    ['project-1', 'missing@example.com', 'password-123'],
+    ['project-1', 'person@example.com', 'incorrect-password'],
+    ['project-2', 'person@example.com', 'password-123'],
   ]) {
     await assert.rejects(
-      attempt,
+      service.login(projectId, email, password),
       (error: unknown) => error instanceof InvalidAppUserCredentialsError
         && error.message === 'Invalid email or password.',
     );

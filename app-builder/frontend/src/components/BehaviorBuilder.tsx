@@ -51,7 +51,7 @@ const COMMON_ACTION_OPTIONS: Array<{ value: ActionType; label: string }> = [
 
 const BUTTON_ACTION_OPTIONS: Array<{ value: ActionType; label: string }> = [
   { value: 'submitData', label: 'Save data' },
-  { value: 'updateCurrentUserRecord', label: 'Update signed-in user data' },
+  { value: 'saveCurrentUserRecord', label: 'Save signed-in user data' },
   { value: 'deleteCurrentUserRecord', label: 'Delete signed-in user data' },
   { value: 'signUpAppUser', label: 'Create an app account' },
   { value: 'loginAppUser', label: 'Sign in an app user' },
@@ -73,14 +73,15 @@ export default function BehaviorBuilder({
   onClearError,
 }: BehaviorBuilderProps) {
   const actionDraft = useWatch({ control, name: 'action' }) as Record<string, unknown> | undefined;
+  const rawActionType = readString(actionDraft?.type);
   const dataSourceName = useWatch({ control, name: 'dataSourceName' }) as string | undefined;
   const actionType = readActionType(actionDraft?.type);
   const selectedSubmitFields = normalizeFieldRefs(actionDraft?.fields);
   const selectedCollectionId = readString(actionDraft?.collectionId);
   const selectedCollection = dataCollections.find((collection) => collection.id === selectedCollectionId) ?? null;
-  const updateCollections = dataCollections.filter((collection) => {
+  const saveCollections = dataCollections.filter((collection) => {
     const access = resolveCollectionAccess(collection);
-    return (access.read === 'own' || access.read === 'public') && access.update === 'own';
+    return access.update === 'own';
   });
   const deleteCollections = dataCollections.filter((collection) => {
     const access = resolveCollectionAccess(collection);
@@ -116,6 +117,12 @@ export default function BehaviorBuilder({
     ? [COMMON_ACTION_OPTIONS[0], COMMON_ACTION_OPTIONS[1], ...BUTTON_ACTION_OPTIONS, ...COMMON_ACTION_OPTIONS.slice(2)]
     : COMMON_ACTION_OPTIONS;
 
+  React.useEffect(() => {
+    if (rawActionType === 'updateCurrentUserRecord') {
+      setValue('action.type', 'saveCurrentUserRecord', { shouldDirty: true });
+    }
+  }, [rawActionType, setValue]);
+
   function clearError() {
     onClearError?.();
   }
@@ -141,12 +148,12 @@ export default function BehaviorBuilder({
       );
     }
 
-    if (nextType === 'updateCurrentUserRecord') {
+    if (nextType === 'saveCurrentUserRecord') {
       const successMessage = readString(getValues('successMessage'));
       if (!successMessage || successMessage === 'Submission received.') {
         setValue('successMessage', 'Changes saved.', { shouldDirty: true });
       }
-      const collectionId = readString(getValues('action.collectionId')) || updateCollections[0]?.id || '';
+      const collectionId = readString(getValues('action.collectionId')) || saveCollections[0]?.id || '';
       const collection = dataCollections.find((candidate) => candidate.id === collectionId) ?? null;
       if (collectionId) setValue('action.collectionId', collectionId, { shouldDirty: true });
       const current = normalizeFieldRefs(getValues('action.fields'));
@@ -433,9 +440,9 @@ export default function BehaviorBuilder({
           </>
         ) : null}
 
-        {allowDataActions && actionType === 'updateCurrentUserRecord' ? (
+        {allowDataActions && actionType === 'saveCurrentUserRecord' ? (
           <>
-            <BehaviorStep number="1" title="Choose the saved data to update">
+            <BehaviorStep number="1" title="Choose where each user saves data">
               <FieldLabel>Collection</FieldLabel>
               <select
                 className="inspector-input"
@@ -447,21 +454,21 @@ export default function BehaviorBuilder({
                 {selectedCollectionId && !dataCollections.some((collection) => collection.id === selectedCollectionId) ? (
                   <option value={selectedCollectionId}>Missing collection</option>
                 ) : null}
-                {updateCollections.map((collection) => (
+                {saveCollections.map((collection) => (
                   <option key={collection.id} value={collection.id}>{collection.name}</option>
                 ))}
               </select>
               <p className="text-xs leading-5 text-slate-500">
-                This updates the newest record owned by the signed-in app user.
+                The first tap creates this user&apos;s record. Later taps update the same saved data.
               </p>
-              {updateCollections.length === 0 ? (
+              {saveCollections.length === 0 ? (
                 <Notice tone="warning">
-                  In the Data workspace, enable own-record reads and updates for a collection first.
+                  In the Data workspace, enable own-record updates for a collection first.
                 </Notice>
               ) : null}
             </BehaviorStep>
 
-            <BehaviorStep number="2" title="Choose the information to update">
+            <BehaviorStep number="2" title="Choose the information to save">
               <div className="behavior-inline-actions">
                 <span>{selectedSubmitFields.length} of {submissionFields.length} inputs selected</span>
                 <div className="flex gap-2">
@@ -497,7 +504,7 @@ export default function BehaviorBuilder({
                         </label>
                         {selectedField && selectedCollection ? (
                           <div className="mt-3 grid gap-2 border-t border-slate-200 pt-3">
-                            <FieldLabel>Update field</FieldLabel>
+                            <FieldLabel>Save as</FieldLabel>
                             <select
                               className="inspector-input"
                               value={selectedField.targetFieldKey ?? ''}
@@ -530,7 +537,7 @@ export default function BehaviorBuilder({
             </BehaviorStep>
 
             <BehaviorStep number="3" title="Choose the success feedback">
-              <FieldLabel>Message shown after updating</FieldLabel>
+              <FieldLabel>Message shown after saving</FieldLabel>
               <TextInput
                 placeholder="Your changes were saved."
                 {...register('successMessage', { onChange: clearError })}
@@ -747,13 +754,13 @@ function getBehaviorSummary(
     return `Saves ${validSelectedCount} ${validSelectedCount === 1 ? 'input' : 'inputs'} to ${destination}.`;
   }
 
-  if (actionType === 'updateCurrentUserRecord') {
+  if (actionType === 'saveCurrentUserRecord') {
     const selected = normalizeFieldRefs(rawAction?.fields);
     const collectionId = readString(rawAction?.collectionId);
     const collection = dataCollections.find((candidate) => candidate.id === collectionId);
     return collection
-      ? `Updates ${selected.length} ${selected.length === 1 ? 'field' : 'fields'} on the signed-in user's newest ${collection.name} record.`
-      : 'Choose which collection record should be updated.';
+      ? `Creates or updates the signed-in user's ${collection.name} data using ${selected.length} ${selected.length === 1 ? 'field' : 'fields'}.`
+      : 'Choose where the signed-in user should save data.';
   }
 
   if (actionType === 'deleteCurrentUserRecord') {

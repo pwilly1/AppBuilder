@@ -13,6 +13,7 @@ import {
   listAppDataRecords,
   listAppDataSources,
   listCurrentAppUserRecords,
+  saveCurrentAppUserRecord,
   serializePublicAppDataRecord,
   updateAppDataRecord,
   updateCurrentAppUserRecord,
@@ -136,6 +137,23 @@ export class AppDataController {
         appUserId,
       );
       res.json(records.map(serializePublicAppDataRecord));
+    });
+  };
+
+  saveCurrentAppUserCollectionRecord = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const collectionId = getRouteParam(req, 'collectionId');
+    if (!id || !collectionId) return this.missingParams(res);
+    await this.withAppUserProject(req, res, next, id, async (project, appUserId) => {
+      const result = await saveCurrentAppUserRecord(
+        project,
+        project.ownerId,
+        id,
+        collectionId,
+        appUserId,
+        req.body,
+      );
+      res.status(result.created ? 201 : 200).json(serializePublicAppDataRecord(result.record));
     });
   };
 

@@ -49,9 +49,9 @@ export function ButtonBlock({
   const [errorMessage, setErrorMessage] = useState('')
   const safeScale = Math.max(0.1, Number(contentScale) || 1)
   const isSubmitAction = action?.type === 'submitData'
-  const isRecordMutationAction = action?.type === 'updateCurrentUserRecord'
+  const isRecordMutationAction = action?.type === 'saveCurrentUserRecord'
     || action?.type === 'deleteCurrentUserRecord'
-  const isUpdateAction = action?.type === 'updateCurrentUserRecord'
+  const isSaveCurrentUserAction = action?.type === 'saveCurrentUserRecord'
   const isAppAuthAction = action?.type === 'signUpAppUser'
     || action?.type === 'loginAppUser'
     || action?.type === 'logoutAppUser'
@@ -60,7 +60,7 @@ export function ButtonBlock({
   const hasRequiredRuntimeIds = isSubmitAction
     ? Boolean(projectId && blockId)
     : (isAppAuthAction || isRecordMutationAction) ? Boolean(projectId) : true
-  const hasRequiredFormRuntime = !isUpdateAction || Boolean(formRuntime)
+  const hasRequiredFormRuntime = !isSaveCurrentUserAction || Boolean(formRuntime)
   const canRun = Boolean(previewMode && action && configured && hasRequiredRuntimeIds && hasRequiredFormRuntime)
 
   async function runAction() {
@@ -146,7 +146,7 @@ function getActionSuccessMessage(action: BlockAction | null | undefined, submitM
   if (action?.type === 'signUpAppUser') return 'Account created.'
   if (action?.type === 'loginAppUser') return 'Signed in.'
   if (action?.type === 'logoutAppUser') return 'Signed out.'
-  if (action?.type === 'updateCurrentUserRecord') {
+  if (action?.type === 'saveCurrentUserRecord') {
     return !submitMessage || submitMessage === 'Submission received.' ? 'Changes saved.' : submitMessage
   }
   if (action?.type === 'deleteCurrentUserRecord') return 'Data deleted.'
@@ -157,7 +157,7 @@ function getActionPendingMessage(action: BlockAction | null | undefined) {
   if (action?.type === 'signUpAppUser') return 'Creating account...'
   if (action?.type === 'loginAppUser') return 'Signing in...'
   if (action?.type === 'logoutAppUser') return 'Signing out...'
-  if (action?.type === 'updateCurrentUserRecord') return 'Updating...'
+  if (action?.type === 'saveCurrentUserRecord') return 'Saving...'
   if (action?.type === 'deleteCurrentUserRecord') return 'Deleting...'
   return 'Submitting...'
 }

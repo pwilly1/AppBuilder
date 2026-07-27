@@ -24,6 +24,11 @@ export function makePublicAppDataRoutes(
     requireAppUser,
     controller.listCurrentAppUserCollectionRecords,
   );
+  router.put(
+    '/projects/:id/app-data/collections/:collectionId/records/mine',
+    requireAppUser,
+    controller.saveCurrentAppUserCollectionRecord,
+  );
   router.patch(
     '/projects/:id/app-data/collections/:collectionId/records/:recordId',
     requireAppUser,

@@ -164,8 +164,8 @@ These are important to the long-term product vision but should wait until the ed
 | Planned | Page parameters and app-state actions. |
 | Completed | Direct Text/Hero bindings to the latest public record, one creator-selected public record, or the signed-in user's newest owned record, with safe fallback in web and Android. |
 | Planned | Record selectors driven by filters, sorting, and end-user selection. |
-| Completed | Record update/delete: Button can update or confirm deletion of the signed-in user's newest owned record in web and Android using owner-scoped APIs. |
-| In Progress | Generated app user accounts; signup/login/logout and stable identity are complete, while profiles and password recovery remain. |
+| Completed | Current-user record save/delete: Button can create or update one newest owned record and confirm its deletion in web and Android using owner-scoped APIs. |
+| In Progress | Generated app user accounts; signup/login/logout, stable identity, current-user bindings, and basic profile editing are complete, while password recovery remains. |
 | Completed | Collection access rules for runtime create/read/update/delete plus owner-scoped backend enforcement and web/Android clients. |
 
 Implementation must follow [Dynamic Data Binding Architecture](dynamic-data-binding.md): pages resolve referenced collection data once, blocks bind to that context, and current-user bindings wait for generated-app identity and authorization.

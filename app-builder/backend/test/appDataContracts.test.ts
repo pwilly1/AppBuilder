@@ -11,6 +11,7 @@ import {
   isPublicSubmissionSource,
   resolveAppDataWriteSource,
   resolveAppDataCollectionAccess,
+  saveCurrentAppUserRecord,
   sanitizeRecordData,
   serializeAppDataRecord,
   serializePublicAppDataRecord,
@@ -192,6 +193,17 @@ test('generated-app mutation requires explicit own-record policies', async () =>
     }],
   }
 
+  await assert.rejects(
+    saveCurrentAppUserRecord(
+      lockedProject,
+      'owner-1',
+      'project-1',
+      collection.id,
+      'app-user-1',
+      { title: 'Saved task' },
+    ),
+    /does not allow app-user updates/,
+  )
   await assert.rejects(
     updateCurrentAppUserRecord(
       lockedProject,

@@ -23,7 +23,7 @@ Implemented:
 - matching web and Android schema/runtime behavior
 - collection create/read/update/delete access rules
 - generated-app owner-scoped record list/update/delete APIs with web and Android clients
-- Button actions that update or confirm deletion of the signed-in user's newest owned record
+- Button actions that create-or-update or confirm deletion of the signed-in user's newest owned record
 
 Not implemented:
 
@@ -265,7 +265,7 @@ Current actions are:
 ```text
 navigate
 submitData
-updateCurrentUserRecord
+saveCurrentUserRecord
 deleteCurrentUserRecord
 openUrl
 setPageState
@@ -275,7 +275,7 @@ setPageState
 
 `submitData` explicitly lists the field block IDs it submits. When it targets a project collection, those values are stored under the collection's stable field keys.
 
-`updateCurrentUserRecord` maps live same-page fields to collection keys and updates the signed-in user's newest owned record. `deleteCurrentUserRecord` confirms before deleting that newest owned record. Both require a readable own-record collection plus the matching own update/delete policy. Bindings remain read-only; mutations belong in the action system.
+`saveCurrentUserRecord` maps live same-page fields to collection keys. Its owner-scoped `PUT` endpoint creates the signed-in user's record when none exists and updates their newest owned record afterward. The action requires `update: "own"` because it promises repeatable saves; creation still follows the collection's create policy and requires the generated-app session. Legacy `updateCurrentUserRecord` actions normalize to this contract. `deleteCurrentUserRecord` confirms before deleting the newest owned record and currently requires readable own-record access plus `delete: "own"`. Bindings remain read-only; mutations belong in the action system.
 
 ## Record Selection Boundary
 

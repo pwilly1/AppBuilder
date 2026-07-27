@@ -15,7 +15,7 @@ data class SubmitDataFieldRef(val fieldBlockId: String, val targetFieldKey: Stri
 sealed interface BlockAction {
     data class Navigate(val targetPageId: String) : BlockAction
     data class SubmitData(val fields: List<SubmitDataFieldRef>, val collectionId: String? = null) : BlockAction
-    data class UpdateCurrentUserRecord(
+    data class SaveCurrentUserRecord(
         val collectionId: String,
         val fields: List<SubmitDataFieldRef>,
     ) : BlockAction
@@ -42,7 +42,7 @@ fun resolveBlockAction(block: Block): BlockAction? {
             fields = action.submitFields(),
             collectionId = action.stringValue("collectionId").ifBlank { null },
         )
-        "updateCurrentUserRecord" -> return BlockAction.UpdateCurrentUserRecord(
+        "saveCurrentUserRecord", "updateCurrentUserRecord" -> return BlockAction.SaveCurrentUserRecord(
             collectionId = action.stringValue("collectionId"),
             fields = action.submitFields(),
         )
@@ -73,7 +73,7 @@ fun isTapActionConfigured(action: BlockAction?): Boolean = when (action) {
     is BlockAction.Navigate -> action.targetPageId.isNotBlank()
     is BlockAction.OpenUrl -> isSupportedExternalUrl(action.url)
     is BlockAction.SetPageState -> action.variableId.isNotBlank()
-    is BlockAction.UpdateCurrentUserRecord -> action.collectionId.isNotBlank()
+    is BlockAction.SaveCurrentUserRecord -> action.collectionId.isNotBlank()
         && action.fields.isNotEmpty()
         && action.fields.all { !it.targetFieldKey.isNullOrBlank() }
     is BlockAction.DeleteCurrentUserRecord -> action.collectionId.isNotBlank()
@@ -103,7 +103,7 @@ fun executeBlockTapAction(
             }
         }
         is BlockAction.SubmitData -> Unit
-        is BlockAction.UpdateCurrentUserRecord,
+        is BlockAction.SaveCurrentUserRecord,
         is BlockAction.DeleteCurrentUserRecord -> Unit
         is BlockAction.SetPageState -> {
             if (action.variableId.isNotBlank()) {

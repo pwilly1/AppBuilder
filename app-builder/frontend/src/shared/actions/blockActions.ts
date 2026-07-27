@@ -16,9 +16,9 @@ export function normalizeBlockAction(value: unknown): BlockAction | null {
       ...(collectionId ? { collectionId } : {}),
     }
   }
-  if (action.type === 'updateCurrentUserRecord') {
+  if (action.type === 'saveCurrentUserRecord' || action.type === 'updateCurrentUserRecord') {
     return {
-      type: 'updateCurrentUserRecord',
+      type: 'saveCurrentUserRecord',
       collectionId: readString(action.collectionId),
       fields: normalizeSubmitFields(action.fields),
     }
@@ -76,7 +76,7 @@ export function isActionConfigured(action: BlockAction | null | undefined): bool
     return action.fields.length > 0
       && (!action.collectionId || action.fields.every((field) => Boolean(field.targetFieldKey)))
   }
-  if (action.type === 'updateCurrentUserRecord') {
+  if (action.type === 'saveCurrentUserRecord') {
     return Boolean(
       action.collectionId.trim()
       && action.fields.length > 0

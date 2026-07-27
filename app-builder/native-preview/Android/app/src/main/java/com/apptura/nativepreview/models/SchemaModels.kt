@@ -497,6 +497,21 @@ object ProjectLoader {
         return json.decodeFromString(body)
     }
 
+    suspend fun saveCurrentAppUserCollectionRecord(
+        baseUrl: String,
+        projectId: String,
+        collectionId: String,
+        values: Map<String, JsonPrimitive>,
+        appUserToken: String,
+    ): AppDataRecord {
+        val body = httpPutJson(
+            normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records/mine",
+            JsonObject(values).toString(),
+            token = appUserToken,
+        )
+        return json.decodeFromString(body)
+    }
+
     suspend fun updateCurrentAppUserCollectionRecord(
         baseUrl: String,
         projectId: String,
@@ -559,6 +574,10 @@ object ProjectLoader {
 
     private suspend fun httpPostJson(url: String, bodyJson: String, token: String?): String {
         return httpWriteJson("POST", url, bodyJson, token)
+    }
+
+    private suspend fun httpPutJson(url: String, bodyJson: String, token: String?): String {
+        return httpWriteJson("PUT", url, bodyJson, token)
     }
 
     private suspend fun httpPatchJson(url: String, bodyJson: String, token: String?): String {

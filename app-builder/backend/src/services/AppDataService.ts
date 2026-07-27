@@ -475,6 +475,45 @@ export async function updateCurrentAppUserRecord(
   });
 }
 
+export async function saveCurrentAppUserRecord(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  collectionId: string,
+  appUserId: string,
+  body: unknown,
+) {
+  const source = requireCollectionSource(project, collectionId);
+  if (source.access.update !== 'own') {
+    throw createServiceError('This collection does not allow app-user updates', 403);
+  }
+
+  const existing = await AppDataRecordModel.findOne({
+    ownerId,
+    projectId,
+    ...appDataRecordScopeFilter(source.sourceId, appUserId),
+  }).sort({ createdAt: -1, submittedAt: -1 }).lean();
+
+  if (existing) {
+    const record = await updateAppDataRecord(
+      project,
+      ownerId,
+      projectId,
+      collectionId,
+      String(existing._id),
+      body,
+      { ownerAppUserId: appUserId },
+    );
+    if (!record) throw createServiceError('Record not found', 404);
+    return { record, created: false };
+  }
+
+  const record = await createAppDataRecord(project, collectionId, body, {
+    ownerAppUserId: appUserId,
+  });
+  return { record, created: true };
+}
+
 export async function deleteCurrentAppUserRecord(
   project: ProjectLike,
   ownerId: string,

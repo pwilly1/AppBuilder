@@ -46,7 +46,7 @@ export type SubmitDataFieldRef = {
 export type BlockAction =
   | { type: 'navigate'; targetPageId: string }
   | { type: 'submitData'; fields: SubmitDataFieldRef[]; collectionId?: string }
-  | { type: 'updateCurrentUserRecord'; collectionId: string; fields: SubmitDataFieldRef[] }
+  | { type: 'saveCurrentUserRecord'; collectionId: string; fields: SubmitDataFieldRef[] }
   | { type: 'deleteCurrentUserRecord'; collectionId: string }
   | { type: 'openUrl'; url: string }
   | { type: 'setPageState'; variableId: string; value: RuntimeValueRef }
