@@ -3,18 +3,23 @@ import {
   ArrowDownTrayIcon,
   ArrowLeftIcon,
   ArrowPathIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   CircleStackIcon,
+  ShieldCheckIcon,
   MagnifyingGlassIcon,
   TableCellsIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   exportProjectAppDataCsv,
   getProject,
-  listProjectAppDataRecords,
+  listProjectAppDataRecordPage,
   listProjectAppDataSources,
   updateProject,
   type ProjectAppDataRecord,
+  type ProjectAppDataSubmitter,
   type ProjectAppDataSource,
 } from '../api';
 import DataCollectionsPanel from '../components/DataCollectionsPanel';
@@ -26,6 +31,8 @@ type ProjectResponse = Project & {
 
 type DataWorkspaceTab = 'collections' | 'records';
 type CollectionSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+const RECORD_PAGE_SIZE = 50;
 
 const SOURCE_TYPE_LABELS: Record<ProjectAppDataSource['type'], string> = {
   collection: 'Collection',
@@ -77,6 +84,27 @@ function getRecordSummary(data: ProjectAppDataRecord['data']) {
   return firstTextValue || 'Submission';
 }
 
+function getSubmitterLabel(submitter?: ProjectAppDataSubmitter) {
+  if (!submitter) return 'Unknown submitter';
+  if (submitter.type === 'anonymous') return 'Anonymous submission';
+  if (submitter.type === 'deleted') return 'Deleted user';
+  return submitter.displayName.trim() || submitter.email;
+}
+
+function getSubmitterDescription(submitter?: ProjectAppDataSubmitter) {
+  if (!submitter) return 'Submitter information is unavailable.';
+  if (submitter.type === 'anonymous') return 'No app account was attached to this record.';
+  if (submitter.type === 'deleted') return 'The app account that created this record no longer exists.';
+  return submitter.displayName.trim() ? submitter.email : 'Authenticated app user';
+}
+
+function getSubmitterSearchValues(submitter?: ProjectAppDataSubmitter) {
+  if (!submitter) return ['unknown submitter'];
+  if (submitter.type === 'anonymous') return ['anonymous submission'];
+  if (submitter.type === 'deleted') return ['deleted user'];
+  return [submitter.displayName, submitter.email];
+}
+
 function recordMatchesSearch(
   record: ProjectAppDataRecord,
   source: ProjectAppDataSource | undefined,
@@ -88,6 +116,7 @@ function recordMatchesSearch(
   const searchable = [
     getRecordSummary(record.data),
     new Date(record.submittedAt).toLocaleString(),
+    ...getSubmitterSearchValues(record.submittedBy),
     ...Object.entries(record.data).flatMap(([key, value]) => [
       key,
       getFieldLabel(key, source),
@@ -184,6 +213,14 @@ export default function ProjectData() {
   const [project, setProject] = useState<Project | null>(null);
   const [sources, setSources] = useState<ProjectAppDataSource[]>([]);
   const [records, setRecords] = useState<ProjectAppDataRecord[]>([]);
+  const [recordCursor, setRecordCursor] = useState<string | null>(null);
+  const [recordCursorHistory, setRecordCursorHistory] = useState<Array<string | null>>([]);
+  const [recordPageInfo, setRecordPageInfo] = useState({
+    limit: RECORD_PAGE_SIZE,
+    total: 0,
+    hasMore: false,
+    nextCursor: null as string | null,
+  });
   const [recordSearch, setRecordSearch] = useState('');
   const [loadingProject, setLoadingProject] = useState(true);
   const [loadingRecords, setLoadingRecords] = useState(true);
@@ -261,8 +298,20 @@ export default function ProjectData() {
   }, [activeTab, searchParams, selectedSource, setSearchParams, sourceParam]);
 
   useEffect(() => {
+    setRecordCursor(null);
+    setRecordCursorHistory([]);
+    setRecordSearch('');
+  }, [selectedSourceId]);
+
+  useEffect(() => {
     if (activeTab !== 'records' || !projectId || !selectedSourceId) {
       setRecords([]);
+      setRecordPageInfo({
+        limit: RECORD_PAGE_SIZE,
+        total: 0,
+        hasMore: false,
+        nextCursor: null,
+      });
       setRecordsError('');
       setLoadingRecords(false);
       return;
@@ -276,11 +325,23 @@ export default function ProjectData() {
 
     async function loadRecords() {
       try {
-        const response = await listProjectAppDataRecords(projectId, selectedSourceId);
-        if (!cancelled) setRecords(response || []);
+        const response = await listProjectAppDataRecordPage(projectId, selectedSourceId, {
+          limit: RECORD_PAGE_SIZE,
+          cursor: recordCursor,
+        });
+        if (!cancelled) {
+          setRecords(response.records || []);
+          setRecordPageInfo(response.pageInfo);
+        }
       } catch (error) {
         if (cancelled) return;
         setRecords([]);
+        setRecordPageInfo({
+          limit: RECORD_PAGE_SIZE,
+          total: 0,
+          hasMore: false,
+          nextCursor: null,
+        });
         setRecordsError(error instanceof Error ? error.message : 'Failed to load submissions.');
       } finally {
         if (!cancelled) setLoadingRecords(false);
@@ -291,7 +352,7 @@ export default function ProjectData() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, projectId, recordLoadAttempt, selectedSourceId]);
+  }, [activeTab, projectId, recordCursor, recordLoadAttempt, selectedSourceId]);
 
   const sortedRecords = useMemo(
     () => [...records].sort((left, right) => new Date(right.submittedAt).getTime() - new Date(left.submittedAt).getTime()),
@@ -313,16 +374,52 @@ export default function ProjectData() {
     () => sources.reduce((total, source) => total + source.recordCount, 0),
     [sources]
   );
+  const recordPageNumber = recordCursorHistory.length + 1;
 
   function selectSource(sourceId: string) {
     const next = new URLSearchParams(searchParams);
     next.set('source', sourceId);
     next.delete('record');
     setRecords([]);
+    setRecordCursor(null);
+    setRecordCursorHistory([]);
     setLoadingRecords(true);
     setRecordsError('');
     setSearchParams(next);
     setRecordSearch('');
+  }
+
+  function changeRecordPage(
+    cursor: string | null,
+    history: Array<string | null>,
+  ) {
+    setRecordCursor(cursor);
+    setRecordCursorHistory(history);
+    setRecordSearch('');
+    setRecords([]);
+    setLoadingRecords(true);
+    setRecordsError('');
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('record');
+    setSearchParams(next, { replace: true });
+  }
+
+  function showNextRecordPage() {
+    if (!recordPageInfo.hasMore || !recordPageInfo.nextCursor) return;
+    changeRecordPage(
+      recordPageInfo.nextCursor,
+      [...recordCursorHistory, recordCursor],
+    );
+  }
+
+  function showPreviousRecordPage() {
+    if (recordCursorHistory.length === 0) return;
+    const previousHistory = recordCursorHistory.slice(0, -1);
+    changeRecordPage(
+      recordCursorHistory[recordCursorHistory.length - 1] ?? null,
+      previousHistory,
+    );
   }
 
   function selectTab(tab: DataWorkspaceTab) {
@@ -575,13 +672,19 @@ export default function ProjectData() {
                       className="field-input !rounded-full !py-2.5 !pl-9"
                       value={recordSearch}
                       onChange={(event) => updateRecordSearch(event.target.value)}
-                      placeholder="Search records..."
-                      aria-label="Search submissions"
+                      placeholder="Search this page..."
+                      aria-label="Search submissions on this page"
                     />
                   </label>
 
                   <div className="mt-4 flex items-center justify-between gap-3 text-xs text-slate-500">
-                    <span>{filteredRecords.length} shown</span>
+                    <span>
+                      {recordSearch
+                        ? `${filteredRecords.length} matching on this page`
+                        : `${records.length} on page ${recordPageNumber}`}
+                      {' · '}
+                      {recordPageInfo.total} total
+                    </span>
                     <button
                       type="button"
                       className="inline-flex items-center gap-1.5 font-semibold text-blue-700 transition hover:text-blue-900 disabled:cursor-not-allowed disabled:text-slate-400"
@@ -631,7 +734,11 @@ export default function ProjectData() {
                           aria-current={active ? 'true' : undefined}
                         >
                           <div className="truncate text-sm font-semibold text-slate-900">{getRecordSummary(record.data)}</div>
-                          <div className="mt-1 text-xs text-slate-500">{new Date(record.submittedAt).toLocaleString()}</div>
+                          <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
+                            <UserCircleIcon className="h-4 w-4 shrink-0 text-slate-400" />
+                            <span className="truncate">{getSubmitterLabel(record.submittedBy)}</span>
+                          </div>
+                          <div className="mt-1 text-xs text-slate-400">{new Date(record.submittedAt).toLocaleString()}</div>
                           {previewEntries.length ? (
                             <div className="mt-3 space-y-1">
                               {previewEntries.map(([key, value]) => (
@@ -646,6 +753,32 @@ export default function ProjectData() {
                       );
                     })}
                   </div>
+
+                  {!loadingRecords && !recordsError && recordPageInfo.total > 0 ? (
+                    <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={showPreviousRecordPage}
+                        disabled={recordCursorHistory.length === 0}
+                      >
+                        <ChevronLeftIcon className="h-4 w-4" />
+                        Previous
+                      </button>
+                      <span className="text-xs font-semibold text-slate-500">
+                        Page {recordPageNumber}
+                      </span>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={showNextRecordPage}
+                        disabled={!recordPageInfo.hasMore || !recordPageInfo.nextCursor}
+                      >
+                        Next
+                        <ChevronRightIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : null}
                 </section>
 
                 <section className="min-w-0 bg-white/65 p-6">
@@ -655,11 +788,61 @@ export default function ProjectData() {
                         <div>
                           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-blue-700">Record details</div>
                           <h3 className="mt-1 text-2xl font-semibold text-slate-950">{getRecordSummary(selectedRecord.data)}</h3>
-                          <p className="mt-1 text-sm text-slate-500">Submitted {new Date(selectedRecord.submittedAt).toLocaleString()}</p>
+                          <p className="mt-1 text-sm text-slate-500">{selectedSource?.name || 'App data record'}</p>
                         </div>
                         <span className="self-start rounded-full border border-slate-200 bg-[#fffbf5] px-3 py-1.5 text-xs font-semibold text-slate-600">
                           {selectedRecordEntries.length} {selectedRecordEntries.length === 1 ? 'field' : 'fields'}
                         </span>
+                      </div>
+
+                      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                              <UserCircleIcon className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0">
+                              <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Submitted by</div>
+                              <div className="mt-1 truncate text-sm font-semibold text-slate-900">
+                                {getSubmitterLabel(selectedRecord.submittedBy)}
+                              </div>
+                              <div className="mt-1 break-words text-xs leading-5 text-slate-500">
+                                {getSubmitterDescription(selectedRecord.submittedBy)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">Record activity</div>
+                          <dl className="mt-2 space-y-2 text-xs">
+                            <div className="flex items-start justify-between gap-3">
+                              <dt className="text-slate-500">Created</dt>
+                              <dd className="text-right font-medium text-slate-700">
+                                {new Date(selectedRecord.createdAt || selectedRecord.submittedAt).toLocaleString()}
+                              </dd>
+                            </div>
+                            <div className="flex items-start justify-between gap-3">
+                              <dt className="text-slate-500">Updated</dt>
+                              <dd className="text-right font-medium text-slate-700">
+                                {new Date(selectedRecord.updatedAt || selectedRecord.submittedAt).toLocaleString()}
+                              </dd>
+                            </div>
+                            <div className="flex items-start justify-between gap-3">
+                              <dt className="text-slate-500">Source</dt>
+                              <dd className="text-right font-medium text-slate-700">
+                                {selectedSource?.pageTitle || 'Project collection'}
+                              </dd>
+                            </div>
+                          </dl>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900">
+                        <ShieldCheckIcon className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+                        <p className="leading-6">
+                          This view shows values intentionally collected by the project. Apptura account password hashes and session tokens are never included; do not collect passwords or other secrets as app-data fields.
+                        </p>
                       </div>
 
                       {selectedRecordEntries.length ? (
@@ -681,10 +864,13 @@ export default function ProjectData() {
                         </div>
                       )}
 
-                      <div className="mt-8 border-t border-slate-200 pt-5">
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">Record ID</div>
+                      <details className="mt-8 border-t border-slate-200 pt-5">
+                        <summary className="cursor-pointer text-xs font-semibold text-slate-500 transition hover:text-slate-800">
+                          Technical details
+                        </summary>
+                        <div className="mt-4 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-400">Record ID</div>
                         <div className="mt-2 break-all font-mono text-xs text-slate-500">{selectedRecord.id}</div>
-                      </div>
+                      </details>
                     </>
                   ) : (
                     <div className="flex min-h-[360px] flex-col items-center justify-center text-center">

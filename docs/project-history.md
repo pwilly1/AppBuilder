@@ -671,3 +671,36 @@ Representative areas:
 - `frontend/src/components/BehaviorBuilder.tsx`
 - `frontend/src/shared/actions/webActionExecutor.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/renderers/ButtonView.kt`
+
+## Phase 37: Safe App-Data Submitter Attribution
+
+Date range: July 2026
+
+The owner-only Records workspace now distinguishes authenticated app users, anonymous submissions, and records whose app user no longer exists. Backend responses replace internal ownership fields with a dedicated safe submitter view containing only the generated-app user's display name, email, ID, and optional account creation time. User resolution is batched and scoped to the current project to prevent cross-project identity leakage.
+
+The Data workspace presents submitter and record activity metadata while moving the raw record ID into collapsed technical details. Password hashes, normalized emails, and session tokens remain outside the record API, public runtime responses still omit identity, and CSV exports continue containing only configured app-data fields.
+
+Representative areas:
+
+- `backend/src/services/AppDataRecordOwnerViewService.ts`
+- `backend/src/repositories/AppUserRepository.ts`
+- `backend/src/controllers/AppDataController.ts`
+- `frontend/src/pages/ProjectData.tsx`
+- `backend/test/appDataRecordOwnerView.test.ts`
+
+## Phase 38: Scalable Record Browsing
+
+Date range: July 2026
+
+The owner Records workspace stopped downloading every submission for a source. The canonical owner records endpoint now returns bounded cursor pages with a default of 50 records, a maximum of 100, exact source totals, and an opaque next cursor. The frontend keeps only the active page in memory and provides previous/next navigation while preserving record details and safe submitter attribution.
+
+Canonical records gained a compound project/source/ID index so deep navigation can continue from the last record rather than using increasingly expensive numeric skips. Search is explicitly scoped to the loaded page. Cross-page search, richer filters, and streaming or background CSV export remain follow-up scale work.
+
+Representative areas:
+
+- `backend/src/models/AppDataRecord.ts`
+- `backend/src/services/AppDataService.ts`
+- `backend/src/controllers/AppDataController.ts`
+- `frontend/src/api.ts`
+- `frontend/src/pages/ProjectData.tsx`
+- `backend/test/appDataContracts.test.ts`

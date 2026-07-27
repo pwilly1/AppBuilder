@@ -205,18 +205,28 @@ export function uploadProjectImage(projectId: string, file: File) {
   return multipartRequest(`/projects/${projectId}/assets/images`, formData) as Promise<UploadedImageAsset>;
 }
 
+export type ProjectAppDataSubmitter =
+  | {
+      type: 'authenticated';
+      id: string;
+      displayName: string;
+      email: string;
+      createdAt?: string;
+    }
+  | { type: 'anonymous' }
+  | { type: 'deleted' };
+
 export type ProjectAppDataRecord = {
   id: string;
   collectionId: string;
-  ownerAppUserId?: string;
   sourceBlockId?: string;
   sourcePageId?: string;
+  submittedBy?: ProjectAppDataSubmitter;
   data: Record<string, string | boolean | undefined>;
   createdAt: string;
   updatedAt: string;
 
   // Compatibility aliases for older callers and stored records.
-  appUserId?: string;
   sourceId: string;
   blockId: string;
   formBlockId: string;
@@ -225,6 +235,16 @@ export type ProjectAppDataRecord = {
 };
 
 export type ProjectFormSubmission = ProjectAppDataRecord;
+
+export type ProjectAppDataRecordPage = {
+  records: ProjectAppDataRecord[];
+  pageInfo: {
+    limit: number;
+    total: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+};
 
 export type ProjectAppDataField = {
   blockId: string;
@@ -324,8 +344,36 @@ export function listProjectAppDataSources(projectId: string) {
   return request(`/projects/${projectId}/app-data/sources`) as Promise<ProjectAppDataSource[]>;
 }
 
-export function listProjectAppDataRecords(projectId: string, sourceId: string) {
-  return request(`/projects/${projectId}/app-data/sources/${sourceId}/records`) as Promise<ProjectAppDataRecord[]>;
+export function listProjectAppDataRecordPage(
+  projectId: string,
+  sourceId: string,
+  options: { limit?: number; cursor?: string | null } = {},
+) {
+  const params = new URLSearchParams();
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.cursor) params.set('cursor', options.cursor);
+  const query = params.size ? `?${params.toString()}` : '';
+  return request(
+    `/projects/${projectId}/app-data/sources/${sourceId}/records${query}`,
+  ).then((response) => {
+    if (Array.isArray(response)) {
+      return {
+        records: response as ProjectAppDataRecord[],
+        pageInfo: {
+          limit: response.length,
+          total: response.length,
+          hasMore: false,
+          nextCursor: null,
+        },
+      };
+    }
+    return response as ProjectAppDataRecordPage;
+  });
+}
+
+export async function listProjectAppDataRecords(projectId: string, sourceId: string) {
+  const page = await listProjectAppDataRecordPage(projectId, sourceId, { limit: 100 });
+  return page.records;
 }
 
 export function updateProjectAppDataRecord(

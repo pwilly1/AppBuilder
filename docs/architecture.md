@@ -139,6 +139,10 @@ Project-level app-data collections have stable IDs, names, operation-specific ac
 
 `AppDataRecord` intentionally uses the existing MongoDB `appsubmissions` collection. Reads accept documents written by the former `AppSubmission` model, and API responses retain `appUserId`, `formBlockId`, `pageId`, and `submittedAt` aliases while clients migrate. Editing a legacy record upgrades its canonical fields in place. This is one persistence system with a compatibility boundary, not two record stores.
 
+Builder-facing record responses pass through `AppDataRecordOwnerViewService`. It batch-loads generated-app users by ID and project, replaces internal ownership fields with a safe `submittedBy` classification, and never serializes generated-app authentication material. Public and generated-app runtime routes continue using the stricter public record serializer, which omits ownership and submitter identity entirely. CSV export contains the configured collection fields rather than automatically adding account identity.
+
+The owner Records workspace never loads an entire source into browser memory. `GET /projects/:id/app-data/sources/:sourceId/records` uses bounded cursor pagination, with a default page size of 50 and a server maximum of 100. Canonical records have a compound project/source/ID index, and the UI keeps only the active page plus cursor history. Cursor navigation avoids the increasingly expensive database skips caused by deep numbered pages. Search currently filters the active page only; cross-page search and large asynchronous exports remain separate scale work.
+
 A block has:
 
 ```ts

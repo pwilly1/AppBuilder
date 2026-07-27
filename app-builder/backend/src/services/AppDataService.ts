@@ -113,6 +113,40 @@ export type PublicSerializedAppDataRecord = Omit<
   'ownerAppUserId' | 'appUserId'
 >;
 
+export type AppDataRecordPage = {
+  records: SerializedAppDataRecord[];
+  pageInfo: {
+    limit: number;
+    total: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+};
+
+const DEFAULT_RECORD_PAGE_LIMIT = 50;
+const MAX_RECORD_PAGE_LIMIT = 100;
+
+export function normalizeAppDataRecordPageOptions(options: {
+  limit?: unknown;
+  cursor?: unknown;
+} = {}) {
+  const parsedLimit = typeof options.limit === 'string' || typeof options.limit === 'number'
+    ? Number(options.limit)
+    : DEFAULT_RECORD_PAGE_LIMIT;
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(MAX_RECORD_PAGE_LIMIT, Math.max(1, Math.floor(parsedLimit)))
+    : DEFAULT_RECORD_PAGE_LIMIT;
+  const cursor = typeof options.cursor === 'string' && options.cursor.trim()
+    ? options.cursor.trim()
+    : undefined;
+
+  if (cursor && !isValidObjectId(cursor)) {
+    throw createServiceError('Invalid record cursor', 400);
+  }
+
+  return { limit, cursor };
+}
+
 export function findAppDataSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
   const collection = (project.dataCollections || []).find((entry) => entry.id === sourceId);
   if (collection) return createCollectionSource(collection);
@@ -316,6 +350,49 @@ export async function listAppDataRecords(
   const records = await query.lean();
 
   return records.map((record) => serializeAppDataRecord(record));
+}
+
+export async function listAppDataRecordPage(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  sourceId: string,
+  options: { limit?: unknown; cursor?: unknown } = {},
+): Promise<AppDataRecordPage> {
+  const source = resolveAppDataWriteSource(project, sourceId);
+  if (!source) {
+    throw createServiceError('App data source not found', 404);
+  }
+
+  const { limit, cursor } = normalizeAppDataRecordPageOptions(options);
+  const baseFilter: FilterQuery<AppDataRecord> = {
+    ownerId,
+    projectId,
+    ...appDataRecordSourceFilter(source.sourceId),
+  };
+  const pageFilter: FilterQuery<AppDataRecord> = cursor
+    ? { ...baseFilter, _id: { $lt: cursor } }
+    : baseFilter;
+  const [documents, total] = await Promise.all([
+    AppDataRecordModel.find(pageFilter)
+      .sort({ _id: -1 })
+      .limit(limit + 1)
+      .lean(),
+    AppDataRecordModel.countDocuments(baseFilter),
+  ]);
+  const hasMore = documents.length > limit;
+  const pageDocuments = hasMore ? documents.slice(0, limit) : documents;
+  const records = pageDocuments.map((record) => serializeAppDataRecord(record));
+
+  return {
+    records,
+    pageInfo: {
+      limit,
+      total,
+      hasMore,
+      nextCursor: hasMore ? records.at(-1)?.id ?? null : null,
+    },
+  };
 }
 
 export async function getLatestAppDataRecord(

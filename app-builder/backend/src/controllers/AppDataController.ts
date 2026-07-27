@@ -10,6 +10,7 @@ import {
   getAppDataCsvFileName,
   isPublicReadableCollection,
   isPublicSubmissionSource,
+  listAppDataRecordPage,
   listAppDataRecords,
   listAppDataSources,
   listCurrentAppUserRecords,
@@ -19,6 +20,7 @@ import {
   updateCurrentAppUserRecord,
 } from '../services/AppDataService.js';
 import { EmailNotificationService } from '../services/EmailNotificationService.js';
+import { AppDataRecordOwnerViewService } from '../services/AppDataRecordOwnerViewService.js';
 import { ProjectManager } from '../services/ProjectManager.js';
 import type { ProjectRecord } from '../repositories/ProjectRepository.js';
 import {
@@ -33,6 +35,7 @@ export class AppDataController {
   constructor(
     private readonly projects: ProjectManager,
     private readonly notifications: EmailNotificationService,
+    private readonly ownerView: AppDataRecordOwnerViewService,
   ) {}
 
   listLegacySubmissions = async (req: Request, res: Response, next: NextFunction) => {
@@ -44,7 +47,8 @@ export class AppDataController {
         res.status(404).json({ error: 'App data source not found' });
         return;
       }
-      res.json(await listAppDataRecords(project, userId, id, sourceId));
+      const records = await listAppDataRecords(project, userId, id, sourceId);
+      res.json(await this.ownerView.serializeRecords(id, records));
     });
   };
 
@@ -78,7 +82,19 @@ export class AppDataController {
     const sourceId = getRouteParam(req, 'sourceId');
     if (!id || !sourceId) return this.missingParams(res);
     await this.withOwnedProject(req, res, next, id, async (project, userId) => {
-      res.json(await listAppDataRecords(project, userId, id, sourceId));
+      const page = await listAppDataRecordPage(project, userId, id, sourceId, {
+        limit: req.query.limit,
+        cursor: req.query.cursor,
+      });
+      const records = await this.ownerView.serializeRecords(id, page.records);
+      if (req.query.limit === undefined && req.query.cursor === undefined) {
+        res.json(records);
+        return;
+      }
+      res.json({
+        records,
+        pageInfo: page.pageInfo,
+      });
     });
   };
 
@@ -213,7 +229,7 @@ export class AppDataController {
         res.status(404).json({ error: 'Record not found' });
         return;
       }
-      res.json(record);
+      res.json(await this.ownerView.serializeRecord(id, record));
     });
   };
 

@@ -101,7 +101,7 @@ Recommended order:
 | Completed | Checkbox |
 | Completed | Toggle |
 | Completed | Image |
-| In Progress | Container |
+| Completed | Container |
 
 ### 6. Section / Container System
 
@@ -157,7 +157,13 @@ These are important to the long-term product vision but should wait until the ed
 | Completed | App-level data collections with typed field definitions and stable IDs. |
 | Completed | Dedicated project Data workspace with separate collection-schema and hosted-record tabs, direct schema persistence, and an editor-side summary link. |
 | Completed | Canonical mutable `AppDataRecord` persistence with legacy submission compatibility and builder-owner update/delete APIs. |
+| Completed | Safe owner-only submitter attribution for authenticated, anonymous, and deleted-user records with project-scoped identity lookup. |
+| Completed | Bounded cursor pagination and indexed owner record browsing for high-volume data sources. |
 | Later | Richer app-level relational data collections. |
+| Planned | Sensitive-field classification, masking, and export controls for app creators. |
+| Planned | Team roles, record-view audit logs, and configurable data-retention controls. |
+| Planned | Server-side record search, date/field filters, and scalable specific-record selection in the Inspector. |
+| Planned | Streaming or background CSV exports for very large data sources. |
 | Completed | Page-scoped text variables and Text/Hero bindings with matching web/Android resolution and editor sample values. |
 | Completed | Schema-backed Set Page Variable actions on Button, Icon, and Image across web and Android. |
 | Completed | Editable Text runtime values as stable-ID sources for Set Page Variable and Submit Data actions. |

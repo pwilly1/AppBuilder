@@ -34,6 +34,11 @@ class MemoryAppUserRepository implements AppUserRepository {
     return this.users.find((user) => String(user.id) === id) ?? null;
   }
 
+  async findByIds(projectId: string, ids: string[]) {
+    const idSet = new Set(ids);
+    return this.users.filter((user) => user.projectId === projectId && idSet.has(String(user.id)));
+  }
+
   async create(input: CreateAppUserInput) {
     const user = {
       ...input,

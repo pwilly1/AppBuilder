@@ -9,6 +9,7 @@ import {
   findAppDataSource,
   isPublicReadableCollection,
   isPublicSubmissionSource,
+  normalizeAppDataRecordPageOptions,
   resolveAppDataWriteSource,
   resolveAppDataCollectionAccess,
   saveCurrentAppUserRecord,
@@ -278,6 +279,28 @@ test('record sanitization still rejects missing required fields', () => {
   assert.throws(() => sanitizeRecordData([
     { blockId: 'email-1', type: 'email', key: 'email', label: 'Email', required: true },
   ], {}), /Email is required/)
+})
+
+test('record pagination bounds page size and rejects malformed cursors', () => {
+  assert.deepEqual(normalizeAppDataRecordPageOptions(), {
+    limit: 50,
+    cursor: undefined,
+  })
+  assert.deepEqual(normalizeAppDataRecordPageOptions({ limit: '1000' }), {
+    limit: 100,
+    cursor: undefined,
+  })
+  assert.deepEqual(normalizeAppDataRecordPageOptions({
+    limit: '20',
+    cursor: '507f1f77bcf86cd799439011',
+  }), {
+    limit: 20,
+    cursor: '507f1f77bcf86cd799439011',
+  })
+  assert.throws(
+    () => normalizeAppDataRecordPageOptions({ cursor: 'not-a-record-id' }),
+    /Invalid record cursor/,
+  )
 })
 
 test('canonical app-data records keep compatibility aliases in API responses', () => {

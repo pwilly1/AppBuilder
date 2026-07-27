@@ -107,6 +107,8 @@ Current layout capabilities:
 - Project CRUD is available through authenticated API routes.
 - Saved projects can review Contact Form, Form, and Submit Data button app-data sources from the dashboard, inspect stored records, and export source data as CSV.
 - Hosted records use a mutable collection-oriented model with created/updated timestamps and optional generated-app-user ownership.
+- The owner-only Records workspace identifies authenticated, anonymous, and deleted-user submissions without exposing raw ownership fields, password hashes, normalized emails, or session tokens. Submitter identity is resolved only inside the current project.
+- Record browsing uses 50-record cursor pages with previous/next controls and accurate source totals, so the workspace does not download every submission into the browser.
 - Collection access rules independently configure runtime create, read, update, and delete permissions. Authenticated generated-app users can list, update, and delete their own records through owner-scoped web and Android API clients.
 
 ### Deployment

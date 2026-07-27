@@ -44,6 +44,7 @@ const AppDataRecordSchema = new Schema<AppDataRecord>(
 );
 
 AppDataRecordSchema.index({ ownerId: 1, projectId: 1, collectionId: 1, createdAt: -1 });
+AppDataRecordSchema.index({ ownerId: 1, projectId: 1, collectionId: 1, _id: -1 });
 AppDataRecordSchema.index({ projectId: 1, collectionId: 1, ownerAppUserId: 1, createdAt: -1 });
 
 export const AppDataRecordModel = model<AppDataRecord>('AppDataRecord', AppDataRecordSchema);

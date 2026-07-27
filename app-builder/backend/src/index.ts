@@ -20,6 +20,7 @@ import { makeProjectRoutes } from './routes/ProjectRoutes.js';
 import { AssetStorageService } from './services/AssetStorageService.js';
 import { AuthService } from './services/AuthService.js';
 import { AppUserAuthService } from './services/AppUserAuthService.js';
+import { AppDataRecordOwnerViewService } from './services/AppDataRecordOwnerViewService.js';
 import { AppUserTokenService, type AppUserTokenExpiry } from './services/AppUserTokenService.js';
 import { EmailNotificationService } from './services/EmailNotificationService.js';
 import { JwtService, type TokenExpiry } from './services/JwtService.js';
@@ -44,7 +45,11 @@ const appUserController = new AppUserController(
 );
 const projectController = new ProjectController(projects);
 const assetController = new AssetController(projects, new AssetStorageService());
-const appDataController = new AppDataController(projects, new EmailNotificationService());
+const appDataController = new AppDataController(
+  projects,
+  new EmailNotificationService(),
+  new AppDataRecordOwnerViewService(appUserRepository),
+);
 
 const app = express();
 app.set('trust proxy', 1);

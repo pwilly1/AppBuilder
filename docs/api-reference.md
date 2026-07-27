@@ -311,13 +311,26 @@ Requires authentication and project ownership. Returns every app-data source in 
 
 ### `GET /projects/:id/app-data/sources/:sourceId/records`
 
-Requires authentication and project ownership. Returns stored records for one app-data source, newest first.
+Requires authentication and project ownership. Returns stored records for one app-data source in newest-first cursor pages. Query parameters:
 
-Canonical record fields are `id`, `collectionId`, optional `ownerAppUserId`, optional `sourceBlockId`, `sourcePageId`, `data`, `createdAt`, and `updatedAt`. During the compatibility period, responses also include the older `appUserId`, `sourceId`, `blockId`, `formBlockId`, `pageId`, and `submittedAt` names.
+- `limit`: optional page size from 1 to 100; defaults to 50.
+- `cursor`: optional opaque record cursor returned by the previous page.
+
+The response is `{ records, pageInfo }`. `pageInfo` includes `limit`, `total`, `hasMore`, and `nextCursor`. Clients should request the next page with `nextCursor` instead of calculating large numeric offsets.
+
+For rolling-deployment compatibility, a request with neither `limit` nor `cursor` returns only the newest default page as the former JSON array shape. It is still bounded to 50 records. Current clients always send pagination parameters and consume the envelope.
+
+Owner-facing records include `id`, `collectionId`, optional source metadata, `data`, timestamps, compatibility source aliases, and a safe `submittedBy` value:
+
+- `authenticated` includes the generated-app user's ID, display name, email, and optional account creation timestamp.
+- `anonymous` means no generated-app account was attached when the record was created.
+- `deleted` means the record has ownership metadata but its generated-app user no longer exists in this project.
+
+Internal ownership fields (`ownerAppUserId` and its legacy `appUserId` alias), normalized emails, generated-app account password hashes, and session tokens are not returned. Submitter lookups are scoped to the requested project, so an identity from another generated app cannot be resolved through this endpoint. Custom collection values remain visible to the project owner, so projects must not collect passwords or other secrets as ordinary app-data fields.
 
 ### `PATCH /projects/:id/app-data/sources/:sourceId/records/:recordId`
 
-Requires builder authentication and project ownership. Merges the supplied field values into the existing record, validates the resulting data against the source schema, updates `updatedAt`, and returns the updated record. Unknown fields are not stored. A legacy submission document is upgraded to canonical record fields when edited.
+Requires builder authentication and project ownership. Merges the supplied field values into the existing record, validates the resulting data against the source schema, updates `updatedAt`, and returns the same safe owner-facing record shape described above. Unknown fields are not stored. A legacy submission document is upgraded to canonical record fields when edited.
 
 ### `DELETE /projects/:id/app-data/sources/:sourceId/records/:recordId`
 
