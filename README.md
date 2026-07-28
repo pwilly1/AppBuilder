@@ -72,6 +72,7 @@ docs/                Architecture, deployment, features, roadmap, project histor
 - [Block and Schema Reference](docs/block-reference.md) - project schema, grid contract, block inventory, and migration behavior
 - [Container and Template System](docs/container-template-system.md) - current container/template design and implementation direction
 - [Dynamic Data Binding](docs/dynamic-data-binding.md) - architecture for page data, runtime values, bindings, generated-app identity, and future private user data
+- [Collection List / Repeater Plan](docs/collection-list-repeater.md) - proposed configurable repeated-record layout across web and Android
 - [How to Add a Block](docs/how-to-add-a-block.md) - end-to-end web and Android block implementation workflow
 - [Features](docs/features.md) - current capabilities, planned product areas, known feature limits
 - [Roadmap](docs/roadmap.md) - priorities, milestones, and next work

@@ -281,6 +281,8 @@ setPageState
 
 End-user record selection and record-aware navigation can be designed later using an explicit page-parameter contract. Creator-selected specific records do not provide that runtime behavior.
 
+Displaying multiple records requires a separate layout concern rather than another single-record selector. The proposed [Collection List / Repeater Plan](collection-list-repeater.md) defines one configurable item template, a row-level `currentItem` record context, bounded collection queries, and matching web/Android rendering. Existing Text/Hero bindings remain the value-resolution mechanism inside each repeated item.
+
 ## Security Boundary
 
 Latest and specific Text/Hero bindings require `access.read = "public"` because those selectors make anonymous collection-read requests. Current-user bindings require a valid generated-app session and `access.read = "own"` or `access.read = "public"`. A binding is presentation configuration, not authorization.

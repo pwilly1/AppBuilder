@@ -169,12 +169,15 @@ These are important to the long-term product vision but should wait until the ed
 | Completed | Editable Text runtime values as stable-ID sources for Set Page Variable and Submit Data actions. |
 | Planned | Page parameters and app-state actions. |
 | Completed | Direct Text/Hero bindings to the latest public record, one creator-selected public record, or the signed-in user's newest owned record, with safe fallback in web and Android. |
+| Planned | Configurable Collection List/repeater that repeats a creator-designed item template across multiple records with web/Android parity. |
 | Planned | Record selectors driven by filters, sorting, and end-user selection. |
 | Completed | Current-user record save/delete: Button can create or update one newest owned record and confirm its deletion in web and Android using owner-scoped APIs. |
 | In Progress | Generated app user accounts; signup/login/logout, stable identity, current-user bindings, and basic profile editing are complete, while password recovery remains. |
 | Completed | Collection access rules for runtime create/read/update/delete plus owner-scoped backend enforcement and web/Android clients. |
 
 Implementation must follow [Dynamic Data Binding Architecture](dynamic-data-binding.md): pages resolve referenced collection data once, blocks bind to that context, and current-user bindings wait for generated-app identity and authorization.
+
+The multi-record implementation is specified separately in the [Collection List / Repeater Plan](collection-list-repeater.md).
 
 ### 9. Offline-First Runtime
 
