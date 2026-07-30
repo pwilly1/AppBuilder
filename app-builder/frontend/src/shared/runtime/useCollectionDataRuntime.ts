@@ -9,6 +9,7 @@ import {
 } from '../../api'
 import type { AppDataCollection, Page } from '../schema/types'
 import { collectBoundCollectionRequests, type RuntimeDataState } from './runtimeBindings'
+import { mapCollectionRecordValuesByFieldId } from './runtimeRecordValues'
 
 type Options = {
   page: Pick<Page, 'id' | 'blocks'>
@@ -77,7 +78,7 @@ export function useCollectionDataRuntime({
         return [request.key, {
           status: 'ready',
           recordId: record.id,
-          values: mapRecordValuesByFieldId(collection, record.data),
+          values: mapCollectionRecordValuesByFieldId(collection, record.data),
         } as RuntimeDataState] as const
       } catch (error: unknown) {
         return [request.key, {
@@ -99,17 +100,4 @@ async function getCurrentAppUserRecord(projectId: string, collectionId: string) 
   if (!getAppUserToken(projectId)) return null
   const records = await listCurrentAppUserCollectionRecords(projectId, collectionId)
   return records[0] ?? null
-}
-
-function mapRecordValuesByFieldId(
-  collection: AppDataCollection,
-  data: Record<string, string | boolean | undefined>,
-) {
-  const values: Record<string, string> = {}
-  for (const field of collection.fields) {
-    const value = data[field.key]
-    if (value === undefined) continue
-    values[field.id] = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)
-  }
-  return values
 }

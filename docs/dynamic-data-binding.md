@@ -281,7 +281,7 @@ setPageState
 
 End-user record selection and record-aware navigation can be designed later using an explicit page-parameter contract. Creator-selected specific records do not provide that runtime behavior.
 
-Displaying multiple records requires a separate layout concern rather than another single-record selector. The proposed [Collection List / Repeater Plan](collection-list-repeater.md) defines one configurable item template, a row-level `currentItem` record context, bounded collection queries, and matching web/Android rendering. Existing Text/Hero bindings remain the value-resolution mechanism inside each repeated item.
+Displaying multiple records requires a separate layout concern rather than another single-record selector. The implemented first milestone of [Collection List / Repeater](collection-list-repeater.md) uses one configurable item template, a row-level `currentItem` record context, bounded collection queries, and matching web/Android rendering. Existing Text/Hero bindings remain the value-resolution mechanism inside each repeated item.
 
 ## Security Boundary
 

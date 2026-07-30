@@ -20,6 +20,11 @@ export function makePublicAppDataRoutes(
 ) {
   const router = Router();
   router.get(
+    '/projects/:id/app-data/collections/:collectionId/records',
+    optionalAppUser,
+    controller.listRuntimeCollectionRecords,
+  );
+  router.get(
     '/projects/:id/app-data/collections/:collectionId/records/mine',
     requireAppUser,
     controller.listCurrentAppUserCollectionRecords,

@@ -8,6 +8,7 @@ import type {
   BlockRenderMetadata,
   BlockRuntimeLayout,
 } from './types'
+import { DEFAULT_REPEATER_PROPS } from './repeater'
 
 export type BlockRegistryEntry = {
   displayName: string
@@ -105,6 +106,19 @@ export const BlockRegistry: Record<BlockType, BlockRegistryEntry> = {
       borderWidth: 1,
       borderRadius: 12,
     },
+  },
+  repeater: {
+    displayName: 'Collection List',
+    layoutClass: 'list',
+    defaultLayout: { width: 'full', align: 'start', spacingTop: 'sm', spacingBottom: 'sm' },
+    gridConstraints: {
+      defaultSpan: { cols: 14, rows: 12 },
+      minSpan: { cols: 4, rows: 4 },
+      maxSpan: { cols: 16, rows: 29 },
+      allowInnerMove: false,
+    },
+    defaultRender: { alignX: 'center', alignY: 'center' },
+    defaultProps: DEFAULT_REPEATER_PROPS,
   },
   button: {
     displayName: 'Button',

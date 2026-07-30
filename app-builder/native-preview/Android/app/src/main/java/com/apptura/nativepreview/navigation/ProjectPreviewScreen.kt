@@ -24,8 +24,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -44,12 +47,17 @@ import com.apptura.nativepreview.layout.getColumnWidth
 import com.apptura.nativepreview.layout.getGridRowCount
 import com.apptura.nativepreview.layout.resolveBlockRenderRect
 import com.apptura.nativepreview.models.Block
+import com.apptura.nativepreview.models.AppDataRecord
 import com.apptura.nativepreview.models.Project
+import com.apptura.nativepreview.models.ProjectLoader
 import com.apptura.nativepreview.renderers.BlockRenderer
 import com.apptura.nativepreview.renderers.FormRuntimeState
 import com.apptura.nativepreview.renderers.RuntimeAppUserSessionStore
 import com.apptura.nativepreview.renderers.RuntimeContext
+import com.apptura.nativepreview.renderers.RuntimeRecordContext
+import com.apptura.nativepreview.renderers.mapRuntimeRecordValues
 import com.apptura.nativepreview.renderers.rememberPageRuntimeContext
+import kotlinx.serialization.json.JsonPrimitive
 
 @Composable
 fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit = {}) {
@@ -119,7 +127,7 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
             appUserToken = appUserToken,
         )
         val containerIds = page.blocks
-            .filter { it.type == "container" || it.type == "form" }
+            .filter { it.type == "container" || it.type == "form" || it.type == "repeater" }
             .map { it.id }
             .toSet()
         val childrenByParentId = page.blocks
@@ -190,8 +198,10 @@ fun ProjectPreviewScreen(project: Project, baseUrl: String, onExit: () -> Unit =
                                 block = block,
                                 childrenByParentId = childrenByParentId,
                                 metrics = metrics,
+                                project = project,
                                 projectId = project.id,
                                 baseUrl = baseUrl,
+                                appUserToken = appUserToken,
                                 formRuntime = formRuntime,
                                 runtimeContext = runtimeContext,
                                 onNavigate = navigateToPage,
@@ -259,8 +269,10 @@ private fun GridBlockLayer(
     block: Block,
     childrenByParentId: Map<String, List<Block>>,
     metrics: GridMetrics,
+    project: Project,
     projectId: String?,
     baseUrl: String,
+    appUserToken: String?,
     formRuntime: FormRuntimeState,
     runtimeContext: RuntimeContext,
     onNavigate: (String) -> Unit,
@@ -283,7 +295,29 @@ private fun GridBlockLayer(
             formRuntime = formRuntime,
             runtimeContext = runtimeContext,
             content = {
-                if ((block.type == "container" || block.type == "form") && placement != null) {
+                if (block.type == "repeater" && placement != null) {
+                    val childMetrics = GridMetrics(
+                        canvasWidth = rect.width,
+                        columnCount = placement.colSpan.coerceAtLeast(1),
+                        rowHeight = metrics.rowHeight,
+                        gap = metrics.gap,
+                        paddingX = 0.dp,
+                        paddingY = 0.dp,
+                    )
+                    RepeaterGridContent(
+                        repeater = block,
+                        children = children,
+                        childrenByParentId = childrenByParentId,
+                        metrics = childMetrics,
+                        project = project,
+                        projectId = projectId,
+                        baseUrl = baseUrl,
+                        appUserToken = appUserToken,
+                        formRuntime = formRuntime,
+                        runtimeContext = runtimeContext,
+                        onNavigate = onNavigate,
+                    )
+                } else if ((block.type == "container" || block.type == "form") && placement != null) {
                     val childMetrics = GridMetrics(
                         canvasWidth = rect.width,
                         columnCount = placement.colSpan.coerceAtLeast(1),
@@ -298,8 +332,10 @@ private fun GridBlockLayer(
                             block = child,
                             childrenByParentId = childrenByParentId,
                             metrics = childMetrics,
+                            project = project,
                             projectId = projectId,
                             baseUrl = baseUrl,
+                            appUserToken = appUserToken,
                             formRuntime = formRuntime,
                             runtimeContext = runtimeContext,
                             onNavigate = onNavigate,
@@ -310,6 +346,191 @@ private fun GridBlockLayer(
             onNavigate = onNavigate,
         )
     }
+}
+
+private data class RepeaterSettings(
+    val collectionId: String,
+    val scope: String,
+    val order: String,
+    val limit: Int,
+    val itemRowSpan: Int,
+    val gapRows: Int,
+    val emptyText: String,
+)
+
+private sealed interface RepeaterRecordsState {
+    data object Loading : RepeaterRecordsState
+    data class Ready(val records: List<AppDataRecord>) : RepeaterRecordsState
+    data class Empty(val message: String) : RepeaterRecordsState
+    data class Error(val message: String) : RepeaterRecordsState
+}
+
+@Composable
+private fun RepeaterGridContent(
+    repeater: Block,
+    children: List<Block>,
+    childrenByParentId: Map<String, List<Block>>,
+    metrics: GridMetrics,
+    project: Project,
+    projectId: String?,
+    baseUrl: String,
+    appUserToken: String?,
+    formRuntime: FormRuntimeState,
+    runtimeContext: RuntimeContext,
+    onNavigate: (String) -> Unit,
+) {
+    val settings = readRepeaterSettings(repeater)
+    val collection = project.dataCollections.find { it.id == settings.collectionId }
+    val dataRevision = runtimeContext.dataRevision
+    var recordsState by remember(repeater.id) {
+        mutableStateOf<RepeaterRecordsState>(RepeaterRecordsState.Loading)
+    }
+
+    LaunchedEffect(
+        repeater.id,
+        repeater.props,
+        project.dataCollections,
+        projectId,
+        baseUrl,
+        appUserToken,
+        dataRevision,
+    ) {
+        recordsState = when {
+            projectId.isNullOrBlank() || baseUrl.isBlank() ->
+                RepeaterRecordsState.Error("Collection data is unavailable.")
+            collection == null ->
+                RepeaterRecordsState.Error(
+                    if (settings.collectionId.isBlank()) {
+                        "Choose a collection for this list."
+                    } else {
+                        "The configured collection no longer exists."
+                    },
+                )
+            settings.scope == "currentUser" && appUserToken.isNullOrBlank() ->
+                RepeaterRecordsState.Error("Sign in to view your records.")
+            else -> try {
+                val page = ProjectLoader.listRuntimeCollectionRecords(
+                    baseUrl = baseUrl,
+                    projectId = projectId,
+                    collectionId = collection.id,
+                    scope = settings.scope,
+                    order = settings.order,
+                    limit = settings.limit,
+                    appUserToken = appUserToken,
+                )
+                if (page.records.isEmpty()) {
+                    RepeaterRecordsState.Empty(settings.emptyText)
+                } else {
+                    RepeaterRecordsState.Ready(page.records)
+                }
+            } catch (error: Exception) {
+                RepeaterRecordsState.Error(error.message ?: "Could not load collection records.")
+            }
+        }
+    }
+
+    val itemHeight = metrics.rowHeight * settings.itemRowSpan.toFloat() +
+        metrics.gap * (settings.itemRowSpan - 1).coerceAtLeast(0).toFloat()
+    val gapHeight = if (settings.gapRows == 0) {
+        0.dp
+    } else {
+        metrics.rowHeight * settings.gapRows.toFloat() +
+            metrics.gap * (settings.gapRows - 1).coerceAtLeast(0).toFloat()
+    }
+
+    when (val state = recordsState) {
+        RepeaterRecordsState.Loading -> RepeaterStatusMessage("Loading records...")
+        is RepeaterRecordsState.Empty -> RepeaterStatusMessage(state.message)
+        is RepeaterRecordsState.Error -> RepeaterStatusMessage(state.message, isError = true)
+        is RepeaterRecordsState.Ready -> {
+            if (children.isEmpty()) {
+                RepeaterStatusMessage("This list does not have an item design yet.")
+                return
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                state.records.forEachIndexed { index, record ->
+                    key("${repeater.id}:${record.id}") {
+                        val values = collection?.let { mapRuntimeRecordValues(it, record) }.orEmpty()
+                        val itemContext = runtimeContext.withCurrentItem(
+                            RuntimeRecordContext(
+                                collectionId = settings.collectionId,
+                                recordId = record.id,
+                                values = values,
+                            ),
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(itemHeight)
+                                .clipToBounds()
+                        ) {
+                            children.forEach { child ->
+                                key("${repeater.id}:${record.id}:${child.id}") {
+                                    GridBlockLayer(
+                                        block = child,
+                                        childrenByParentId = childrenByParentId,
+                                        metrics = metrics,
+                                        project = project,
+                                        projectId = projectId,
+                                        baseUrl = baseUrl,
+                                        appUserToken = appUserToken,
+                                        formRuntime = formRuntime,
+                                        runtimeContext = itemContext,
+                                        onNavigate = onNavigate,
+                                    )
+                                }
+                            }
+                        }
+                        if (index < state.records.lastIndex && gapHeight > 0.dp) {
+                            Spacer(modifier = Modifier.height(gapHeight))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RepeaterStatusMessage(message: String, isError: Boolean = false) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = message,
+            color = if (isError) Color(0xFFDC2626) else Color(0xFF64748B),
+        )
+    }
+}
+
+private fun readRepeaterSettings(block: Block): RepeaterSettings {
+    fun string(name: String): String =
+        (block.props[name] as? JsonPrimitive)?.content?.trim().orEmpty()
+    fun integer(name: String, fallback: Int, min: Int, max: Int): Int =
+        (block.props[name] as? JsonPrimitive)
+            ?.content
+            ?.toIntOrNull()
+            ?.coerceIn(min, max)
+            ?: fallback
+
+    return RepeaterSettings(
+        collectionId = string("collectionId"),
+        scope = if (string("scope") == "currentUser") "currentUser" else "all",
+        order = if (string("order") == "oldest") "oldest" else "newest",
+        limit = integer("limit", fallback = 10, min = 1, max = 20),
+        itemRowSpan = integer("itemRowSpan", fallback = 4, min = 1, max = 29),
+        gapRows = integer("gapRows", fallback = 1, min = 0, max = 29),
+        emptyText = string("emptyText").ifBlank { "No records yet" },
+    )
 }
 
 @Composable

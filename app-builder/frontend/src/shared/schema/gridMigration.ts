@@ -8,6 +8,7 @@ import {
 import { getBlockEditorPlacement } from './runtimeLayout'
 import { repairBlockHierarchy } from './blockHierarchy'
 import { normalizePageAccess } from '../runtime/pageAccess'
+import { normalizeRepeaterBlock } from './repeater'
 import type { Block, GridPlacement, Page, Project } from './types'
 
 export const GRID_DENSITY_SCHEMA_VERSION = 2
@@ -16,7 +17,8 @@ export const UNIFIED_BUTTON_SCHEMA_VERSION = 4
 export const EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5
 export const UNIFIED_TEXT_FIELD_SCHEMA_VERSION = 6
 export const PAGE_ACCESS_SCHEMA_VERSION = 7
-export const CURRENT_SCHEMA_VERSION = PAGE_ACCESS_SCHEMA_VERSION
+export const REPEATER_SCHEMA_VERSION = 8
+export const CURRENT_SCHEMA_VERSION = REPEATER_SCHEMA_VERSION
 
 function migrateLegacyTextField(block: Block): Block {
   const legacyType = String(block.type)
@@ -187,7 +189,9 @@ export function migratePageToGridLayout(
   const convertedBlocks = options.migrateLegacySubmissionGroups
     ? migrateExplicitSubmitFields(legacyButtonsMigrated)
     : legacyButtonsMigrated
-  const supportedBlocks = convertedBlocks.filter((block) => isSupportedBlockType(block.type))
+  const supportedBlocks = convertedBlocks
+    .filter((block) => isSupportedBlockType(block.type))
+    .map(normalizeRepeaterBlock)
   if (!supportedBlocks.length) {
     return supportedBlocks.length === convertedBlocks.length
       ? { ...pageWithAccess, blocks: convertedBlocks }

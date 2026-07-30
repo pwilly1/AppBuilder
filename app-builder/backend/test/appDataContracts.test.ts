@@ -10,6 +10,7 @@ import {
   isPublicReadableCollection,
   isPublicSubmissionSource,
   normalizeAppDataRecordPageOptions,
+  normalizeRuntimeCollectionRecordPageOptions,
   resolveAppDataWriteSource,
   resolveAppDataCollectionAccess,
   saveCurrentAppUserRecord,
@@ -303,6 +304,38 @@ test('record pagination bounds page size and rejects malformed cursors', () => {
   )
 })
 
+test('runtime collection pagination validates scope and keeps list queries bounded', () => {
+  assert.deepEqual(normalizeRuntimeCollectionRecordPageOptions(), {
+    scope: 'all',
+    order: 'newest',
+    limit: 10,
+    cursor: undefined,
+  })
+  assert.deepEqual(normalizeRuntimeCollectionRecordPageOptions({
+    scope: 'currentUser',
+    order: 'oldest',
+    limit: '500',
+    cursor: '507f1f77bcf86cd799439011',
+  }), {
+    scope: 'currentUser',
+    order: 'oldest',
+    limit: 20,
+    cursor: '507f1f77bcf86cd799439011',
+  })
+  assert.throws(
+    () => normalizeRuntimeCollectionRecordPageOptions({ scope: 'everyone' }),
+    /Invalid record scope/,
+  )
+  assert.throws(
+    () => normalizeRuntimeCollectionRecordPageOptions({ order: 'random' }),
+    /Invalid record order/,
+  )
+  assert.throws(
+    () => normalizeRuntimeCollectionRecordPageOptions({ cursor: 'not-a-record-id' }),
+    /Invalid record cursor/,
+  )
+})
+
 test('canonical app-data records keep compatibility aliases in API responses', () => {
   const createdAt = new Date('2026-07-23T12:00:00.000Z')
   const updatedAt = new Date('2026-07-23T12:05:00.000Z')
@@ -435,7 +468,7 @@ test('backend project migration exposes only unified button records', () => {
     }],
   })
 
-  assert.equal(migrated.schemaVersion, 7)
+  assert.equal(migrated.schemaVersion, 8)
   assert.deepEqual(migrated.pages?.[0].access, { mode: 'public' })
   assert.equal(migrated.pages?.[0].blocks?.[0].type, 'button')
   assert.deepEqual(migrated.pages?.[0].blocks?.[0].props.action, {

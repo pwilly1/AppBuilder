@@ -25,6 +25,10 @@ import {
   resolvePageAccess,
 } from '../../frontend/src/shared/runtime/pageAccess.js'
 import { validateBehaviorDraft } from '../../frontend/src/components/behaviorBuilderUtils.js'
+import {
+  getRepeaterRuntimeInstanceId,
+  normalizeRepeaterProps,
+} from '../../frontend/src/shared/schema/repeater.js'
 
 test('page background colors normalize to portable six-digit hex values', () => {
   assert.equal(normalizePageBackgroundColor('#EFF6FF'), '#eff6ff')
@@ -204,6 +208,73 @@ test('collection bindings resolve stable field ids and fall back until ready', (
       },
     },
   }, 'Static title'), 'Specific task')
+})
+
+test('current-item bindings resolve from a repeater row without creating page requests', () => {
+  const reference = {
+    source: 'collection',
+    collectionId: 'tasks',
+    fieldId: 'field-title',
+    record: { mode: 'currentItem' },
+  } as const
+  const page: Pick<Page, 'blocks'> = {
+    blocks: [{
+      id: 'task-title',
+      type: 'text',
+      parentId: 'task-list',
+      props: { value: 'Fallback task' },
+      bindings: { value: reference },
+    }],
+  }
+
+  assert.equal(resolveRuntimeValue(reference, {
+    pageState: {},
+    collectionData: {},
+    currentItem: {
+      collectionId: 'tasks',
+      recordId: 'record-1',
+      values: { 'field-title': 'Inspect generator' },
+    },
+  }, 'Fallback task'), 'Inspect generator')
+  assert.equal(resolveRuntimeValue(reference, {
+    pageState: {},
+    collectionData: {},
+    currentItem: {
+      collectionId: 'other-collection',
+      recordId: 'record-1',
+      values: { 'field-title': 'Wrong collection' },
+    },
+  }, 'Fallback task'), 'Fallback task')
+  assert.deepEqual(collectBoundCollectionRequests(page), [])
+})
+
+test('repeater props and runtime instance ids normalize deterministically', () => {
+  assert.deepEqual(normalizeRepeaterProps({
+    collectionId: ' tasks ',
+    scope: 'currentUser',
+    order: 'oldest',
+    limit: 500,
+    itemRowSpan: 0,
+    gapRows: -3,
+    emptyText: ' Empty ',
+  }), {
+    collectionId: 'tasks',
+    scope: 'currentUser',
+    order: 'oldest',
+    limit: 20,
+    itemRowSpan: 1,
+    gapRows: 0,
+    emptyText: 'Empty',
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+    borderWidth: 0,
+    borderRadius: 0,
+    opacity: 1,
+  })
+  assert.equal(
+    getRepeaterRuntimeInstanceId('list-1', 'record-2', 'title-3'),
+    'list-1:record-2:title-3',
+  )
 })
 
 test('action values resolve live form fields without changing display binding behavior', () => {

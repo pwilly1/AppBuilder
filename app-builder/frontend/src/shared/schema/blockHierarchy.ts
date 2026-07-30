@@ -7,9 +7,11 @@ import {
   placementsOverlap,
 } from './gridLayout'
 import type { Block, BlockType, GridPlacement, GridSpan } from './types'
+import { getRepeaterItemSpan } from './repeater'
 
 export const CONTAINER_BLOCK_TYPE: BlockType = 'container'
 export const FORM_BLOCK_TYPE: BlockType = 'form'
+export const REPEATER_BLOCK_TYPE: BlockType = 'repeater'
 
 export const CONTAINER_CHILD_BLOCK_TYPES = [
   'text',
@@ -30,8 +32,18 @@ export const FORM_CHILD_BLOCK_TYPES = [
   'toggle',
 ] as const satisfies readonly BlockType[]
 
+export const REPEATER_CHILD_BLOCK_TYPES = [
+  'text',
+  'hero',
+  'button',
+  'shape',
+  'badge',
+  'icon',
+] as const satisfies readonly BlockType[]
+
 const CONTAINER_CHILD_TYPE_SET = new Set<BlockType>(CONTAINER_CHILD_BLOCK_TYPES)
 const FORM_CHILD_TYPE_SET = new Set<BlockType>(FORM_CHILD_BLOCK_TYPES)
+const REPEATER_CHILD_TYPE_SET = new Set<BlockType>(REPEATER_CHILD_BLOCK_TYPES)
 
 export type BlockHierarchyIndex = {
   byId: Map<string, Block>
@@ -63,8 +75,13 @@ export function isContainerBlock(block: Block): boolean {
   return block.type === CONTAINER_BLOCK_TYPE || block.type === FORM_BLOCK_TYPE
 }
 
+export function isChildOwnerBlock(block: Block): boolean {
+  return isContainerBlock(block) || block.type === REPEATER_BLOCK_TYPE
+}
+
 export function canBlockTypeBeContainerChild(type: BlockType, parentType: BlockType = CONTAINER_BLOCK_TYPE): boolean {
   if (parentType === FORM_BLOCK_TYPE) return FORM_CHILD_TYPE_SET.has(type)
+  if (parentType === REPEATER_BLOCK_TYPE) return REPEATER_CHILD_TYPE_SET.has(type)
   return CONTAINER_CHILD_TYPE_SET.has(type)
 }
 
@@ -110,6 +127,15 @@ export function isPlacementWithinSpan(placement: GridPlacement, span: GridSpan):
 
 export function isPlacementWithinPlacement(placement: GridPlacement, parentPlacement: GridPlacement): boolean {
   return isPlacementWithinSpan(placement, { cols: parentPlacement.colSpan, rows: parentPlacement.rowSpan })
+}
+
+export function getChildOwnerSpan(parent: Block): GridSpan {
+  if (parent.type === REPEATER_BLOCK_TYPE) return getRepeaterItemSpan(parent)
+  const placement = parent.layout?.grid
+  return {
+    cols: Math.max(1, placement?.colSpan ?? 1),
+    rows: Math.max(1, placement?.rowSpan ?? 1),
+  }
 }
 
 export function pageToContainerPlacement(pagePlacement: GridPlacement, containerPlacement: GridPlacement): GridPlacement {
@@ -168,12 +194,12 @@ export function validateBlockHierarchy(blocks: Block[]): HierarchyIssue[] {
       continue
     }
 
-    if (!isContainerBlock(parent)) {
+    if (!isChildOwnerBlock(parent)) {
       issues.push({ code: 'parent-not-container', blockId: block.id, parentId: block.parentId })
       continue
     }
 
-    if (isContainerBlock(block)) {
+    if (isChildOwnerBlock(block)) {
       issues.push({ code: 'nested-container', blockId: block.id, parentId: block.parentId })
       continue
     }
@@ -188,7 +214,7 @@ export function validateBlockHierarchy(blocks: Block[]): HierarchyIssue[] {
       continue
     }
 
-    if (!isPlacementWithinPlacement(block.layout.grid, parent.layout.grid)) {
+    if (!isPlacementWithinSpan(block.layout.grid, getChildOwnerSpan(parent))) {
       issues.push({ code: 'child-out-of-bounds', blockId: block.id, parentId: block.parentId })
     }
   }

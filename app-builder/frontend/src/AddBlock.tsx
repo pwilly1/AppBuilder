@@ -260,6 +260,7 @@ export function AddBlock({
       <CollapsibleSection title="Layout">
         <div className="grid gap-2">
           <BlockEntry title="Container" note="Group simple blocks together" create={() => createBlock('container')} onAdd={onAdd} />
+          <BlockEntry title="Collection List" note="Repeat one item design for collection records" create={() => createBlock('repeater')} onAdd={onAdd} />
         </div>
       </CollapsibleSection>
     </div>

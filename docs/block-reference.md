@@ -58,7 +58,7 @@ type Block = {
 `Page.appearance.backgroundColor` stores an optional six-digit hex color for the full page surface. Web and Android preview normalize invalid or missing values back to white for older projects.
 `Page.access` controls preview/runtime navigation. Missing access defaults to `public`. A blocked page may point to another page through `redirectPageId`; invalid destinations and redirect cycles fall back to the first page accessible to the current generated-app session. Page access does not replace backend authorization.
 
-Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest public record, one specific public record, or the signed-in generated-app user's newest owned record; bindings without a selector default to latest for compatibility. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an editable Text block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, signed-out, permission-denied, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
+Pages may define text `stateVariables` with stable IDs. Text `value` and Hero `headline` may bind either to a page variable or directly to a stable project collection/field ID through `block.bindings`. The creator may select the latest public record, one specific public record, the signed-in generated-app user's newest owned record, or a repeater row's `currentItem`; bindings without a selector default to latest for compatibility. `currentItem` is meaningful only inside a Collection List item template and must use the parent list's collection. Button, Icon, and Image may use `setPageState` to assign a fixed value or the current value of an editable Text block during a preview session. Runtime resolution never mutates `props`; the static property remains the fallback for old projects and missing, loading, empty, signed-out, permission-denied, or failed runtime data. End-user record selection and generic page parameters are not implemented yet. See [Dynamic Data Binding Architecture](dynamic-data-binding.md).
 
 Collections without `access` retain the legacy behavior: anyone may create records, `publicRead` controls anonymous reads, and generated-app save/delete access is disabled. Current-user bindings require compatible read access. Current-user save/delete Button actions require the corresponding own-record mutation policy.
 
@@ -139,6 +139,7 @@ The grid remains the collision and placement boundary. Render width, height, and
 | `button` | `label`, optional `action`, submission/source/auth settings, font/colors/padding/radius | 5 x 2 | Primary action block; supports no action, navigation, repeatable submission, signed-in-user create-or-update/delete, generated-app signup/login/logout, URL, page-state updates, inline editing, and content scaling |
 | `container` | background/border/radius/opacity | 12 x 8 | Layout primitive; top-level only; owns supported child blocks through `parentId` |
 | `form` | title/description/submit/success labels, background/border/radius/padding | 16 x 10 | Functional schema-backed form surface; top-level only; owns supported field blocks through `parentId` |
+| `repeater` | collection, scope, order, limit, item rows/gap, empty text, surface style | 14 x 12 | Shown as Collection List; owns one reusable item template and repeats it across at most 20 runtime records |
 | `shape` | `shapeType`, fill/border/radius/opacity | 6 x 4 | Shape type is chosen before insertion |
 | `badge` | `text`, font/colors/border/radius/padding | 4 x 2 | Visual status/tag primitive |
 | `icon` | `iconName`, `fontSize`, colors/radius, optional `action` | 2 x 2 | Uses the supported icon-name set; can navigate or open a safe URL |
@@ -158,13 +159,15 @@ The editor calls this configuration **Behavior** and presents `submitData` as **
 
 ## Container Hierarchy Contract
 
-- `Page.blocks` stays flat even when containers or forms are present.
+- `Page.blocks` stays flat even when containers, forms, or repeaters are present.
 - A child block references its owner through `parentId`.
-- `container` and `form` are the current parent block types, and both remain top-level only.
+- `container`, `form`, and `repeater` are the current parent block types, and all remain top-level only.
 - Nested parent blocks are not supported.
 - Container and form children use relative `layout.grid` coordinates.
+- Repeater children use relative coordinates inside one item whose row count is `props.itemRowSpan`, not the full list viewport.
 - `container` currently accepts lightweight child blocks including `button`, but not nested `container` or `form` blocks.
 - `form` only accepts editable `text`, `checkbox`, and `toggle` children. Static Text may be placed in a Form for presentation, but only Text with `props.editable === true` is exposed as a submission field.
+- `repeater` accepts Text, Hero, Button, Shape, Badge, and Icon. Text/Hero can bind to the row's `currentItem`; editable repeated controls are deferred.
 - A Submit Data `button` is not a Form child. It stays top-level or inside a Container and explicitly selects same-page fields in its `action.fields` list.
 - Unsupported or orphaned child relationships are repaired at load time.
 
@@ -203,7 +206,7 @@ The preferred production path is backend upload. The backend validates the file,
 
 ## Schema Version And Migration
 
-The current schema version is `7`.
+The current schema version is `8`.
 
 `gridMigration.ts` performs these important load-time operations:
 
@@ -215,8 +218,9 @@ The current schema version is `7`.
 6. converts grouped submission fields into explicit button-owned field references
 7. converts retired Input and Textarea records into editable Text records without changing block IDs
 8. assigns public page access to projects saved before page guards existed
+9. normalizes Collection List props and repairs children against one item boundary
 
-Frontend and backend migrations normalize saved projects to schema version `7`, while Android decodes the same optional access contract with public defaults. The Input/Textarea conversion preserves block IDs so existing Button actions still reference the same runtime fields. Any future schema-version change must be implemented and tested across all three surfaces.
+Frontend and backend migrations normalize saved projects to schema version `8`, while Android decodes the same repeater and `currentItem` contracts with safe defaults. The Input/Textarea conversion preserves block IDs so existing Button actions still reference the same runtime fields. Any future schema-version change must be implemented and tested across all three surfaces.
 
 ## Related
 

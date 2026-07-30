@@ -123,8 +123,19 @@ export type AppDataRecordPage = {
   };
 };
 
+export type RuntimeCollectionRecordPage = {
+  records: SerializedAppDataRecord[];
+  pageInfo: {
+    limit: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+};
+
 const DEFAULT_RECORD_PAGE_LIMIT = 50;
 const MAX_RECORD_PAGE_LIMIT = 100;
+const DEFAULT_RUNTIME_RECORD_LIMIT = 10;
+const MAX_RUNTIME_RECORD_LIMIT = 20;
 
 export function normalizeAppDataRecordPageOptions(options: {
   limit?: unknown;
@@ -145,6 +156,41 @@ export function normalizeAppDataRecordPageOptions(options: {
   }
 
   return { limit, cursor };
+}
+
+export function normalizeRuntimeCollectionRecordPageOptions(options: {
+  scope?: unknown;
+  order?: unknown;
+  limit?: unknown;
+  cursor?: unknown;
+} = {}) {
+  const scope = options.scope === undefined || options.scope === 'all'
+    ? 'all'
+    : options.scope === 'currentUser'
+      ? 'currentUser'
+      : null;
+  const order = options.order === undefined || options.order === 'newest'
+    ? 'newest'
+    : options.order === 'oldest'
+      ? 'oldest'
+      : null;
+  if (!scope) throw createServiceError('Invalid record scope', 400);
+  if (!order) throw createServiceError('Invalid record order', 400);
+
+  const parsedLimit = typeof options.limit === 'string' || typeof options.limit === 'number'
+    ? Number(options.limit)
+    : DEFAULT_RUNTIME_RECORD_LIMIT;
+  const limit = Number.isFinite(parsedLimit)
+    ? Math.min(MAX_RUNTIME_RECORD_LIMIT, Math.max(1, Math.floor(parsedLimit)))
+    : DEFAULT_RUNTIME_RECORD_LIMIT;
+  const cursor = typeof options.cursor === 'string' && options.cursor.trim()
+    ? options.cursor.trim()
+    : undefined;
+  if (cursor && !isValidObjectId(cursor)) {
+    throw createServiceError('Invalid record cursor', 400);
+  }
+
+  return { scope, order, limit, cursor } as const;
 }
 
 export function findAppDataSource(project: ProjectLike, sourceId: string): AppDataSourceMatch | null {
@@ -389,6 +435,67 @@ export async function listAppDataRecordPage(
     pageInfo: {
       limit,
       total,
+      hasMore,
+      nextCursor: hasMore ? records.at(-1)?.id ?? null : null,
+    },
+  };
+}
+
+export async function listRuntimeCollectionRecordPage(
+  project: ProjectLike,
+  ownerId: string,
+  projectId: string,
+  collectionId: string,
+  options: {
+    scope?: unknown;
+    order?: unknown;
+    limit?: unknown;
+    cursor?: unknown;
+    appUserId?: string;
+  } = {},
+): Promise<RuntimeCollectionRecordPage> {
+  const source = requireCollectionSource(project, collectionId);
+  const { scope, order, limit, cursor } = normalizeRuntimeCollectionRecordPageOptions(options);
+
+  if (scope === 'all' && source.access.read !== 'public') {
+    throw createServiceError('This collection is not publicly readable', 403);
+  }
+  if (scope === 'currentUser' && !options.appUserId) {
+    throw createServiceError('Sign in before reading your records', 401);
+  }
+  if (
+    scope === 'currentUser'
+    && source.access.read !== 'own'
+    && source.access.read !== 'public'
+  ) {
+    throw createServiceError('This collection does not allow app-user reads', 403);
+  }
+
+  const baseFilter: FilterQuery<AppDataRecord> = {
+    ownerId,
+    projectId,
+    ...(scope === 'currentUser'
+      ? appDataRecordScopeFilter(source.sourceId, options.appUserId)
+      : appDataRecordSourceFilter(source.sourceId)),
+  };
+  const cursorFilter = cursor
+    ? { _id: order === 'newest' ? { $lt: cursor } : { $gt: cursor } }
+    : {};
+  const documents = await AppDataRecordModel.find({
+    ...baseFilter,
+    ...cursorFilter,
+  })
+    .sort({ _id: order === 'newest' ? -1 : 1 })
+    .limit(limit + 1)
+    .lean();
+  const hasMore = documents.length > limit;
+  const pageDocuments = hasMore ? documents.slice(0, limit) : documents;
+  const records = pageDocuments.map((record) => serializeAppDataRecord(record));
+
+  return {
+    records,
+    pageInfo: {
+      limit,
       hasMore,
       nextCursor: hasMore ? records.at(-1)?.id ?? null : null,
     },

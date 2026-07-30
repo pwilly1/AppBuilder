@@ -350,6 +350,12 @@ When the target collection uses `create: "authenticated"`, requests without a va
 
 Success: `201` with the stored record.
 
+### `GET /public/projects/:id/app-data/collections/:collectionId/records`
+
+Returns a bounded runtime page for Collection List/repeater blocks. Query parameters are `scope=all|currentUser`, `order=newest|oldest`, `limit=1..20`, and an optional record cursor. The response contains `records` plus `pageInfo.limit`, `pageInfo.hasMore`, and `pageInfo.nextCursor`.
+
+`scope=all` requires `read: "public"`. `scope=currentUser` requires a generated-app JWT and `read: "own"` or `read: "public"`; ownership is derived from that token and cannot be supplied by the client. Public responses omit internal ownership metadata. Invalid scopes, ordering, limits, or cursors fail through the normal safe error contract.
+
 ### `GET /public/projects/:id/app-data/collections/:collectionId/records/latest`
 
 Does not require authentication. Returns the newest record from the collection, or JSON `null` when the collection has no records. The collection must belong to the requested project and allow `read: "public"`; legacy projects derive this rule from `publicRead`. Web and Android page runtimes use this endpoint for direct Text/Hero collection bindings. Generated-app ownership fields are omitted from this public response. Disabled public reads return `403`.

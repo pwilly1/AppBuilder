@@ -55,7 +55,7 @@ export interface Project extends Document {
 const ProjectSchema = new Schema<Project>(
   {
     ownerId: { type: String, required: true, index: true },
-    schemaVersion: { type: Number, default: 7 },
+    schemaVersion: { type: Number, default: 8 },
     name:    { type: String, required: true, trim: true },
     pages:   { type: Array as any, default: [] },
     dataCollections: { type: Array as any, default: [] },

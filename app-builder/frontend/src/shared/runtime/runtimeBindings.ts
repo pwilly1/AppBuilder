@@ -3,6 +3,13 @@ import type { Block, CollectionRecordSelector, Page, RuntimeValueRef } from '../
 export type RuntimeContext = {
   pageState: Record<string, string>
   collectionData: Record<string, RuntimeDataState>
+  currentItem?: RuntimeRecordContext
+}
+
+export type RuntimeRecordContext = {
+  collectionId: string
+  recordId: string
+  values: Record<string, string>
 }
 
 export type RuntimeDataState =
@@ -40,6 +47,16 @@ export function resolveRuntimeValue(
   if (normalized.source === 'static') return normalized.value
   if (normalized.source === 'formValue') return normalized.fallback ?? staticFallback
   if (normalized.source === 'collection') {
+    if (normalized.record?.mode === 'currentItem') {
+      const currentItem = context.currentItem
+      if (
+        currentItem?.collectionId === normalized.collectionId
+        && Object.prototype.hasOwnProperty.call(currentItem.values, normalized.fieldId)
+      ) {
+        return currentItem.values[normalized.fieldId]
+      }
+      return normalized.fallback ?? staticFallback
+    }
     const state = context.collectionData[getCollectionDataKey(normalized.collectionId, normalized.record)]
     if (state?.status === 'ready' && Object.prototype.hasOwnProperty.call(state.values, normalized.fieldId)) {
       return state.values[normalized.fieldId]
@@ -93,6 +110,7 @@ export function collectBoundCollectionRequests(page: Pick<Page, 'blocks'>): Coll
     for (const reference of Object.values(block.bindings || {})) {
       const normalized = normalizeRuntimeValueRef(reference)
       if (normalized?.source !== 'collection') continue
+      if (normalized.record?.mode === 'currentItem') continue
       const key = getCollectionDataKey(normalized.collectionId, normalized.record)
       requests.set(key, {
         key,
@@ -111,6 +129,7 @@ export function getCollectionDataKey(
 ): string {
   if (record.mode === 'specific') return `${collectionId}::specific:${record.recordId}`
   if (record.mode === 'currentUser') return `${collectionId}::currentUser`
+  if (record.mode === 'currentItem') return `${collectionId}::currentItem`
   return `${collectionId}::latest`
 }
 
@@ -160,6 +179,7 @@ function normalizeCollectionRecordSelector(value: unknown): CollectionRecordSele
   const selector = value as Record<string, unknown>
   if (selector.mode === 'latest') return { mode: 'latest' }
   if (selector.mode === 'currentUser') return { mode: 'currentUser' }
+  if (selector.mode === 'currentItem') return { mode: 'currentItem' }
   if (selector.mode === 'specific' && typeof selector.recordId === 'string' && selector.recordId.trim()) {
     return { mode: 'specific', recordId: selector.recordId.trim() }
   }

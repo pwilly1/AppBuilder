@@ -13,6 +13,7 @@ import {
   resolveBlockRenderRect,
 } from '../shared/schema/gridLayout'
 import { getBlockEditorPlacement } from '../shared/schema/runtimeLayout'
+import { isChildOwnerBlock } from '../shared/schema/blockHierarchy'
 import { InlineBlockEditor } from './InlineBlockEditor'
 import {
   clamp,
@@ -91,7 +92,8 @@ export function DraggableBlock({
     block.type === 'progressBar' ||
     block.type === 'image' ||
     block.type === 'container' ||
-    block.type === 'form'
+    block.type === 'form' ||
+    block.type === 'repeater'
   const scalesContentWithBox = supportsInlineEdit && block.layout?.resizeBehavior === 'scaleContent'
   const placement = getBlockEditorPlacement(block, index)
   const elRef = useRef<HTMLDivElement | null>(null)
@@ -745,11 +747,11 @@ export function DraggableBlock({
       onPointerUp={previewMode ? undefined : end}
       onPointerCancel={previewMode ? undefined : end}
       onDoubleClick={
-        previewMode || (!supportsInlineEdit && block.type !== 'container')
+        previewMode || (!supportsInlineEdit && !isChildOwnerBlock(block))
           ? undefined
           : (event) => {
               event.stopPropagation()
-              if (block.type === 'container') {
+              if (isChildOwnerBlock(block)) {
                 onEnterContainer?.(block)
                 return
               }

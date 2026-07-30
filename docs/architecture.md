@@ -449,6 +449,6 @@ Planned GenAI features should generate or edit the same project schema the edito
 ## Related Documentation
 
 - [Block and Schema Reference](block-reference.md) - exact project, block, layout, and migration contract
-- [Collection List / Repeater Plan](collection-list-repeater.md) - proposed multi-record layout and row-context architecture
+- [Collection List / Repeater](collection-list-repeater.md) - implemented first-milestone multi-record layout and row-context architecture
 - [How to Add a Block](how-to-add-a-block.md) - required implementation path across web and Android
 - [API Reference](api-reference.md) - current backend route surface

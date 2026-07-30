@@ -4,6 +4,7 @@
 export type BlockType =
   | 'container'
   | 'form'
+  | 'repeater'
   | 'hero'
   | 'text'
   | 'button'
@@ -80,7 +81,8 @@ export type PageAccess = {
 export type CollectionRecordSelector =
   | { mode: 'latest' }
   | { mode: 'currentUser' }
-  | { mode: 'specific'; recordId: string };
+  | { mode: 'specific'; recordId: string }
+  | { mode: 'currentItem' };
 
 export type RuntimeValueRef =
   | { source: 'static'; value: string }

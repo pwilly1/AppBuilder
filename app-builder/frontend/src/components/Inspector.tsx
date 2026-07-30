@@ -6,6 +6,8 @@ import { getBlockContentScale } from '../shared/schema/contentScale';
 import { listProjectAppDataRecords, uploadProjectImage, type ProjectAppDataRecord } from '../api';
 import { normalizeBlockAction, resolveBlockAction } from '../shared/actions/blockActions';
 import { BlockRegistry } from '../shared/schema/registry';
+import { isChildOwnerBlock } from '../shared/schema/blockHierarchy';
+import { normalizeRepeaterProps } from '../shared/schema/repeater';
 import BehaviorBuilder from './BehaviorBuilder';
 import { validateBehaviorDraft } from './behaviorBuilderUtils';
 
@@ -18,7 +20,7 @@ type TextBindingDraft =
       source: 'collection';
       collectionId: string;
       fieldId: string;
-      recordMode: 'latest' | 'currentUser' | 'specific';
+      recordMode: 'latest' | 'currentUser' | 'specific' | 'currentItem';
       recordId: string;
     };
 
@@ -121,8 +123,11 @@ export default function Inspector({
   const [bindingRecordsError, setBindingRecordsError] = React.useState<string | null>(null);
   const [textBindingError, setTextBindingError] = React.useState<string | null>(null);
   const [behaviorError, setBehaviorError] = React.useState<string | null>(null);
+  const [repeaterError, setRepeaterError] = React.useState<string | null>(null);
   const textEditable = block?.type === 'text' && Boolean(watch('editable'));
   const textInputMode = watch('textInputMode') as string | undefined;
+  const repeaterCollectionId = watch('collectionId') as string | undefined;
+  const repeaterScope = watch('scope') as string | undefined;
 
   React.useEffect(() => {
     if (previewedPropsRef.current === block?.props) {
@@ -134,6 +139,7 @@ export default function Inspector({
     setImageUploadError(null);
     setTextBindingError(null);
     setBehaviorError(null);
+    setRepeaterError(null);
   }, [block, reset]);
 
   const bindingCollectionId = textBinding.source === 'collection' ? textBinding.collectionId : '';
@@ -180,6 +186,14 @@ export default function Inspector({
     );
   }
 
+  const selectedParentBlock = block.parentId
+    ? pageBlocks.find((candidate) => candidate.id === block.parentId)
+    : undefined;
+  const selectedParentRepeaterProps = selectedParentBlock?.type === 'repeater'
+    ? normalizeRepeaterProps(selectedParentBlock.props)
+    : undefined;
+  const allowButtonDataActions = block.type === 'button' && selectedParentBlock?.type !== 'repeater';
+
   const submit = (vals: any) => {
     const nextBehaviorError = validateBehaviorDraft(vals.action, {
       block,
@@ -187,7 +201,7 @@ export default function Inspector({
       pageBlocks,
       pageStateVariables,
       dataCollections,
-      allowDataActions: block.type === 'button',
+      allowDataActions: allowButtonDataActions,
     });
     if (nextBehaviorError) {
       setBehaviorError(nextBehaviorError);
@@ -196,6 +210,14 @@ export default function Inspector({
     setBehaviorError(null);
     if (textBinding.source === 'collection' && textBinding.recordMode === 'specific' && !textBinding.recordId) {
       setTextBindingError('Choose a specific record before saving this binding.');
+      return;
+    }
+    if (
+      textBinding.source === 'collection'
+      && textBinding.recordMode === 'currentItem'
+      && selectedParentRepeaterProps?.collectionId !== textBinding.collectionId
+    ) {
+      setTextBindingError('Current list item must use the parent Collection List collection.');
       return;
     }
     setTextBindingError(null);
@@ -214,7 +236,27 @@ export default function Inspector({
     if (props.opacity !== undefined) props.opacity = Number(props.opacity);
     if (props.positionX !== undefined) props.positionX = Number(props.positionX);
     if (props.positionY !== undefined) props.positionY = Number(props.positionY);
+    if (props.limit !== undefined) props.limit = Number(props.limit);
+    if (props.itemRowSpan !== undefined) props.itemRowSpan = Number(props.itemRowSpan);
+    if (props.gapRows !== undefined) props.gapRows = Number(props.gapRows);
     if (props.value !== undefined && block.type === 'progressBar') props.value = Number(props.value);
+    if (block.type === 'repeater') {
+      const normalizedRepeaterProps = normalizeRepeaterProps(props);
+      const requiredItemRows = pageBlocks
+        .filter((candidate) => candidate.parentId === block.id)
+        .reduce((rows, candidate) => {
+          const placement = candidate.layout?.grid;
+          return placement
+            ? Math.max(rows, placement.rowStart + placement.rowSpan - 1)
+            : rows;
+        }, 1);
+      if (normalizedRepeaterProps.itemRowSpan < requiredItemRows) {
+        setRepeaterError(`Item height must be at least ${requiredItemRows} rows for the current item design.`);
+        return;
+      }
+      Object.assign(props, normalizedRepeaterProps);
+    }
+    setRepeaterError(null);
     if (block.type === 'button') {
       const action = normalizeBlockAction(props.action);
       if (action) props.action = action;
@@ -326,6 +368,12 @@ export default function Inspector({
   }
 
   function renderTextBindingControls(propertyLabel: 'text' | 'headline') {
+    const currentBlock = block!;
+    const parentBlock = currentBlock.parentId
+      ? pageBlocks.find((candidate) => candidate.id === currentBlock.parentId)
+      : undefined;
+    const parentRepeater = parentBlock?.type === 'repeater' ? parentBlock : undefined;
+    const parentRepeaterProps = parentRepeater ? normalizeRepeaterProps(parentRepeater.props) : undefined;
     const selectedVariable = textBinding.source === 'pageState'
       ? pageStateVariables.find((variable) => variable.id === textBinding.variableId)
       : undefined;
@@ -363,12 +411,16 @@ export default function Inspector({
                 setTextBinding({ source, variableId: pageStateVariables[0]?.id || '' });
                 setTextBindingError(null);
               } else if (source === 'collection') {
-                const collection = dataCollections[0];
+                const collection = dataCollections.find(
+                  (candidate) => candidate.id === parentRepeaterProps?.collectionId,
+                ) ?? dataCollections[0];
                 setTextBinding({
                   source,
                   collectionId: collection?.id || '',
                   fieldId: collection?.fields[0]?.id || '',
-                  recordMode: 'latest',
+                  recordMode: parentRepeaterProps?.collectionId === collection?.id
+                    ? 'currentItem'
+                    : 'latest',
                   recordId: '',
                 });
                 setTextBindingError(null);
@@ -413,7 +465,11 @@ export default function Inspector({
                     source: 'collection',
                     collectionId,
                     fieldId: collection?.fields[0]?.id || '',
-                    recordMode: 'latest',
+                    recordMode:
+                      parentRepeaterProps?.collectionId === collectionId
+                      && textBinding.recordMode === 'currentItem'
+                        ? 'currentItem'
+                        : 'latest',
                     recordId: '',
                   });
                   setTextBindingError(null);
@@ -436,9 +492,22 @@ export default function Inspector({
                     ? 'specific'
                     : event.target.value === 'currentUser'
                       ? 'currentUser'
+                      : event.target.value === 'currentItem' && parentRepeater
+                        ? 'currentItem'
                       : 'latest';
                   setTextBinding({
                     ...textBinding,
+                    collectionId: recordMode === 'currentItem' && parentRepeaterProps?.collectionId
+                      ? parentRepeaterProps.collectionId
+                      : textBinding.collectionId,
+                    fieldId:
+                      recordMode === 'currentItem'
+                      && parentRepeaterProps?.collectionId
+                      && parentRepeaterProps.collectionId !== textBinding.collectionId
+                        ? dataCollections.find(
+                            (candidate) => candidate.id === parentRepeaterProps.collectionId,
+                          )?.fields[0]?.id || ''
+                        : textBinding.fieldId,
                     recordMode,
                     recordId: recordMode === 'specific' ? textBinding.recordId : '',
                   });
@@ -449,6 +518,7 @@ export default function Inspector({
                 <option value="latest">Latest record</option>
                 <option value="currentUser">Signed-in user's newest record</option>
                 <option value="specific">Specific record</option>
+                {parentRepeater ? <option value="currentItem">Current list item</option> : null}
               </select>
             </div>
             {textBinding.recordMode === 'specific' ? (
@@ -503,9 +573,17 @@ export default function Inspector({
                 Allow signed-in users to read their own records, or make this collection publicly readable, before testing this binding.
               </p>
             ) : null}
-            {selectedCollection && textBinding.recordMode !== 'currentUser' && collectionReadAccess !== 'public' ? (
+            {selectedCollection
+              && textBinding.recordMode !== 'currentUser'
+              && textBinding.recordMode !== 'currentItem'
+              && collectionReadAccess !== 'public' ? (
               <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
                 Enable public reads for this collection before testing the binding in web or Android preview.
+              </p>
+            ) : null}
+            {textBinding.recordMode === 'currentItem' && parentRepeaterProps?.collectionId !== textBinding.collectionId ? (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">
+                Current list item must use the same collection as its parent Collection List.
               </p>
             ) : null}
             {textBindingError ? <p className="text-xs font-medium text-red-600">{textBindingError}</p> : null}
@@ -528,7 +606,11 @@ export default function Inspector({
         {textBinding.source === 'collection' && dataCollections.length === 0 ? (
           <p className="text-xs text-slate-500">Create a collection in the Data workspace before adding this binding.</p>
         ) : null}
-        {textBinding.source === 'collection' && selectedCollection && !selectedCollection.publicRead ? (
+        {textBinding.source === 'collection'
+          && selectedCollection
+          && !selectedCollection.publicRead
+          && textBinding.recordMode !== 'currentUser'
+          && textBinding.recordMode !== 'currentItem' ? (
           <p className="text-xs text-amber-700">Turn on "Show records inside the app" for this collection before previewing live data.</p>
         ) : null}
       </FormSection>
@@ -613,8 +695,18 @@ export default function Inspector({
   const hasCustomScale = Math.abs(rawScaleX - 1) > 0.001 || Math.abs(rawScaleY - 1) > 0.001;
   const supportsContentScaling = block!.type === 'hero' || block!.type === 'text' || block!.type === 'button';
   const resizeBehavior = block!.layout?.resizeBehavior ?? 'boxOnly';
-  const isParentBlock = block!.type === 'container' || block!.type === 'form';
+  const isParentBlock = isChildOwnerBlock(block!);
   const isEditingThisContainer = isParentBlock && activeContainerId === block!.id;
+  const parentBlockLabel = block!.type === 'form'
+    ? 'Form'
+    : block!.type === 'repeater'
+      ? 'Collection List'
+      : 'Container';
+  const selectedRepeaterCollection = block!.type === 'repeater'
+    ? dataCollections.find((collection) => collection.id === repeaterCollectionId)
+    : undefined;
+  const selectedRepeaterReadAccess = selectedRepeaterCollection?.access?.read
+    ?? (selectedRepeaterCollection?.publicRead ? 'public' : 'none');
 
   function setResizeBehavior(nextBehavior: 'boxOnly' | 'scaleContent') {
     const grid = block!.layout?.grid;
@@ -722,10 +814,12 @@ export default function Inspector({
       ) : null}
       {isParentBlock ? (
         <FormSection
-          title={`${block.type === 'form' ? 'Form' : 'Container'} contents`}
+          title={`${parentBlockLabel} contents`}
           description={
             block.type === 'form'
               ? 'Click Edit contents, then add editable Text, Checkbox, or Toggle blocks from the left sidebar.'
+              : block.type === 'repeater'
+                ? 'Design one item here. Preview mode repeats that design once for every loaded collection record.'
               : 'Click Edit contents, then click blocks in the left sidebar. New blocks will be placed inside this container until you exit.'
           }
         >
@@ -733,10 +827,10 @@ export default function Inspector({
             {isEditingThisContainer ? (
               <>
                 <div className="rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-sm text-blue-900">
-                  {block.type === 'form' ? 'Form editing' : 'Container editing'} is active. Use the left sidebar to add child blocks here.
+                  {parentBlockLabel} editing is active. Use the left sidebar to add child blocks here.
                 </div>
                 <button type="button" className="ghost-btn !justify-start !px-4 !py-3 text-left text-sm" onClick={onExitContainer}>
-                  Exit container editing
+                  Exit {block.type === 'repeater' ? 'item' : 'container'} editing
                 </button>
               </>
             ) : (
@@ -749,8 +843,8 @@ export default function Inspector({
       ) : null}
       {block.parentId ? (
         <FormSection
-          title="Container membership"
-          description="This block is inside a container. Moving it to the page will place it in the first open page-grid position."
+          title="Parent membership"
+          description="This block belongs to a parent layout. Moving it to the page will place it in the first open page-grid position."
         >
           <button type="button" className="ghost-btn !justify-start !px-4 !py-3 text-left text-sm" onClick={() => onDetachBlock?.(block)}>
             Move block to page
@@ -760,10 +854,12 @@ export default function Inspector({
       <form onSubmit={handleSubmit(submit)} className="grid gap-4">
         {isParentBlock && (
           <FormSection
-            title={`${block.type === 'form' ? 'Form' : 'Container'} style`}
+            title={`${parentBlockLabel} style`}
             description={
               block.type === 'form'
                 ? 'Style the form surface and submit area. Child fields keep their own styles.'
+                : block.type === 'repeater'
+                  ? 'Style the list viewport. Each repeated child keeps its own block style.'
                 : 'Containers are transparent by default. Add a surface only when it helps structure the screen.'
             }
           >
@@ -811,6 +907,74 @@ export default function Inspector({
               <FieldLabel>Opacity</FieldLabel>
               <TextInput type="number" min={0} max={1} step={0.05} className="max-w-[120px]" {...registerLiveContainerStyle('opacity')} />
             </div>
+          </FormSection>
+        )}
+
+        {block.type === 'repeater' && (
+          <FormSection
+            title="Collection records"
+            description="Choose which records are repeated and how the reusable item is spaced."
+          >
+            <div className="grid gap-2">
+              <FieldLabel>Collection</FieldLabel>
+              <select className="inspector-input" {...register('collectionId')}>
+                <option value="">Select a collection...</option>
+                {dataCollections.map((collection) => (
+                  <option key={collection.id} value={collection.id}>
+                    {collection.name || 'Unnamed collection'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Records</FieldLabel>
+              <select className="inspector-input" {...register('scope')}>
+                <option value="all">All records</option>
+                <option value="currentUser">Signed-in user's records</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Order</FieldLabel>
+              <select className="inspector-input" {...register('order')}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Maximum records</FieldLabel>
+              <TextInput type="number" min={1} max={20} className="max-w-[120px]" {...register('limit')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Item height (grid rows)</FieldLabel>
+              <TextInput type="number" min={1} max={29} className="max-w-[120px]" {...register('itemRowSpan')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Gap between items (grid rows)</FieldLabel>
+              <TextInput type="number" min={0} max={29} className="max-w-[120px]" {...register('gapRows')} />
+            </div>
+            <div className="grid gap-2">
+              <FieldLabel>Empty message</FieldLabel>
+              <TextInput {...register('emptyText')} />
+            </div>
+            {selectedRepeaterCollection
+              && repeaterScope === 'all'
+              && selectedRepeaterReadAccess !== 'public' ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                  All-record lists require public read access for this collection.
+                </p>
+              ) : null}
+            {selectedRepeaterCollection
+              && repeaterScope === 'currentUser'
+              && selectedRepeaterReadAccess !== 'own'
+              && selectedRepeaterReadAccess !== 'public' ? (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                  Current-user lists require own-record or public read access.
+                </p>
+              ) : null}
+            {repeaterScope === 'currentUser' ? (
+              <p className="text-xs text-slate-500">App users must sign in before this list can load their records.</p>
+            ) : null}
+            {repeaterError ? <p className="text-xs font-medium text-red-600">{repeaterError}</p> : null}
           </FormSection>
         )}
 
@@ -936,7 +1100,7 @@ export default function Inspector({
               pageBlocks={pageBlocks}
               pageStateVariables={pageStateVariables}
               dataCollections={dataCollections}
-              allowDataActions
+              allowDataActions={allowButtonDataActions}
               control={control}
               register={register}
               getValues={getValues}
@@ -1418,7 +1582,7 @@ export default function Inspector({
                 type="button"
                 className="ghost-btn !text-red-700"
                 onClick={() => {
-                  if (block.type !== 'container' && block.type !== 'form') {
+                  if (!isChildOwnerBlock(block)) {
                     const ok = confirm('Delete this block?');
                     if (!ok) return;
                   }
@@ -1451,6 +1615,8 @@ function getTextBindingDraft(block?: Block | null): TextBindingDraft {
     const specificRecordId = reference.record?.mode === 'specific' ? reference.record.recordId : '';
     const recordMode = reference.record?.mode === 'currentUser'
       ? 'currentUser'
+      : reference.record?.mode === 'currentItem'
+        ? 'currentItem'
       : specificRecordId
         ? 'specific'
         : 'latest';

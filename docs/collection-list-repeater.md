@@ -1,8 +1,8 @@
-# Collection List / Repeater Implementation Plan
+# Collection List / Repeater
 
 ## Status
 
-Proposed. This feature is not implemented yet.
+First milestone implemented on July 28, 2026. Shared schema, bounded backend reads, web editor/runtime support, and Android runtime support are in place. Production builds and contract tests pass; manual save/reload and cross-runtime visual QA remain before the feature should be considered fully stabilized.
 
 ## Purpose
 
@@ -52,7 +52,7 @@ The runtime repeats it:
 +------------------------------------------------+
 ```
 
-Each repeated Text, Hero, or Badge resolves against a different current record. A Button in a row can eventually navigate to a detail page while carrying that row's record identity.
+Each repeated Text or Hero can resolve against a different current record. Badge, Icon, Shape, and Button are supported as static/action template blocks. A Button in a row can eventually navigate to a detail page while carrying that row's record identity.
 
 ## First Milestone Scope
 
@@ -271,7 +271,7 @@ Item design follows the existing explicit container-editing pattern:
 - Double-clicking it or choosing **Edit item design** enters its item scope.
 - In item scope, supported blocks can be added and edited.
 - Template children remain relative to one item boundary.
-- Clicking outside or pressing Escape exits item design mode.
+- Clicking outside the list or using **Exit Item Design** exits item design mode.
 - The canvas clearly identifies that the creator is editing one repeated item.
 
 Only the persisted template blocks are selectable. Ghost or preview repetitions must not create additional editor selections.
@@ -328,14 +328,18 @@ Suggested response:
   "records": [
     {
       "id": "record-123",
-      "values": {
+      "data": {
         "taskName": "Inspect warehouse",
         "status": "Pending"
       },
       "createdAt": "2026-07-27T12:00:00.000Z"
     }
   ],
-  "nextCursor": null
+  "pageInfo": {
+    "limit": 20,
+    "hasMore": false,
+    "nextCursor": null
+  }
 }
 ```
 
@@ -370,10 +374,10 @@ The web implementation should:
 
 Android must decode the same props and `currentItem` selector.
 
-The Compose implementation should:
+The Compose implementation:
 
 - Load through the same bounded runtime endpoint.
-- Use `LazyColumn` for repeated records.
+- Uses a bounded, vertically scrollable `Column` inside the fixed list viewport. The first milestone loads at most 20 records.
 - Use stable runtime instance keys.
 - Render each template block through the existing Android block renderer.
 - Apply the same relative item-grid math as web.
@@ -410,7 +414,7 @@ Until that contract is implemented, repeated Buttons may use ordinary navigation
 
 ## Delivery Sequence
 
-### Phase 1: Shared contract and pure helpers
+### Phase 1: Shared contract and pure helpers - Complete
 
 - Add `repeater` and its normalized props.
 - Add `currentItem` collection selector and runtime record context.
@@ -419,7 +423,7 @@ Until that contract is implemented, repeated Buttons may use ordinary navigation
 - Add runtime instance-ID helper.
 - Add schema, migration, binding-resolution, and hierarchy tests.
 
-### Phase 2: Backend runtime list query
+### Phase 2: Backend runtime list query - Complete
 
 - Add the bounded record-list service method.
 - Add route/controller handling.
@@ -427,7 +431,7 @@ Until that contract is implemented, repeated Buttons may use ordinary navigation
 - Add cursor, order, and limit validation.
 - Add service and route contract tests.
 
-### Phase 3: Web read-only runtime
+### Phase 3: Web read-only runtime - Complete
 
 - Add the API client.
 - Add repeater record loading.
@@ -435,7 +439,7 @@ Until that contract is implemented, repeated Buttons may use ordinary navigation
 - Add loading, empty, error, and access states.
 - Verify fallback behavior and stable keys.
 
-### Phase 4: Web editor
+### Phase 4: Web editor - Complete
 
 - Register Collection List and expose it in the palette.
 - Add Inspector controls.
@@ -444,7 +448,7 @@ Until that contract is implemented, repeated Buttons may use ordinary navigation
 - Add non-interactive ghost preview.
 - Keep compound changes atomic for undo/redo.
 
-### Phase 5: Android parity
+### Phase 5: Android parity - Complete
 
 - Extend Kotlin schema normalization.
 - Add the runtime list API call.
@@ -460,7 +464,7 @@ Until that contract is implemented, repeated Buttons may use ordinary navigation
 - Resolve a destination page's specific record.
 - Implement and test web/Android parity.
 
-### Phase 7: Stabilization
+### Phase 7: Stabilization - In progress
 
 - Save/reload and migration QA.
 - Undo/redo QA.

@@ -21,16 +21,23 @@ import { DraggableBlock } from './DraggableBlock'
 import { BlockRenderer } from '../shared/BlockRenderer'
 import { createPageRuntimeContext, type RuntimeContext } from '../shared/runtime/runtimeBindings'
 import { useCollectionDataRuntime } from '../shared/runtime/useCollectionDataRuntime'
+import { useRepeaterRecords } from '../shared/runtime/useRepeaterRecords'
 import { BLOCK_DRAG_DATA_TYPE, getActiveDraggedBlock, getDraggedBlockFromDataTransfer } from './blockDrag'
 import { collectAllFieldValues, collectFieldValues, FormRuntimeProvider, type FormValue } from '../shared/blocks/formRuntime'
 import {
   buildBlockHierarchyIndex,
   canBlockBeContainerChild,
-  isContainerBlock,
-  isPlacementWithinPlacement,
+  getChildOwnerSpan,
+  isChildOwnerBlock,
+  isPlacementWithinSpan,
   pageToContainerPlacement,
 } from '../shared/schema/blockHierarchy'
 import { normalizePageBackgroundColor } from '../shared/schema/pageAppearance'
+import {
+  getRepeaterRuntimeInstanceId,
+  isRepeaterBlock,
+  normalizeRepeaterProps,
+} from '../shared/schema/repeater'
 
 const DEFAULT_PHONE_GRID_ROWS = GRID_DEFAULT_ROW_COUNT
 const EMPTY_DATA_COLLECTIONS: AppDataCollection[] = []
@@ -59,6 +66,7 @@ type ContainerChildrenLayerProps = {
   pageGridMetrics: GridMetrics
   pageRowCount: number
   topLevelBlocks: Block[]
+  dataCollections: AppDataCollection[]
 }
 
 export function PageRenderer({
@@ -178,13 +186,13 @@ export function PageRenderer({
         const placement = block.layout?.grid
         if (!placement) return block
         const parent = block.parentId ? page.blocks.find((candidate) => candidate.id === block.parentId) : null
-        const parentPlacement = parent?.layout?.grid
+        const parentSpan = parent && isChildOwnerBlock(parent) ? getChildOwnerSpan(parent) : null
 
         const normalizedGrid = normalizePlacement(
           placement,
           getBlockGridConstraints(block),
-          parentPlacement ? parentPlacement.colSpan : GRID_COLUMN_COUNT,
-          parentPlacement ? parentPlacement.rowSpan : gridRowCount,
+          parentSpan?.cols ?? GRID_COLUMN_COUNT,
+          parentSpan?.rows ?? gridRowCount,
         )
 
         if (
@@ -213,7 +221,7 @@ export function PageRenderer({
       editorBlocks.filter((block) => {
         if (!block.parentId) return true
         const parent = hierarchy.byId.get(block.parentId)
-        return !parent || !isContainerBlock(parent)
+        return !parent || !isChildOwnerBlock(parent)
       }),
     [editorBlocks, hierarchy],
   )
@@ -224,11 +232,13 @@ export function PageRenderer({
     const children = hierarchy.childrenByParentId.get(container.id) ?? []
 
     const containerRect = getContainerRect(container)
+    const ownerSpan = getChildOwnerSpan(container)
+    const childRowHeight = getNestedRowHeight(containerRect.height, containerPlacement.rowSpan, gridMetrics.gap)
     const childGridMetrics = {
       ...gridMetrics,
       canvasWidth: containerRect.width,
-      columnCount: containerPlacement.colSpan,
-      rowHeight: containerRect.height / Math.max(1, containerPlacement.rowSpan),
+      columnCount: ownerSpan.cols,
+      rowHeight: childRowHeight,
       paddingX: 0,
       paddingY: 0,
     }
@@ -253,6 +263,7 @@ export function PageRenderer({
         pageGridMetrics={gridMetrics}
         pageRowCount={gridRowCount}
         topLevelBlocks={topLevelBlocks}
+        dataCollections={dataCollections || EMPTY_DATA_COLLECTIONS}
       />
     )
   }
@@ -286,12 +297,17 @@ export function PageRenderer({
       const { container, rect } = containerTarget
       const containerPlacement = container.layout?.grid
       if (!containerPlacement) return
+      const ownerSpan = getChildOwnerSpan(container)
 
       const childMetrics: GridMetrics = {
         ...gridMetrics,
         canvasWidth: rect.width,
-        columnCount: containerPlacement.colSpan,
-        rowHeight: rect.height / Math.max(1, containerPlacement.rowSpan),
+        columnCount: ownerSpan.cols,
+        rowHeight: getNestedRowHeight(
+          getContainerRect(container).height,
+          containerPlacement.rowSpan,
+          gridMetrics.gap,
+        ),
         paddingX: 0,
         paddingY: 0,
       }
@@ -302,8 +318,8 @@ export function PageRenderer({
           y: localPoint.y - rect.top,
         },
         childMetrics,
-        containerPlacement.colSpan,
-        containerPlacement.rowSpan,
+        ownerSpan.cols,
+        ownerSpan.rows,
       )
       const siblings = hierarchy.childrenByParentId.get(container.id) ?? []
       if (collidesWithBlocks(placement, siblings)) return
@@ -338,12 +354,18 @@ export function PageRenderer({
         setNewBlockPreview(null)
         return
       }
+      const ownerSpan = getChildOwnerSpan(container)
+      const fullContainerRect = getContainerRect(container)
 
       const childMetrics: GridMetrics = {
         ...gridMetrics,
         canvasWidth: containerRect.width,
-        columnCount: containerPlacement.colSpan,
-        rowHeight: containerRect.height / Math.max(1, containerPlacement.rowSpan),
+        columnCount: ownerSpan.cols,
+        rowHeight: getNestedRowHeight(
+          fullContainerRect.height,
+          containerPlacement.rowSpan,
+          gridMetrics.gap,
+        ),
         paddingX: 0,
         paddingY: 0,
       }
@@ -354,8 +376,8 @@ export function PageRenderer({
           y: localPoint.y - containerRect.top,
         },
         childMetrics,
-        containerPlacement.colSpan,
-        containerPlacement.rowSpan,
+        ownerSpan.cols,
+        ownerSpan.rows,
       )
       const localRect = getPlacementRect(placement, childMetrics)
       const valid = !collidesWithBlocks(placement, hierarchy.childrenByParentId.get(container.id) ?? [])
@@ -384,15 +406,15 @@ export function PageRenderer({
   }
 
   function getDropContainerTarget(point: { x: number; y: number }, block: Block) {
-    if (isContainerBlock(block)) return null
+    if (isChildOwnerBlock(block)) return null
 
-    const containers = topLevelBlocks.filter((candidate) => isContainerBlock(candidate))
+    const containers = topLevelBlocks.filter((candidate) => isChildOwnerBlock(candidate))
     for (let index = containers.length - 1; index >= 0; index -= 1) {
       const container = containers[index]
       if (!canBlockBeContainerChild(block, container)) continue
       const placement = container.layout?.grid
       if (!placement) continue
-      const rect = getContainerRect(container)
+      const rect = getChildOwnerTargetRect(container)
       if (isPointInRect(point, rect)) return { container, rect }
     }
 
@@ -403,6 +425,27 @@ export function PageRenderer({
     const placement = container.layout?.grid
     if (!placement) return { left: 0, top: 0, width: 0, height: 0 }
     return resolveBlockRenderRect(container, gridMetrics) ?? getPlacementRect(placement, gridMetrics)
+  }
+
+  function getChildOwnerTargetRect(container: Block) {
+    const placement = container.layout?.grid
+    const containerRect = getContainerRect(container)
+    if (!placement || !isRepeaterBlock(container)) return containerRect
+
+    const ownerSpan = getChildOwnerSpan(container)
+    const childMetrics: GridMetrics = {
+      ...gridMetrics,
+      canvasWidth: containerRect.width,
+      columnCount: ownerSpan.cols,
+      rowHeight: getNestedRowHeight(containerRect.height, placement.rowSpan, gridMetrics.gap),
+      paddingX: 0,
+      paddingY: 0,
+    }
+    const itemRect = getPlacementRect(
+      { colStart: 1, rowStart: 1, colSpan: ownerSpan.cols, rowSpan: ownerSpan.rows },
+      childMetrics,
+    )
+    return { ...containerRect, height: Math.min(containerRect.height, itemRect.height) }
   }
 
   function handleGridPreviewChange(next: { blockId: string; left: number; top: number; width: number; height: number } | null) {
@@ -443,7 +486,7 @@ export function PageRenderer({
     const canAttachToActiveContainer = Boolean(
       canConsiderAttach &&
         relativePlacement &&
-        isPlacementWithinPlacement(relativePlacement, activeContainerPlacement) &&
+        isPlacementWithinSpan(relativePlacement, getChildOwnerSpan(activeContainer)) &&
         !collidesWithBlocks(relativePlacement, hierarchy.childrenByParentId.get(activeContainer.id) ?? []),
     )
 
@@ -578,7 +621,7 @@ export function PageRenderer({
                   setShowVGuide(v)
                 }}
               >
-                {isContainerBlock(block) ? renderContainerChildren(block) : null}
+                {isChildOwnerBlock(block) ? renderContainerChildren(block) : null}
               </DraggableBlock>
             ))}
           </div>
@@ -671,12 +714,14 @@ function ContainerChildrenLayer({
   pageGridMetrics,
   pageRowCount,
   topLevelBlocks,
+  dataCollections,
 }: ContainerChildrenLayerProps) {
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [childGridPreview, setChildGridPreview] = useState<GridPreview | null>(null)
   const [childDetachPreview, setChildDetachPreview] = useState<GridPreview | null>(null)
   const [childDragActive, setChildDragActive] = useState(false)
   const containerPlacement = container.layout?.grid
+  const ownerSpan = getChildOwnerSpan(container)
   const childRowHeight = childGridMetrics.rowHeight ?? GRID_ROW_HEIGHT
 
   useEffect(() => {
@@ -699,7 +744,7 @@ function ContainerChildrenLayer({
     }
 
     const childLayerWidth = childGridMetrics.canvasWidth
-    const childLayerHeight = containerPlacement.rowSpan * childRowHeight
+    const childLayerHeight = getNestedSpanPixelSize(ownerSpan.rows, childRowHeight, childGridMetrics.gap)
     const outsideContainer =
       next.left < 0 ||
       next.top < 0 ||
@@ -746,8 +791,8 @@ function ContainerChildrenLayer({
       },
       childGridMetrics,
       getBlockGridConstraints(block),
-      containerPlacement.colSpan,
-      containerPlacement.rowSpan,
+      ownerSpan.cols,
+      ownerSpan.rows,
     )
     const rect = getPlacementRect(placement, childGridMetrics)
     const valid = !collidesWithBlocks(placement, childrenBlocks, next.blockId)
@@ -759,6 +804,22 @@ function ContainerChildrenLayer({
       valid,
     })
     setChildDetachPreview(null)
+  }
+
+  if (isRepeaterBlock(container) && (!isActiveContainer || previewMode)) {
+    return (
+      <RepeaterRuntimeLayer
+        repeater={container}
+        templateBlocks={childrenBlocks}
+        childGridMetrics={childGridMetrics}
+        previewMode={previewMode}
+        projectId={projectId}
+        dataCollections={dataCollections}
+        runtimeContext={runtimeContext}
+        onSetPageState={onSetPageState}
+        onNavigate={onNavigate}
+      />
+    )
   }
 
   if (!isActiveContainer || previewMode) {
@@ -811,13 +872,13 @@ function ContainerChildrenLayer({
           top: 0,
           left: 0,
           right: 0,
-          height: (containerPlacement?.rowSpan ?? 1) * childRowHeight,
-          gridTemplateColumns: `repeat(${containerPlacement?.colSpan ?? 1}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${containerPlacement?.rowSpan ?? 1}, ${childRowHeight}px)`,
+          height: getNestedSpanPixelSize(ownerSpan.rows, childRowHeight, childGridMetrics.gap),
+          gridTemplateColumns: `repeat(${ownerSpan.cols}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${ownerSpan.rows}, ${childRowHeight}px)`,
           gap: GRID_GAP,
         }}
       >
-        {Array.from({ length: (containerPlacement?.colSpan ?? 1) * (containerPlacement?.rowSpan ?? 1) }, (_, index) => (
+        {Array.from({ length: ownerSpan.cols * ownerSpan.rows }, (_, index) => (
           <div key={`container-grid-cell-${container.id}-${index}`} className="editor-grid-cell" />
         ))}
       </div>
@@ -840,7 +901,9 @@ function ContainerChildrenLayer({
 
       {!childrenBlocks.length && container.type !== 'form' ? (
         <div className="pointer-events-none absolute inset-3 flex items-center justify-center rounded-2xl border border-dashed border-blue-300/70 bg-blue-50/45 text-center text-xs font-semibold text-blue-700">
-          Drop blocks here or click a block in the sidebar
+          {container.type === 'repeater'
+            ? 'Drop blocks here to design one repeated item'
+            : 'Drop blocks here or click a block in the sidebar'}
         </div>
       ) : null}
 
@@ -882,6 +945,152 @@ function ContainerChildrenLayer({
       ))}
     </div>
   )
+}
+
+function RepeaterRuntimeLayer({
+  repeater,
+  templateBlocks,
+  childGridMetrics,
+  previewMode,
+  projectId,
+  dataCollections,
+  runtimeContext,
+  onSetPageState,
+  onNavigate,
+}: {
+  repeater: Block
+  templateBlocks: Block[]
+  childGridMetrics: GridMetrics
+  previewMode?: boolean
+  projectId?: string
+  dataCollections: AppDataCollection[]
+  runtimeContext: RuntimeContext
+  onSetPageState: (variableId: string, value: string) => void
+  onNavigate?: (pageId: string) => void
+}) {
+  const props = normalizeRepeaterProps(repeater.props)
+  const recordsState = useRepeaterRecords({
+    block: repeater,
+    projectId,
+    dataCollections,
+    enabled: Boolean(previewMode),
+  })
+  const itemHeight = getNestedSpanPixelSize(
+    props.itemRowSpan,
+    childGridMetrics.rowHeight ?? GRID_ROW_HEIGHT,
+    childGridMetrics.gap,
+  )
+  const gapHeight = props.gapRows > 0
+    ? getNestedSpanPixelSize(
+        props.gapRows,
+        childGridMetrics.rowHeight ?? GRID_ROW_HEIGHT,
+        childGridMetrics.gap,
+      )
+    : 0
+
+  function renderTemplate(
+    recordId: string,
+    itemRuntimeContext: RuntimeContext,
+  ) {
+    return (
+      <div
+        key={`${repeater.id}:${recordId}`}
+        className="relative shrink-0"
+        style={{ height: itemHeight, marginBottom: gapHeight }}
+      >
+        {templateBlocks.map((child) => {
+          const placement = child.layout?.grid
+          if (!placement) return null
+          const rect = getPlacementRect(placement, childGridMetrics)
+          const instanceId = getRepeaterRuntimeInstanceId(repeater.id, recordId, child.id)
+
+          return (
+            <div
+              key={instanceId}
+              data-repeater-instance-id={instanceId}
+              style={{
+                position: 'absolute',
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+              }}
+            >
+              <BlockRenderer
+                block={child}
+                projectId={projectId}
+                previewMode={previewMode}
+                runtimeContext={itemRuntimeContext}
+                onSetPageState={onSetPageState}
+                onNavigate={previewMode ? onNavigate : undefined}
+              />
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (!previewMode) {
+    if (!templateBlocks.length) {
+      return (
+        <div className="pointer-events-none absolute inset-3 flex items-center justify-center rounded-2xl border border-dashed border-blue-300/70 bg-blue-50/45 px-4 text-center text-xs font-semibold text-blue-700">
+          Double-click the Collection List to design its repeated item.
+        </div>
+      )
+    }
+
+    return (
+      <div className="absolute inset-0 overflow-hidden">
+        {renderTemplate('editor-item', runtimeContext)}
+      </div>
+    )
+  }
+
+  if (recordsState.status === 'loading') {
+    return <RepeaterStatusMessage message="Loading records..." />
+  }
+  if (recordsState.status === 'error') {
+    return <RepeaterStatusMessage message={recordsState.message} tone="error" />
+  }
+  if (recordsState.status === 'empty' || recordsState.status === 'idle') {
+    return <RepeaterStatusMessage message={props.emptyText} />
+  }
+  if (!templateBlocks.length) {
+    return <RepeaterStatusMessage message="This list does not have an item design yet." />
+  }
+
+  return (
+    <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
+      {recordsState.records.map((record) =>
+        renderTemplate(record.recordId, { ...runtimeContext, currentItem: record }),
+      )}
+    </div>
+  )
+}
+
+function RepeaterStatusMessage({
+  message,
+  tone = 'neutral',
+}: {
+  message: string
+  tone?: 'neutral' | 'error'
+}) {
+  return (
+    <div className={`absolute inset-0 flex items-center justify-center px-4 text-center text-sm font-semibold ${
+      tone === 'error' ? 'text-red-600' : 'text-slate-500'
+    }`}>
+      {message}
+    </div>
+  )
+}
+
+function getNestedRowHeight(containerHeight: number, rowCount: number, gap = GRID_GAP) {
+  return Math.max(1, (containerHeight - Math.max(0, rowCount - 1) * gap) / Math.max(1, rowCount))
+}
+
+function getNestedSpanPixelSize(rowCount: number, rowHeight: number, gap = GRID_GAP) {
+  return Math.max(0, rowCount * rowHeight + Math.max(0, rowCount - 1) * gap)
 }
 
 

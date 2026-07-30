@@ -18,6 +18,7 @@ import { ContactForm } from './blocks/ContactForm';
 import { ImageGallery } from './blocks/ImageGallery';
 import { ContainerBlock } from './blocks/ContainerBlock';
 import { FormBlock } from './blocks/FormBlock';
+import { RepeaterBlock } from './blocks/RepeaterBlock';
 import { getBlockContentScale } from './schema/contentScale';
 import { resolveBlockAction } from './actions/blockActions';
 import { resolveBlockProps, type RuntimeContext } from './runtime/runtimeBindings';
@@ -25,6 +26,7 @@ import { resolveBlockProps, type RuntimeContext } from './runtime/runtimeBinding
 const registry: Record<BlockType, (p: any) => ReactElement | null> = {
   container: ContainerBlock,
   form: FormBlock,
+  repeater: RepeaterBlock,
   hero: Hero,
   text: TextBlock,
   button: ButtonBlock,

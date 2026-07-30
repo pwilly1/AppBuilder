@@ -14,6 +14,7 @@ import {
   listAppDataRecords,
   listAppDataSources,
   listCurrentAppUserRecords,
+  listRuntimeCollectionRecordPage,
   saveCurrentAppUserRecord,
   serializePublicAppDataRecord,
   updateAppDataRecord,
@@ -135,6 +136,39 @@ export class AppDataController {
       }
       const record = await getLatestAppDataRecord(project, project.ownerId, id, collectionId);
       res.json(record ? serializePublicAppDataRecord(record) : null);
+    } catch (error) {
+      this.handleAppDataError(error, res, next);
+    }
+  };
+
+  listRuntimeCollectionRecords = async (req: Request, res: Response, next: NextFunction) => {
+    const id = getRouteParam(req, 'id');
+    const collectionId = getRouteParam(req, 'collectionId');
+    if (!id || !collectionId) return this.missingParams(res);
+    try {
+      const project = await this.projects.findById(id);
+      if (!project) {
+        res.status(404).json({ error: 'Not found' });
+        return;
+      }
+      const appUserId = (req as AppUserAuthenticatedRequest).appUserId;
+      const page = await listRuntimeCollectionRecordPage(
+        project,
+        project.ownerId,
+        id,
+        collectionId,
+        {
+          scope: req.query.scope,
+          order: req.query.order,
+          limit: req.query.limit,
+          cursor: req.query.cursor,
+          ...(appUserId ? { appUserId } : {}),
+        },
+      );
+      res.json({
+        records: page.records.map(serializePublicAppDataRecord),
+        pageInfo: page.pageInfo,
+      });
     } catch (error) {
       this.handleAppDataError(error, res, next);
     }

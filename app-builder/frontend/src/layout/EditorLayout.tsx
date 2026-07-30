@@ -14,8 +14,10 @@ import { instantiateSectionTemplate, instantiateTemplatePage, isSectionTemplate 
 import {
   canBlockBeContainerChild,
   containerToPagePlacement,
+  getChildOwnerSpan,
+  isChildOwnerBlock,
   isContainerBlock,
-  isPlacementWithinPlacement,
+  isPlacementWithinSpan,
   pageToContainerPlacement,
   validateContainerResize,
 } from '../shared/schema/blockHierarchy'
@@ -124,7 +126,7 @@ export default function EditorLayout(props: Props) {
     ? pages.find((candidate: Page) => candidate.id === runtimePageResolution.pageId)
     : page
   const activeContainer = useMemo(
-    () => (page?.blocks || []).find((block: Block) => block.id === activeContainerId && isContainerBlock(block)) ?? null,
+    () => (page?.blocks || []).find((block: Block) => block.id === activeContainerId && isChildOwnerBlock(block)) ?? null,
     [activeContainerId, page?.blocks],
   )
   const pageSummary = useMemo(() => {
@@ -196,7 +198,14 @@ export default function EditorLayout(props: Props) {
 
   function handleAddBlock(block: Block) {
     setTemplateInsertError(null)
-    if (!activeContainer || isContainerBlock(block) || !canBlockBeContainerChild(block, activeContainer)) {
+    if (
+      activeContainer?.type === 'repeater'
+      && (isChildOwnerBlock(block) || !canBlockBeContainerChild(block, activeContainer))
+    ) {
+      setTemplateInsertError(`${block.type} blocks are not supported inside a Collection List item yet.`)
+      return
+    }
+    if (!activeContainer || isChildOwnerBlock(block) || !canBlockBeContainerChild(block, activeContainer)) {
       addBlock(block)
       return
     }
@@ -215,9 +224,9 @@ export default function EditorLayout(props: Props) {
         ...(block.layout || {}),
         grid: findFirstAvailablePlacement(
           activeChildren,
-          getContainerChildConstraints(getBlockGridConstraints(block), containerGrid),
-          containerGrid.colSpan,
-          containerGrid.rowSpan,
+          getContainerChildConstraints(getBlockGridConstraints(block), activeContainer),
+          getChildOwnerSpan(activeContainer).cols,
+          getChildOwnerSpan(activeContainer).rows,
         ),
       },
     }
@@ -299,8 +308,8 @@ export default function EditorLayout(props: Props) {
     const parent = parentId ? (page?.blocks || []).find((candidate: Block) => candidate.id === parentId) : null
     const shouldAddToContainer =
       parent &&
-      isContainerBlock(parent) &&
-      !isContainerBlock(block) &&
+      isChildOwnerBlock(parent) &&
+      !isChildOwnerBlock(block) &&
       canBlockBeContainerChild(block, parent)
 
     if (parentId && !shouldAddToContainer) return
@@ -336,7 +345,7 @@ export default function EditorLayout(props: Props) {
   }
 
   function enterContainer(container: Block) {
-    if (!isContainerBlock(container)) return
+    if (!isChildOwnerBlock(container)) return
     setActiveContainerId(container.id)
     setSelectedBlock(container)
   }
@@ -364,13 +373,26 @@ export default function EditorLayout(props: Props) {
     const oldGrid = currentBlock?.layout?.grid
     const newGrid = block.layout?.grid
     const activeContainerGrid = activeContainer?.layout?.grid
+    if (currentBlock?.type === 'repeater') {
+      const nextItemSpan = getChildOwnerSpan(block)
+      const childrenFitNextItem = (page?.blocks || [])
+        .filter((candidate: Block) => candidate.parentId === currentBlock.id)
+        .every((child: Block) => {
+          const placement = child.layout?.grid
+          return !placement || isPlacementWithinSpan(placement, nextItemSpan)
+        })
+      if (!childrenFitNextItem) {
+        setSelectedBlock(currentBlock)
+        return
+      }
+    }
     const isAttachToActiveContainer =
       activeContainer &&
       activeContainerGrid &&
       currentBlock &&
       !currentBlock.parentId &&
       currentBlock.id !== activeContainer.id &&
-      !isContainerBlock(currentBlock) &&
+      !isChildOwnerBlock(currentBlock) &&
       canBlockBeContainerChild(currentBlock, activeContainer) &&
       newGrid
 
@@ -378,7 +400,7 @@ export default function EditorLayout(props: Props) {
       const relativePlacement = pageToContainerPlacement(newGrid, activeContainerGrid)
       const activeChildren = (page?.blocks || []).filter((candidate: Block) => candidate.parentId === activeContainer.id)
       const canAttach =
-        isPlacementWithinPlacement(relativePlacement, activeContainerGrid) &&
+        isPlacementWithinSpan(relativePlacement, getChildOwnerSpan(activeContainer)) &&
         !collidesWithBlocks(relativePlacement, activeChildren, block.id)
 
       if (canAttach && applyBlockTransaction) {
@@ -558,10 +580,11 @@ export default function EditorLayout(props: Props) {
 
   function getContainerChildConstraints(
     constraints: BlockGridConstraints,
-    containerGrid: GridPlacement,
+    container: Block,
   ): BlockGridConstraints {
-    const maxCols = Math.max(1, containerGrid.colSpan)
-    const maxRows = Math.max(1, containerGrid.rowSpan)
+    const span = getChildOwnerSpan(container)
+    const maxCols = Math.max(1, span.cols)
+    const maxRows = Math.max(1, span.rows)
     const defaultCols = Math.min(constraints.defaultSpan.cols, maxCols)
     const defaultRows = Math.min(constraints.defaultSpan.rows, maxRows)
 
@@ -635,7 +658,7 @@ export default function EditorLayout(props: Props) {
                 className="ghost-btn !px-4 !py-3 text-sm"
                 onClick={exitContainer}
               >
-                Exit Container
+                {activeContainer.type === 'repeater' ? 'Exit Item Design' : 'Exit Container'}
               </button>
             ) : null}
             <button
@@ -738,7 +761,9 @@ export default function EditorLayout(props: Props) {
               ) : null}
               {activeContainer ? (
                 <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
-                  Adding into selected container. Click Exit Container to add to the page again.
+                  {activeContainer.type === 'repeater'
+                    ? 'Adding into the Collection List item design. Exit item editing to add to the page again.'
+                    : 'Adding into the selected container. Exit container editing to add to the page again.'}
                 </div>
               ) : null}
             </div>
@@ -786,7 +811,11 @@ export default function EditorLayout(props: Props) {
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="editor-pill">{modeLabel}</span>
-              {activeContainer ? <span className="editor-pill">Editing container</span> : null}
+              {activeContainer ? (
+                <span className="editor-pill">
+                  {activeContainer.type === 'repeater' ? 'Editing list item' : 'Editing container'}
+                </span>
+              ) : null}
               <span className="editor-pill">{pageSummary}</span>
               <span className="editor-pill">{blockCount} blocks</span>
             </div>
@@ -861,7 +890,7 @@ export default function EditorLayout(props: Props) {
               onClose={() => setSelectedBlock(null)}
               onDelete={(id: string) => {
                 const block = (page?.blocks || []).find((candidate: Block) => candidate.id === id)
-                if (block && isContainerBlock(block) && (page?.blocks || []).some((candidate: Block) => candidate.parentId === id)) {
+                if (block && isChildOwnerBlock(block) && (page?.blocks || []).some((candidate: Block) => candidate.parentId === id)) {
                   setPendingContainerDelete(block)
                   return
                 }
@@ -878,12 +907,14 @@ export default function EditorLayout(props: Props) {
       {pendingContainerDelete ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-[1.85rem] border border-slate-200 bg-[#fffcf6] p-6 shadow-2xl">
-            <div className="editor-section-title">Delete container</div>
+            <div className="editor-section-title">
+              Delete {pendingContainerDelete.type === 'repeater' ? 'Collection List' : 'container'}
+            </div>
             <h3 className="section-heading mt-2 text-2xl font-semibold text-slate-900">
               What should happen to the blocks inside?
             </h3>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              This container has child blocks. You can delete everything, move the child blocks back onto the page,
+              This block has child blocks. You can delete everything, move the child blocks back onto the page,
               or cancel.
             </p>
             <div className="mt-6 grid gap-3">
@@ -892,14 +923,14 @@ export default function EditorLayout(props: Props) {
                 className="btn"
                 onClick={() => deleteContainerKeepChildren(pendingContainerDelete)}
               >
-                Delete container, keep child blocks
+                Delete parent, keep child blocks
               </button>
               <button
                 type="button"
                 className="ghost-btn !justify-center !text-red-700"
                 onClick={() => deleteContainerAndChildren(pendingContainerDelete)}
               >
-                Delete container and children
+                Delete parent and children
               </button>
               <button
                 type="button"

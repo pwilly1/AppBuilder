@@ -194,11 +194,25 @@ data class AppDataRecord(
     val submittedAt: String? = null,
 )
 
+@Serializable
+data class RuntimeCollectionRecordPageInfo(
+    val limit: Int,
+    val hasMore: Boolean,
+    val nextCursor: String? = null,
+)
+
+@Serializable
+data class RuntimeCollectionRecordPage(
+    val records: List<AppDataRecord> = emptyList(),
+    val pageInfo: RuntimeCollectionRecordPageInfo,
+)
+
 object ProjectLoader {
     private const val GRID_DENSITY_SCHEMA_VERSION = 2
     private const val EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5
     private const val UNIFIED_TEXT_FIELD_SCHEMA_VERSION = 6
-    private const val CURRENT_SCHEMA_VERSION = UNIFIED_TEXT_FIELD_SCHEMA_VERSION
+    private const val REPEATER_SCHEMA_VERSION = 8
+    private const val CURRENT_SCHEMA_VERSION = REPEATER_SCHEMA_VERSION
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -265,7 +279,7 @@ object ProjectLoader {
         val scaleGrid = (project.schemaVersion ?: 1) < GRID_DENSITY_SCHEMA_VERSION
         val migrateLegacySubmissionGroups = (project.schemaVersion ?: 1) < EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION
         return project.copy(
-            schemaVersion = CURRENT_SCHEMA_VERSION,
+            schemaVersion = maxOf(project.schemaVersion ?: 1, CURRENT_SCHEMA_VERSION),
             pages = project.pages.map { page ->
                 val textFieldsMigrated = page.blocks.map(::migrateLegacyTextField)
                 val legacyButtonsMigrated = textFieldsMigrated.map(::migrateLegacyButton)
@@ -492,6 +506,25 @@ object ProjectLoader {
     ): List<AppDataRecord> {
         val body = httpGet(
             normalizeBaseUrl(baseUrl) + "/public/projects/$projectId/app-data/collections/$collectionId/records/mine",
+            token = appUserToken,
+        )
+        return json.decodeFromString(body)
+    }
+
+    suspend fun listRuntimeCollectionRecords(
+        baseUrl: String,
+        projectId: String,
+        collectionId: String,
+        scope: String = "all",
+        order: String = "newest",
+        limit: Int = 10,
+        appUserToken: String? = null,
+    ): RuntimeCollectionRecordPage {
+        val boundedLimit = limit.coerceIn(1, 20)
+        val body = httpGet(
+            normalizeBaseUrl(baseUrl) +
+                "/public/projects/$projectId/app-data/collections/$collectionId/records" +
+                "?scope=$scope&order=$order&limit=$boundedLimit",
             token = appUserToken,
         )
         return json.decodeFromString(body)

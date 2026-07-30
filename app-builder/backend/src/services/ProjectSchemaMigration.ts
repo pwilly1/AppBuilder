@@ -2,7 +2,7 @@ import type { ProjectRecord } from '../repositories/ProjectRepository.js';
 import type { ProjectPageAccess } from '../models/Project.js';
 
 const EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION = 5;
-const CURRENT_SCHEMA_VERSION = 7;
+const CURRENT_SCHEMA_VERSION = 8;
 
 export function migrateProjectRecord(project: ProjectRecord): ProjectRecord {
   const migrateLegacySubmissionGroups = (project.schemaVersion || 1) < EXPLICIT_SUBMIT_FIELDS_SCHEMA_VERSION;

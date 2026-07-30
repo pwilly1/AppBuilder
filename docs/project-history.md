@@ -704,3 +704,21 @@ Representative areas:
 - `frontend/src/api.ts`
 - `frontend/src/pages/ProjectData.tsx`
 - `backend/test/appDataContracts.test.ts`
+
+## Phase 39: Configurable Collection Lists
+
+Date: July 28, 2026
+
+The first Collection List/repeater milestone added a creator-designed item template for displaying multiple app-data records without persisting cloned row blocks. Repeaters remain top-level child owners in the flat page schema, while their supported children use coordinates relative to one reusable item. Text and Hero gained a `currentItem` selector that resolves each runtime row independently and does not create page-level single-record requests.
+
+The backend now exposes a bounded collection-record list endpoint with all-record and current-user scopes, newest/oldest ordering, cursor pagination, a hard 20-record limit, token-derived ownership, and public-response redaction. The web editor provides list configuration, item-design mode, ghost preview rows, access warnings, and live repeated rendering. Android decodes the same schema, loads the same endpoint, and renders the same item grid with derived row contexts.
+
+Representative areas:
+
+- `frontend/src/shared/schema/repeater.ts`
+- `frontend/src/shared/schema/blockHierarchy.ts`
+- `frontend/src/editor/PageRenderer.tsx`
+- `frontend/src/components/Inspector.tsx`
+- `backend/src/services/AppDataService.ts`
+- `backend/src/routes/AppDataRoutes.ts`
+- `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`

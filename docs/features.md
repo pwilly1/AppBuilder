@@ -70,8 +70,9 @@ The current visible block palette is:
 - Checkbox
 - Toggle
 - Container
+- Collection List
 
-Hero, Text, Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Checkbox, Toggle, and Container are lightweight schema-backed primitives that are already available in the editor and runtime.
+Hero, Text, Button, Shape, and Image remain the main public-demo blocks. Badge, Icon, Progress Bar, Form, Checkbox, Toggle, Container, and Collection List are schema-backed primitives that are already available in the editor and runtime.
 
 Text-like blocks support canvas editing and inspector editing. Text `value` and Hero `headline` can bind to page-scoped text variables or a field from the latest public record, one creator-selected public record, or the signed-in generated-app user's newest owned record while keeping their static props as fallbacks. Shape supports canvas placement/resizing and inspector-based visual styling. Button supports a static/no-action mode, page navigation, repeatable data submission, signed-in-user create-or-update/delete, generated-app signup/login/logout, safe external URLs, or page-variable updates plus inspector-based styling for colors, padding, and corner radius. The Inspector presents those behaviors in plain language, summarizes the configured result, suggests suitable account fields, and guides collection mutations and Save Data setup through destination, input selection, collection mapping, and success feedback.
 Badge, Icon, Progress Bar, Checkbox, and Toggle also expose inspector-driven styling/content controls and render in both web preview and Android preview.
@@ -82,6 +83,7 @@ Text is display-only by default. The inspector can make it app-editable, choose 
 Button configured with Save Data is a second schema-backed submission path. It persists the existing `submitData` schema action, so web and Android preview continue submitting the same-page editable Text, Checkbox, and Toggle fields explicitly selected in the Behavior Builder. Eligible inputs are selected automatically for a new Save Data behavior, collection targets are mapped when possible, and incomplete mappings are blocked from saving. Editable Text can also supply live values to Change Page Data actions.
 Container supports grouping approved atomic child blocks, entering an explicit child-editing mode, dragging blocks into the container, dragging children back onto the page, and optional container surface styling.
 Project-level data collections define stable record sources and typed fields. Submit Data buttons can map selected field values into a collection. Text and Hero can directly display a field from the latest public record, one public record selected by the app creator, or the signed-in generated-app user's newest owned record in web and Android preview.
+Collection List repeats one creator-designed item across up to 20 collection records. The first milestone supports all-record or signed-in-user scope, newest/oldest ordering, configurable item spacing, and Text/Hero `currentItem` bindings in both web and Android preview.
 
 ### Grid Layout
 

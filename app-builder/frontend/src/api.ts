@@ -246,6 +246,15 @@ export type ProjectAppDataRecordPage = {
   };
 };
 
+export type RuntimeCollectionRecordPage = {
+  records: ProjectAppDataRecord[];
+  pageInfo: {
+    limit: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+};
+
 export type ProjectAppDataField = {
   blockId: string;
   type: string;
@@ -411,6 +420,28 @@ export function listCurrentAppUserCollectionRecords(projectId: string, collectio
     projectId,
     `/public/projects/${projectId}/app-data/collections/${collectionId}/records/mine`,
   ) as Promise<ProjectAppDataRecord[]>;
+}
+
+export function listRuntimeCollectionRecords(
+  projectId: string,
+  collectionId: string,
+  options: {
+    scope?: 'all' | 'currentUser';
+    order?: 'newest' | 'oldest';
+    limit?: number;
+    cursor?: string | null;
+  } = {},
+) {
+  const params = new URLSearchParams();
+  if (options.scope) params.set('scope', options.scope);
+  if (options.order) params.set('order', options.order);
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.cursor) params.set('cursor', options.cursor);
+  const query = params.size ? `?${params.toString()}` : '';
+  return runtimeRequest(
+    projectId,
+    `/public/projects/${projectId}/app-data/collections/${collectionId}/records${query}`,
+  ) as Promise<RuntimeCollectionRecordPage>;
 }
 
 export async function saveCurrentAppUserCollectionRecord(

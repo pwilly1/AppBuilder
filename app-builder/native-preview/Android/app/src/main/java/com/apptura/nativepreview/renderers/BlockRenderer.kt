@@ -17,6 +17,7 @@ fun BlockRenderer(
     when (block.type) {
         "container" -> ContainerView(block, content = content)
         "form" -> FormView(block, content = content)
+        "repeater" -> ContainerView(block, content = content)
         "hero" -> HeroView(block, runtimeContext)
         "text" -> TextView(block, runtimeContext, formRuntime)
         "button" -> ButtonView(block, projectId, baseUrl, formRuntime, runtimeContext, onNavigate)

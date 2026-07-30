@@ -15,6 +15,8 @@ import {
   attachBlockToContainer,
   buildBlockHierarchyIndex,
   detachBlockFromContainer,
+  getChildOwnerSpan,
+  isChildOwnerBlock,
   pageToContainerPlacement,
   repairBlockHierarchy,
   validateBlockHierarchy,
@@ -163,4 +165,30 @@ test('container resize rejects proportional child collisions', () => {
 
   assert.equal(result.valid, false)
   assert.equal(result.issues.some((issue) => issue.code === 'sibling-collision'), true)
+})
+
+test('repeater children are validated against one item instead of the list viewport', () => {
+  const repeater: Block = {
+    ...block('task-list', 'repeater', { colStart: 1, rowStart: 1, colSpan: 8, rowSpan: 16 }),
+    props: { itemRowSpan: 4 },
+  }
+  const validChild = block(
+    'task-title',
+    'text',
+    { colStart: 1, rowStart: 1, colSpan: 6, rowSpan: 2 },
+    repeater.id,
+  )
+  const invalidChild = block(
+    'task-status',
+    'badge',
+    { colStart: 1, rowStart: 4, colSpan: 3, rowSpan: 2 },
+    repeater.id,
+  )
+
+  assert.equal(isChildOwnerBlock(repeater), true)
+  assert.deepEqual(getChildOwnerSpan(repeater), { cols: 8, rows: 4 })
+  const issues = validateBlockHierarchy([repeater, validChild, invalidChild])
+  assert.equal(issues.some((issue) => (
+    issue.code === 'child-out-of-bounds' && issue.blockId === invalidChild.id
+  )), true)
 })
