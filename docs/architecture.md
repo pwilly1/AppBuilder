@@ -437,7 +437,13 @@ Container work keeps `Page.blocks` flat and derives ownership through `parentId`
 
 ### AI should operate on schema
 
-Planned GenAI features should generate or edit the same project schema the editor already understands. AI should not create a separate app format.
+Planned AI features will produce a constrained generation plan that deterministic Apptura code compiles into the same project schema the editor already understands. The model may propose exact grid positions, but schema, reference, hierarchy, layout, and native-support validation must pass before the editor can preview or apply a proposal.
+
+AI generation will not use RAG in the initial architecture, will not write directly to project storage, and will not create a separate app format. Accepted proposals must enter the existing project history as one undoable transaction.
+
+The first deterministic prototype now implements this boundary with a strict page-scoped fixture: compilation and preview operate on an isolated project value, stale proposals cannot be accepted, and only explicit acceptance enters `applyProjectTransaction`. No model or backend AI route exists yet.
+
+The complete contract, validation loop, security boundary, testing strategy, and phased rollout are documented in [AI App Generation](ai-app-generation.md).
 
 ## Current Architecture Risks
 
@@ -450,5 +456,6 @@ Planned GenAI features should generate or edit the same project schema the edito
 
 - [Block and Schema Reference](block-reference.md) - exact project, block, layout, and migration contract
 - [Collection List / Repeater](collection-list-repeater.md) - implemented first-milestone multi-record layout and row-context architecture
+- [AI App Generation](ai-app-generation.md) - planned AI proposal, compiler, exact-placement validation, and review architecture
 - [How to Add a Block](how-to-add-a-block.md) - required implementation path across web and Android
 - [API Reference](api-reference.md) - current backend route surface

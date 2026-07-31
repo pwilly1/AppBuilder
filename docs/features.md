@@ -250,20 +250,26 @@ A future plugin system could allow third-party components, connectors, and actio
 
 ### GenAI App Building
 
-GenAI should generate or modify the existing project schema. It should not create a separate app format.
+Status: deterministic prototype implemented; model-backed generation planned.
+
+The editor currently compiles a strict, hardcoded Crew Directory plan into two pages and one collection. It previews the isolated result, preserves or repairs exact grid positions, resolves bindings and actions, rejects broken references, and applies acceptance as one undoable transaction.
+
+The future backend model will return the same constrained plan. Model calls, prompts, authenticated AI routes, limits, and correction requests are not implemented yet.
 
 Good first AI features:
 
 - rewrite block text
 - suggest page structure
-- generate a section from templates
-- validate generated schema before applying changes
+- generate a section with validated exact placement
+- generate a new page
+- preview and approve a proposal before applying it
 
 Later AI features:
 
-- prompt-to-page
 - prompt-to-app
-- guided app iteration
+- safe guided editing through explicit patch operations
+
+The initial architecture will not use RAG, embeddings, fine-tuning, autonomous agents, or model-authored source code. See [AI App Generation](ai-app-generation.md) for the complete plan.
 
 ## Current Known Feature Limits
 

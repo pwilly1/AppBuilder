@@ -215,14 +215,20 @@ The multi-record implementation is specified separately in the [Collection List 
 
 Goal: use AI to assist app creation without bypassing the editor schema.
 
+Implementation must follow [AI App Generation](ai-app-generation.md): no RAG in the initial architecture, model-proposed exact grid placement, deterministic validation and limited correction, preview before apply, and one undoable project transaction.
+
 | Status | Task |
 | --- | --- |
-| Later | AI copywriting for hero/text/button labels. |
-| Later | Prompt-to-section using existing templates. |
-| Later | Prompt-to-page generation. |
+| Completed | Define and validate the page-scoped `AppGenerationPlanV1` prototype. |
+| Completed | Build the deterministic compiler, exact-placement validator, bounded repair, fixture preview, and one-transaction apply flow. |
+| Next | Verify the generated Crew Directory fixture in web preview, save/reload, undo/redo, and Android runtime. |
+| Next | Publish the versioned capability catalog used to construct model context. |
+| Planned | Add the authenticated backend model-client and proposal boundary. |
+| Planned | Prompt-to-section with proposal preview and one undoable apply operation. |
+| Planned | Prompt-to-page generation. |
 | Later | Prompt-to-app starter flow. |
-| Later | Schema validation for AI-generated layouts. |
-| Later | Preview-and-confirm before saving AI changes. |
+| Later | Safe editing through explicit project patch operations. |
+| Later | Usage limits, model evaluations, cost reporting, and production monitoring. |
 
 Rule:
 

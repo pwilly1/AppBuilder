@@ -1,5 +1,5 @@
 // © 2025 Preston Willis. All rights reserved.
-import type { AppDataCollection, Page, Block, BlockGridConstraints, GridPlacement } from '../shared/schema/types'
+import type { AppDataCollection, Page, Block, GridPlacement } from '../shared/schema/types'
 import {
   clampSpan,
   collidesWithBlocks,
@@ -8,6 +8,7 @@ import {
   getColumnWidth,
   GRID_DEFAULT_ROW_COUNT,
   getPlacementRect,
+  getScopedGridConstraints,
   GRID_COLUMN_COUNT,
   GRID_GAP,
   GRID_PADDING,
@@ -56,6 +57,7 @@ type ContainerChildrenLayerProps = {
   selectedBlockId?: string
   isActiveContainer: boolean
   previewMode?: boolean
+  previewPlaceholderData?: boolean
   projectId?: string
   runtimeContext: RuntimeContext
   onSetPageState: (variableId: string, value: string) => void
@@ -76,6 +78,7 @@ export function PageRenderer({
   selectedBlockId,
   activeContainerId,
   previewMode,
+  previewPlaceholderData,
   onNavigate,
   onSelectBlock,
   onEnterContainer,
@@ -91,6 +94,7 @@ export function PageRenderer({
   selectedBlockId?: string
   activeContainerId?: string | null
   previewMode?: boolean
+  previewPlaceholderData?: boolean
   onNavigate?: (pageId: string) => void
   onSelectBlock?: (b: Block | null) => void
   onEnterContainer?: (b: Block) => void
@@ -253,6 +257,7 @@ export function PageRenderer({
         selectedBlockId={selectedBlockId}
         isActiveContainer={isActiveContainer}
         previewMode={previewMode}
+        previewPlaceholderData={previewPlaceholderData}
         projectId={projectId}
         runtimeContext={runtimeContext}
         onSetPageState={handleSetPageState}
@@ -647,7 +652,7 @@ function derivePlacementFromDropPoint(
   columnCount: number,
   rowCount: number,
 ): GridPlacement {
-  const constraints = getScopedConstraints(getBlockGridConstraints(block), columnCount, rowCount)
+  const constraints = getScopedGridConstraints(getBlockGridConstraints(block), columnCount, rowCount)
   const span = clampSpan(constraints.defaultSpan, constraints)
   const columnWidth = getColumnWidth(metrics)
   const gap = metrics.gap ?? GRID_GAP
@@ -670,33 +675,6 @@ function derivePlacementFromDropPoint(
   )
 }
 
-function getScopedConstraints(
-  constraints: BlockGridConstraints,
-  columnCount: number,
-  rowCount: number,
-): BlockGridConstraints {
-  const maxCols = Math.max(1, columnCount)
-  const maxRows = Math.max(1, rowCount)
-  const defaultCols = Math.min(constraints.defaultSpan.cols, maxCols)
-  const defaultRows = Math.min(constraints.defaultSpan.rows, maxRows)
-
-  return {
-    ...constraints,
-    defaultSpan: {
-      cols: Math.max(1, defaultCols),
-      rows: Math.max(1, defaultRows),
-    },
-    minSpan: {
-      cols: Math.min(constraints.minSpan.cols, Math.max(1, defaultCols)),
-      rows: Math.min(constraints.minSpan.rows, Math.max(1, defaultRows)),
-    },
-    maxSpan: {
-      cols: Math.min(constraints.maxSpan.cols, maxCols),
-      rows: Math.min(constraints.maxSpan.rows, maxRows),
-    },
-  }
-}
-
 function ContainerChildrenLayer({
   container,
   childrenBlocks,
@@ -704,6 +682,7 @@ function ContainerChildrenLayer({
   selectedBlockId,
   isActiveContainer,
   previewMode,
+  previewPlaceholderData,
   projectId,
   runtimeContext,
   onSetPageState,
@@ -813,6 +792,7 @@ function ContainerChildrenLayer({
         templateBlocks={childrenBlocks}
         childGridMetrics={childGridMetrics}
         previewMode={previewMode}
+        previewPlaceholderData={previewPlaceholderData}
         projectId={projectId}
         dataCollections={dataCollections}
         runtimeContext={runtimeContext}
@@ -952,6 +932,7 @@ function RepeaterRuntimeLayer({
   templateBlocks,
   childGridMetrics,
   previewMode,
+  previewPlaceholderData,
   projectId,
   dataCollections,
   runtimeContext,
@@ -962,6 +943,7 @@ function RepeaterRuntimeLayer({
   templateBlocks: Block[]
   childGridMetrics: GridMetrics
   previewMode?: boolean
+  previewPlaceholderData?: boolean
   projectId?: string
   dataCollections: AppDataCollection[]
   runtimeContext: RuntimeContext
@@ -973,7 +955,7 @@ function RepeaterRuntimeLayer({
     block: repeater,
     projectId,
     dataCollections,
-    enabled: Boolean(previewMode),
+    enabled: Boolean(previewMode && !previewPlaceholderData),
   })
   const itemHeight = getNestedSpanPixelSize(
     props.itemRowSpan,
@@ -1027,6 +1009,17 @@ function RepeaterRuntimeLayer({
             </div>
           )
         })}
+      </div>
+    )
+  }
+
+  if (previewPlaceholderData) {
+    if (!templateBlocks.length) {
+      return <RepeaterStatusMessage message="This list does not have an item design yet." />
+    }
+    return (
+      <div className="absolute inset-0 overflow-hidden">
+        {renderTemplate('proposal-item', runtimeContext)}
       </div>
     )
   }

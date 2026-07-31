@@ -35,6 +35,33 @@ export function getBlockGridConstraints(block: Block): BlockGridConstraints {
   return BlockRegistry[block.type].gridConstraints
 }
 
+export function getScopedGridConstraints(
+  constraints: BlockGridConstraints,
+  columnCount: number,
+  rowCount: number,
+): BlockGridConstraints {
+  const maxCols = Math.max(1, columnCount)
+  const maxRows = Math.max(1, rowCount)
+  const defaultCols = Math.min(constraints.defaultSpan.cols, maxCols)
+  const defaultRows = Math.min(constraints.defaultSpan.rows, maxRows)
+
+  return {
+    ...constraints,
+    defaultSpan: {
+      cols: Math.max(1, defaultCols),
+      rows: Math.max(1, defaultRows),
+    },
+    minSpan: {
+      cols: Math.min(constraints.minSpan.cols, Math.max(1, defaultCols)),
+      rows: Math.min(constraints.minSpan.rows, Math.max(1, defaultRows)),
+    },
+    maxSpan: {
+      cols: Math.min(constraints.maxSpan.cols, maxCols),
+      rows: Math.min(constraints.maxSpan.rows, maxRows),
+    },
+  }
+}
+
 export function getColumnWidth(metrics: GridMetrics): number {
   const columnCount = metrics.columnCount ?? GRID_COLUMN_COUNT
   const gap = metrics.gap ?? GRID_GAP

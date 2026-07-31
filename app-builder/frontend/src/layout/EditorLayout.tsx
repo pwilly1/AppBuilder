@@ -7,6 +7,8 @@ import Inspector from '../components/Inspector'
 import PagesPanel from '../components/PagesPanel'
 import PageVariablesPanel from '../components/PageVariablesPanel'
 import ProjectDataSummary from '../components/ProjectDataSummary'
+import { AiGenerateDialog } from '../components/ai/AiGenerateDialog'
+import { useAiGenerationPrototype } from '../hooks/useAiGenerationPrototype'
 import type { Block, Page, PageAccess, PageStateVariable, Project } from '../shared/schema/types'
 import { normalizePageAccess, resolvePageAccess } from '../shared/runtime/pageAccess'
 import type { TemplateDefinition } from '../shared/schema/templates'
@@ -114,6 +116,7 @@ export default function EditorLayout(props: Props) {
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('blocks')
   const [, setAppUserSessionRevision] = useState(0)
   const [pendingProtectedPageId, setPendingProtectedPageId] = useState<string | null>(null)
+  const aiGeneration = useAiGenerationPrototype(project)
   const appUserSignedIn = Boolean(projectId && getAppUserToken(projectId))
   const runtimeRequestedPageId = appUserSignedIn && pendingProtectedPageId
     ? pendingProtectedPageId
@@ -194,6 +197,18 @@ export default function EditorLayout(props: Props) {
 
     const resolution = resolvePageAccess(pages, targetPageId, appUserSignedIn)
     if (resolution.pageId) selectPage?.(resolution.pageId)
+  }
+
+  function acceptAiGenerationProposal() {
+    if (!applyProjectTransaction || !aiGeneration.proposal || aiGeneration.isStale) return
+    const proposal = aiGeneration.proposal
+    applyProjectTransaction(
+      () => proposal.project,
+      { selectedPageId: proposal.generatedPageIds[0] },
+    )
+    setSelectedBlock(null)
+    setActiveContainerId(null)
+    aiGeneration.closePrototype()
   }
 
   function handleAddBlock(block: Block) {
@@ -639,6 +654,14 @@ export default function EditorLayout(props: Props) {
                 {isSaving ? 'Saving...' : 'Save'}
               </button>
             )}
+            <button
+              type="button"
+              className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50"
+              onClick={aiGeneration.openPrototype}
+              disabled={previewMode || !applyProjectTransaction}
+            >
+              Generate with AI
+            </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200/70 bg-white/45 p-1">
@@ -903,6 +926,16 @@ export default function EditorLayout(props: Props) {
           </div>
         </div>
       </aside>
+
+      <AiGenerateDialog
+        open={aiGeneration.open}
+        proposal={aiGeneration.proposal}
+        issues={aiGeneration.issues}
+        isStale={aiGeneration.isStale}
+        onClose={aiGeneration.closePrototype}
+        onRegenerate={aiGeneration.regeneratePrototype}
+        onAccept={acceptAiGenerationProposal}
+      />
 
       {pendingContainerDelete ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
