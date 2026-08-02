@@ -7,7 +7,7 @@ import type {
   AiGenerationPlanIssue,
   AiPagePlan,
   AppGenerationPlanV1,
-} from './aiTypes'
+} from '@apptura/shared/ai'
 import { createBlock } from '../shared/schema/registry'
 import { CURRENT_SCHEMA_VERSION } from '../shared/schema/gridMigration'
 import type {

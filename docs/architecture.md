@@ -20,6 +20,8 @@ Android native preview
 
 The central product idea is schema-driven app creation. The web editor saves a project schema, and preview/runtime clients render that schema.
 
+The frontend and backend toolchains share a small pure TypeScript package at `app-builder/shared`. The frontend and backend AI tests consume it now; the future backend generation route will use the same parser and catalog. This package is a source-code boundary, not a fourth deployed service: each consumer compiles or packages the shared code into its own application.
+
 ## Repository Structure
 
 ```text
@@ -30,6 +32,9 @@ app-builder/frontend/src
   layout/          Editor page composition
   pages/           Route-level pages such as dashboard/account
   shared/          Block renderers and shared schema logic
+
+app-builder/shared/src
+  ai/              Versioned AI plan types, strict parser, and capability catalog
 
 app-builder/backend/src
   config/          Environment variable loading
@@ -102,7 +107,7 @@ Legacy `contactForm` blocks still use the older fixed submission shape and optio
 
 ## Current Project Schema
 
-The main frontend schema lives in `app-builder/frontend/src/shared/schema/types.ts`.
+The canonical project/runtime schema currently lives in `app-builder/frontend/src/shared/schema/types.ts`. Cross-process AI request contracts live in `app-builder/shared/src/ai`; moving the entire project schema is a later migration and is not required for the current AI boundary.
 
 A project contains pages, and pages contain blocks:
 
@@ -437,11 +442,11 @@ Container work keeps `Page.blocks` flat and derives ownership through `parentId`
 
 ### AI should operate on schema
 
-Planned AI features will produce a constrained generation plan that deterministic Apptura code compiles into the same project schema the editor already understands. The model may propose exact grid positions, but schema, reference, hierarchy, layout, and native-support validation must pass before the editor can preview or apply a proposal.
+AI features produce a constrained generation plan that deterministic Apptura code compiles into the same project schema the editor already understands. The model may propose exact grid positions, but schema, reference, hierarchy, layout, and native-support validation must pass before the editor can preview or apply a proposal.
 
 AI generation will not use RAG in the initial architecture, will not write directly to project storage, and will not create a separate app format. Accepted proposals must enter the existing project history as one undoable transaction.
 
-The first deterministic prototype now implements this boundary with a strict page-scoped fixture: compilation and preview operate on an isolated project value, stale proposals cannot be accepted, and only explicit acceptance enters `applyProjectTransaction`. No model or backend AI route exists yet.
+The first deterministic prototype implements this boundary with a strict page-scoped fixture: compilation and preview operate on an isolated project value, stale proposals cannot be accepted, and only explicit acceptance enters `applyProjectTransaction`. The versioned plan contract, strict parser, and capability catalog are published internally from `@apptura/shared/ai`, while editor-state compilation, layout repair, final project validation, and preview remain frontend-owned. No model or backend AI route exists yet.
 
 The complete contract, validation loop, security boundary, testing strategy, and phased rollout are documented in [AI App Generation](ai-app-generation.md).
 

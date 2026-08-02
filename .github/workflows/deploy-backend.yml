@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'app-builder/backend/**'
+      - 'app-builder/shared/**'
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
@@ -40,6 +41,15 @@ jobs:
       - name: Prune dev dependencies
         working-directory: ${{ env.BACKEND_PATH }}
         run: npm prune --omit=dev
+
+      - name: Materialize shared runtime package
+        shell: bash
+        run: |
+          SHARED_MODULE="${BACKEND_PATH}/node_modules/@apptura/shared"
+          rm -rf "${SHARED_MODULE}"
+          mkdir -p "${SHARED_MODULE}"
+          cp app-builder/shared/package.json "${SHARED_MODULE}/package.json"
+          cp -R app-builder/shared/dist "${SHARED_MODULE}/dist"
 
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4

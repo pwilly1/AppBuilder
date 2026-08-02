@@ -39,12 +39,14 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending
 - MongoDB persistence for projects
 - Azure-hosted frontend and backend with GitHub Actions deployment
+- Deterministic AI generation foundation with a versioned shared plan contract, strict parser, capability catalog, isolated preview, and one-transaction apply flow
 
 ## Tech Stack
 
 | Layer | Technology |
 | --- | --- |
 | Frontend | React, TypeScript, Vite, Tailwind CSS |
+| Shared contracts | TypeScript package consumed by frontend and backend |
 | Editor interactions | React state, custom grid math, dnd-kit dependency available |
 | Backend | Node.js, Express, TypeScript |
 | Database | MongoDB Atlas, Mongoose |
@@ -59,6 +61,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 app-builder/
   frontend/          React/Vite web app and editor
   backend/           Express API, auth, project persistence
+  shared/            Pure TypeScript contracts shared by frontend and backend
   native-preview/    Android/Kotlin native preview app
 docs/                Architecture, deployment, features, roadmap, project history
 .github/workflows/   Frontend and backend deployment workflows
@@ -91,6 +94,8 @@ props = block-specific content and styling
 ```
 
 The long-term goal is for the same saved schema to power web preview, Android preview, future export targets, and eventual AI-assisted generation.
+
+The first cross-surface TypeScript boundary now lives in `app-builder/shared`. It contains the versioned AI generation plan contract, strict parser, and capability catalog. It is compiled into each Node build that consumes it; it is not a separate runtime service.
 
 Today the editor canvas is intentionally constrained to a phone-style 16-column by 29-row workspace so placement stays predictable and closer to the Android reference surface.
 The current editor keeps page structure, block insertion, and runtime data setup in a tabbed left workspace so the rail stays focused while preserving the same three-column shell.

@@ -11,7 +11,7 @@ import {
   validateBlockHierarchy,
 } from '../shared/schema/blockHierarchy'
 import type { Block, GridPlacement } from '../shared/schema/types'
-import type { AiGenerationPlanIssue } from './aiTypes'
+import type { AiGenerationPlanIssue } from '@apptura/shared/ai'
 
 export type AiGenerationLayoutRepair = {
   pageKey: string

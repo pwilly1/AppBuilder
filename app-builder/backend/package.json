@@ -4,17 +4,19 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build:shared": "tsc -p ../shared/tsconfig.json",
+    "dev": "npm run build:shared && tsx watch src/index.ts",
+    "build": "npm run build:shared && tsc",
     "start": "node dist/index.js",
     "lint": "eslint . --ext .ts",
-    "test": "tsx --test test/**/*.test.ts"
+    "test": "npm run build:shared && tsx --test test/**/*.test.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@apptura/shared": "file:../shared",
     "@azure/storage-blob": "^12.33.0",
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",

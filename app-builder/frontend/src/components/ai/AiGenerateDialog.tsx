@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { AiGenerationProposal } from '../../ai/compileGenerationPlan'
-import type { AiGenerationPlanIssue } from '../../ai/aiTypes'
+import type { AiGenerationPlanIssue } from '@apptura/shared/ai'
 import { PageRenderer } from '../../editor/PageRenderer'
 
 type Props = {

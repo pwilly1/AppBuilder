@@ -1,4 +1,4 @@
-import type { AppGenerationPlanV1 } from '../aiTypes'
+import type { AppGenerationPlanV1 } from '@apptura/shared/ai'
 
 export const CREW_DIRECTORY_GENERATION_PLAN = {
   planVersion: 1,
@@ -101,7 +101,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'open-add-member',
           type: 'button',
-          grid: { colStart: 5, rowStart: 24, colSpan: 7, rowSpan: 2 },
+          grid: { colStart: 5, rowStart: 24, colSpan: 8, rowSpan: 2 },
           content: {
             label: 'Add crew member',
             backgroundColor: '#2563eb',

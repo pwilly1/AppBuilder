@@ -722,3 +722,22 @@ Representative areas:
 - `backend/src/services/AppDataService.ts`
 - `backend/src/routes/AppDataRoutes.ts`
 - `native-preview/Android/app/src/main/java/com/apptura/nativepreview/navigation/ProjectPreviewScreen.kt`
+
+## Phase 40: Deterministic AI Generation Foundation
+
+Date: July 31, 2026
+
+Apptura added the first end-to-end AI generation boundary without introducing a model dependency. A versioned `AppGenerationPlanV1` contract, strict allowlisted parser, and capability catalog now live in the new framework-free `app-builder/shared` package and are consumed as `@apptura/shared/ai`. The frontend compiles that plan into normal project schema, repairs simple layout issues deterministically, previews the result in an isolated dialog, and applies accepted changes through one undoable project transaction.
+
+The initial milestone is intentionally narrow: it uses a deterministic Crew Directory fixture instead of natural-language prompting, backend AI routes, or provider SDKs. That keeps the trust boundary explicit while proving that page generation, collection creation, binding resolution, action mapping, stale-proposal protection, and project-history integration can all run through the same validated pipeline that future model output must satisfy.
+
+Representative areas:
+
+- `app-builder/shared/src/ai/aiTypes.ts`
+- `app-builder/shared/src/ai/parseGenerationPlan.ts`
+- `app-builder/shared/src/ai/aiCapabilities.ts`
+- `frontend/src/ai/compileGenerationPlan.ts`
+- `frontend/src/hooks/useAiGenerationPrototype.ts`
+- `frontend/src/components/ai/AiGenerateDialog.tsx`
+- `backend/test/aiGenerationCompiler.test.ts`
+- `docs/ai-app-generation.md`

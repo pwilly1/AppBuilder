@@ -20,6 +20,7 @@ import {
   computeCenteredOffset,
   getAlignedPositionForPlacement,
   MAX_SCALE,
+  measureResizeContentMinHeight,
   measureResizeContentMinWidth,
   MIN_BLOCK_HEIGHT,
   MIN_BLOCK_WIDTH,
@@ -214,6 +215,9 @@ export function DraggableBlock({
     const contentNode = contentRef.current
     const contentRoot = contentNode?.firstElementChild as HTMLElement | null
     const resizeContentMinWidth = supportsInlineEdit && !scalesContentWithBox ? measureResizeContentMinWidth(contentRoot) : null
+    const resizeContentMinHeight = block.type === 'button' && !scalesContentWithBox
+      ? measureResizeContentMinHeight(contentRoot)
+      : null
     const contentWidth = Math.ceil(
       resizeContentMinWidth ??
         contentRoot?.getBoundingClientRect().width ??
@@ -221,7 +225,8 @@ export function DraggableBlock({
         currentWidth,
     )
     const contentHeight = Math.ceil(
-      contentRoot?.getBoundingClientRect().height ??
+      resizeContentMinHeight ??
+        contentRoot?.getBoundingClientRect().height ??
         contentNode?.scrollHeight ??
         currentHeight,
     )

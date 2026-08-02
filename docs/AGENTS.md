@@ -13,6 +13,7 @@ Apptura is a schema-driven low-code mobile app builder with:
 - MongoDB persistence
 - Kotlin/Jetpack Compose Android preview
 - Azure-hosted frontend/backend deployment
+- Pure TypeScript shared contracts compiled into frontend/backend consumers
 
 The active product focus is:
 
@@ -85,6 +86,7 @@ props.scaleY
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
 - The public `/editor/demo` route is now a five-screen `FieldReady` sample app that exercises portable atomic blocks, containers, page backgrounds, page access, navigation, checkbox/toggle state, live page-variable binding, and a project collection schema with persistence intentionally disabled.
 - AI generation must follow `ai-app-generation.md`: the deterministic page-scoped fixture compiler is implemented, while model/backend generation remains planned. Keep no initial RAG, no direct model-authored project writes, exact model-proposed grid placement only after deterministic validation, preview before apply, stale-proposal protection, and one undoable project transaction.
+- `app-builder/shared` is a narrow framework-free package, not a service. It currently owns the AI plan contract, strict parser, and capability catalog. Keep React/editor state in frontend and credentials, provider calls, authenticated routes, quotas, and persistence in backend.
 
 ## Current Block Inventory
 
@@ -152,6 +154,15 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | `app-builder/frontend/src/shared/schema/contentScale.ts` | Shared content scale helper |
 | `app-builder/frontend/src/shared/actions/blockActions.ts` | Shared block-action normalization and legacy fallback resolution |
 | `app-builder/frontend/src/shared/actions/webActionExecutor.ts` | Web preview action execution for navigation, submit, and URL actions |
+
+## Key Shared Package Files
+
+| File | Purpose |
+| --- | --- |
+| `app-builder/shared/src/ai/aiCapabilities.ts` | Versioned AI scope, block, action, binding, access, and limit catalog |
+| `app-builder/shared/src/ai/aiTypes.ts` | Framework-free `AppGenerationPlanV1` contract |
+| `app-builder/shared/src/ai/parseGenerationPlan.ts` | Strict allowlisted parser for untrusted generation-plan input |
+| `app-builder/shared/src/ai/index.ts` | Public `@apptura/shared/ai` export boundary |
 
 ## Key Backend Files
 

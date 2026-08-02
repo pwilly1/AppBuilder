@@ -1,6 +1,13 @@
 import {
   APP_GENERATION_PLAN_VERSION,
+  AI_GENERATION_COLLECTION_ACCESS_PRESETS,
+  AI_GENERATION_LIMITS,
+  AI_GENERATION_SUPPORTED_ACTION_TYPES,
+  AI_GENERATION_SUPPORTED_BINDING_RECORDS,
   AI_GENERATION_SUPPORTED_BLOCK_TYPES,
+  AI_GENERATION_SUPPORTED_SCOPES,
+} from './aiCapabilities.js'
+import {
   type AiBlockPlan,
   type AiBlockRenderPlan,
   type AiButtonActionPlan,
@@ -16,8 +23,8 @@ import {
   type AiRepeaterBlockPlan,
   type AiSubmitFieldPlan,
   type AiTextBlockPlan,
-} from './aiTypes'
-import type { GridPlacement } from '../shared/schema/types'
+  type GridPlacement,
+} from './aiTypes.js'
 
 const KEY_PATTERN = /^[a-z][a-z0-9-]*$/
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]*$/
@@ -43,16 +50,24 @@ export function parseAppGenerationPlan(value: unknown): AiGenerationPlanParseRes
     })
   }
 
-  const scope = readEnum(root.scope, '$.scope', ['page'] as const, issues)
-  const summary = readRequiredString(root.summary, '$.summary', issues, 240)
+  const scope = readEnum(root.scope, '$.scope', AI_GENERATION_SUPPORTED_SCOPES, issues)
+  const summary = readRequiredString(
+    root.summary,
+    '$.summary',
+    issues,
+    AI_GENERATION_LIMITS.summaryLength,
+  )
   const collections = parseArray(
     root.collections,
     '$.collections',
     issues,
     parseCollection,
-    { min: 0, max: 5 },
+    { min: 0, max: AI_GENERATION_LIMITS.collections },
   )
-  const pages = parseArray(root.pages, '$.pages', issues, parsePage, { min: 1, max: 5 })
+  const pages = parseArray(root.pages, '$.pages', issues, parsePage, {
+    min: 1,
+    max: AI_GENERATION_LIMITS.pages,
+  })
 
   validateUniqueKeys(collections, '$.collections', issues)
   validateUniqueKeys(pages, '$.pages', issues)
@@ -80,10 +95,13 @@ function parseCollection(value: unknown, path: string, issues: AiGenerationPlanI
   const accessPreset = readEnum(
     object.accessPreset,
     `${path}.accessPreset`,
-    ['public-directory', 'authenticated-own-records', 'private-submissions'] as const,
+    AI_GENERATION_COLLECTION_ACCESS_PRESETS,
     issues,
   )
-  const fields = parseArray(object.fields, `${path}.fields`, issues, parseCollectionField, { min: 1, max: 30 })
+  const fields = parseArray(object.fields, `${path}.fields`, issues, parseCollectionField, {
+    min: 1,
+    max: AI_GENERATION_LIMITS.fieldsPerCollection,
+  })
   validateUniqueKeys(fields, `${path}.fields`, issues)
 
   if (!key || !accessPreset) return null
@@ -128,7 +146,10 @@ function parsePage(value: unknown, path: string, issues: AiGenerationPlanIssue[]
   const access = object.access === undefined
     ? undefined
     : parsePageAccess(object.access, `${path}.access`, issues)
-  const blocks = parseArray(object.blocks, `${path}.blocks`, issues, parseBlock, { min: 1, max: 60 })
+  const blocks = parseArray(object.blocks, `${path}.blocks`, issues, parseBlock, {
+    min: 1,
+    max: AI_GENERATION_LIMITS.blocksPerPage,
+  })
   validateUniqueKeys(blocks, `${path}.blocks`, issues)
 
   if (!key) return null
@@ -456,7 +477,7 @@ function parseButtonAction(
 ): AiButtonActionPlan | null {
   const base = readObject(value, path, ['type', 'targetPageKey', 'collectionKey', 'fields'], issues)
   if (!base) return null
-  const type = readEnum(base.type, `${path}.type`, ['navigate', 'submitData'] as const, issues)
+  const type = readEnum(base.type, `${path}.type`, AI_GENERATION_SUPPORTED_ACTION_TYPES, issues)
   if (!type) return null
 
   if (type === 'navigate') {
@@ -467,7 +488,10 @@ function parseButtonAction(
 
   rejectPresentKeys(base, path, ['targetPageKey'], issues)
   const collectionKey = readKey(base.collectionKey, `${path}.collectionKey`, issues)
-  const fields = parseArray(base.fields, `${path}.fields`, issues, parseSubmitField, { min: 1, max: 30 })
+  const fields = parseArray(base.fields, `${path}.fields`, issues, parseSubmitField, {
+    min: 1,
+    max: AI_GENERATION_LIMITS.fieldsPerCollection,
+  })
   const fieldBlockKeys = fields.map((field) => ({ key: field.fieldBlockKey }))
   validateUniqueKeys(fieldBlockKeys, `${path}.fields`, issues)
   if (!collectionKey) return null
@@ -492,7 +516,12 @@ function parseCollectionBinding(
   if (!object) return null
   const collectionKey = readKey(object.collectionKey, `${path}.collectionKey`, issues)
   const fieldKey = readFieldKey(object.fieldKey, `${path}.fieldKey`, issues)
-  const record = readEnum(object.record, `${path}.record`, ['latest', 'currentItem'] as const, issues)
+  const record = readEnum(
+    object.record,
+    `${path}.record`,
+    AI_GENERATION_SUPPORTED_BINDING_RECORDS,
+    issues,
+  )
   const fallback = readOptionalString(object.fallback, `${path}.fallback`, issues, 240)
   if (!collectionKey || !fieldKey || !record) return null
   return {
@@ -613,7 +642,7 @@ function readOptionalString(
 }
 
 function readKey(value: unknown, path: string, issues: AiGenerationPlanIssue[]): string {
-  const key = readRequiredString(value, path, issues, 80)
+  const key = readRequiredString(value, path, issues, AI_GENERATION_LIMITS.keyLength)
   if (key && !KEY_PATTERN.test(key)) {
     issues.push({
       code: 'invalid-key',
@@ -625,7 +654,7 @@ function readKey(value: unknown, path: string, issues: AiGenerationPlanIssue[]):
 }
 
 function readFieldKey(value: unknown, path: string, issues: AiGenerationPlanIssue[]): string {
-  const key = readRequiredString(value, path, issues, 80)
+  const key = readRequiredString(value, path, issues, AI_GENERATION_LIMITS.keyLength)
   if (key && !FIELD_KEY_PATTERN.test(key)) {
     issues.push({
       code: 'invalid-field-key',

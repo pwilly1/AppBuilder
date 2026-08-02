@@ -1,12 +1,29 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import {
+  AI_GENERATION_CAPABILITIES,
+  parseAppGenerationPlan,
+  type AppGenerationPlanV1,
+} from '@apptura/shared/ai'
 import { compileGenerationPlan } from '../../frontend/src/ai/compileGenerationPlan.js'
 import { CREW_DIRECTORY_GENERATION_PLAN } from '../../frontend/src/ai/fixtures/crewDirectoryPlan.js'
-import { parseAppGenerationPlan } from '../../frontend/src/ai/parseGenerationPlan.js'
 import { placementsOverlap } from '../../frontend/src/shared/schema/gridLayout.js'
 import { CURRENT_SCHEMA_VERSION } from '../../frontend/src/shared/schema/gridMigration.js'
-import type { AppGenerationPlanV1 } from '../../frontend/src/ai/aiTypes.js'
 import type { BlockAction, Project } from '../../frontend/src/shared/schema/types.js'
+
+test('shared AI capability catalog matches the supported fixture contract', () => {
+  assert.equal(AI_GENERATION_CAPABILITIES.catalogVersion, 1)
+  assert.equal(AI_GENERATION_CAPABILITIES.planVersion, CREW_DIRECTORY_GENERATION_PLAN.planVersion)
+
+  const fixtureBlockTypes = new Set(
+    CREW_DIRECTORY_GENERATION_PLAN.pages.flatMap((page) => (
+      page.blocks.map((block) => block.type)
+    )),
+  )
+  fixtureBlockTypes.forEach((blockType) => {
+    assert.ok(AI_GENERATION_CAPABILITIES.blockTypes.includes(blockType))
+  })
+})
 
 test('strict plan parsing accepts the fixture and rejects unknown block properties', () => {
   const parsed = parseAppGenerationPlan(clone(CREW_DIRECTORY_GENERATION_PLAN))
@@ -47,6 +64,16 @@ test('fixture compilation resolves IDs, collection bindings, navigation, and sub
   assert.equal(proposal.generatedCollectionIds.length, 1)
   assert.equal(proposal.generatedBlockCount, 12)
   assert.equal(proposal.repairs.length, 0)
+
+  const addMemberButton = proposal.project.pages
+    .flatMap((page) => page.blocks)
+    .find((block) => block.type === 'button' && block.props.label === 'Add crew member')
+  assert.deepEqual(addMemberButton?.layout?.grid, {
+    colStart: 5,
+    rowStart: 24,
+    colSpan: 8,
+    rowSpan: 2,
+  })
 
   const collection = proposal.project.dataCollections?.find((candidate) => (
     proposal.generatedCollectionIds.includes(candidate.id)

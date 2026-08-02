@@ -1,25 +1,23 @@
-import type {
-  AppDataFieldType,
-  GridPlacement,
-  PageAccessMode,
-  RenderAlign,
-} from '../shared/schema/types'
+import {
+  AI_GENERATION_COLLECTION_ACCESS_PRESETS,
+  AI_GENERATION_SUPPORTED_BLOCK_TYPES,
+  AI_GENERATION_SUPPORTED_SCOPES,
+} from './aiCapabilities.js'
 
-export const APP_GENERATION_PLAN_VERSION = 1
+export type AppDataFieldType = 'text' | 'number' | 'boolean' | 'email' | 'date'
+export type PageAccessMode = 'public' | 'signedIn' | 'signedOut'
+export type RenderAlign = 'start' | 'center' | 'end'
 
-export const AI_GENERATION_SUPPORTED_BLOCK_TYPES = [
-  'hero',
-  'text',
-  'button',
-  'repeater',
-] as const
+export type GridPlacement = {
+  colStart: number
+  rowStart: number
+  colSpan: number
+  rowSpan: number
+}
 
 export type AiGenerationBlockType = typeof AI_GENERATION_SUPPORTED_BLOCK_TYPES[number]
-export type AiGenerationScope = 'page'
-export type AiCollectionAccessPreset =
-  | 'public-directory'
-  | 'authenticated-own-records'
-  | 'private-submissions'
+export type AiGenerationScope = typeof AI_GENERATION_SUPPORTED_SCOPES[number]
+export type AiCollectionAccessPreset = typeof AI_GENERATION_COLLECTION_ACCESS_PRESETS[number]
 
 export type AiGenerationPlanIssue = {
   code: string

@@ -37,9 +37,10 @@ Workflow file:
 Important workflow settings:
 
 ```text
-app_location: app-builder/frontend
+app_location: app-builder/frontend/dist
 api_location: ""
-output_location: dist
+output_location: ""
+skip_app_build: true
 ```
 
 Required GitHub secret:
@@ -54,7 +55,7 @@ Required build-time environment variable:
 VITE_API_URL=https://apptura-cneyenbkczh5hzcv.eastus-01.azurewebsites.net
 ```
 
-Because the frontend is built by Vite, `VITE_API_URL` must be available during the GitHub Actions build. Adding it only as a runtime Azure Static Web Apps setting is not enough after the static files are already built.
+The workflow installs frontend dependencies, compiles `app-builder/shared`, builds the Vite frontend with `VITE_API_URL`, and then uploads the prebuilt `frontend/dist` directory. `skip_app_build: true` prevents Azure's deploy action from rebuilding the app without the repository-relative shared package available. Adding `VITE_API_URL` only as a runtime Azure Static Web Apps setting is not enough after the static files are already built.
 
 ## Backend Deployment
 
@@ -84,11 +85,14 @@ The backend workflow:
 
 1. checks out the repo
 2. installs backend dependencies with `npm ci`
-3. builds TypeScript into `dist`
+3. compiles `app-builder/shared` and then builds backend TypeScript into `dist`
 4. prunes dev dependencies
-5. uploads the backend artifact
-6. logs into Azure with OIDC
-7. deploys to Azure App Service
+5. replaces the local shared-package link with a physical compiled package inside `node_modules/@apptura/shared`
+6. uploads the self-contained backend artifact
+7. logs into Azure with OIDC
+8. deploys to Azure App Service
+
+Changes under `app-builder/shared` trigger the backend workflow because future backend runtime code may consume those contracts. The shared package does not require another Azure resource; its compiled files are bundled into the frontend build and backend artifact.
 
 ## Backend App Settings
 

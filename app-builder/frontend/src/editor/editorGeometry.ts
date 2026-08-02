@@ -11,7 +11,7 @@ export const MAX_SCALE = 2.6
 export const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v))
 
 export function measureResizeContentMinWidth(root: HTMLElement | null) {
-  if (!root || !document.body) return null
+  if (!root || typeof document === 'undefined' || !document.body) return null
 
   const clone = root.cloneNode(true) as HTMLElement
   clone.style.position = 'fixed'
@@ -35,6 +35,27 @@ export function measureResizeContentMinWidth(root: HTMLElement | null) {
 
   // Keep a small guard band so grid rounding does not force a last-word wrap.
   return width > 0 ? width + 12 : null
+}
+
+export function measureResizeContentMinHeight(root: HTMLElement | null) {
+  if (!root || typeof window === 'undefined') return null
+
+  const children = Array.from(root.children).filter(
+    (child): child is HTMLElement => child instanceof HTMLElement,
+  )
+  if (children.length === 0) return null
+
+  const style = window.getComputedStyle(root)
+  const paddingTop = Number.parseFloat(style.paddingTop) || 0
+  const paddingBottom = Number.parseFloat(style.paddingBottom) || 0
+  const rowGap = Number.parseFloat(style.rowGap || style.gap) || 0
+  const childrenHeight = children.reduce(
+    (total, child) => total + child.getBoundingClientRect().height,
+    0,
+  )
+  const height = paddingTop + childrenHeight + rowGap * Math.max(0, children.length - 1) + paddingBottom
+
+  return height > 0 ? Math.ceil(height) : null
 }
 
 export function computeCenteredOffset(

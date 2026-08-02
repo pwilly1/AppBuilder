@@ -11,7 +11,7 @@ import {
 } from '../shared/schema/blockHierarchy'
 import { normalizeRepeaterProps } from '../shared/schema/repeater'
 import type { Block, Project, RuntimeValueRef } from '../shared/schema/types'
-import type { AiGenerationPlanIssue } from './aiTypes'
+import type { AiGenerationPlanIssue } from '@apptura/shared/ai'
 
 export function validateCompiledGenerationProject(
   project: Project,

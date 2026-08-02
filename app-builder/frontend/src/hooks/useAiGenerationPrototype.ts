@@ -4,8 +4,10 @@ import {
   type AiGenerationProposal,
 } from '../ai/compileGenerationPlan'
 import { CREW_DIRECTORY_GENERATION_PLAN } from '../ai/fixtures/crewDirectoryPlan'
-import { parseAppGenerationPlan } from '../ai/parseGenerationPlan'
-import type { AiGenerationPlanIssue } from '../ai/aiTypes'
+import {
+  parseAppGenerationPlan,
+  type AiGenerationPlanIssue,
+} from '@apptura/shared/ai'
 import type { Project } from '../shared/schema/types'
 
 type PrototypeState = {

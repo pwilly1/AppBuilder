@@ -266,7 +266,7 @@ Validation has two layers:
 1. The backend validates the model response's contract, allowed values, temporary references, and basic numeric bounds before returning it.
 2. The frontend compiles the plan and runs the canonical grid, collision, hierarchy, and final project checks already used by the editor.
 
-The initial implementation should not duplicate all frontend grid math inside the backend. If generation later becomes a fully server-side or asynchronous job, the pure schema/compiler/validation modules should first be extracted into a shared TypeScript package.
+The initial implementation does not duplicate frontend grid math inside the backend. The versioned plan contract, strict parser, and capability catalog now live in `app-builder/shared` and are consumed as `@apptura/shared/ai`. Editor-state compilation, canonical grid repair, final project validation, and proposal preview remain in the frontend because they operate against the builder's current unsaved project. If generation later becomes fully server-side or asynchronous, those additional pure modules can move only after their frontend dependencies are removed.
 
 The validator checks:
 
@@ -512,14 +512,17 @@ The backend response should include:
 
 The backend should not expose hidden reasoning or model chain-of-thought.
 
-## Frontend Structure
+## Shared And Frontend Structure
 
 Current prototype modules:
 
 ```text
-app-builder/frontend/src/ai/
+app-builder/shared/src/ai/
+  aiCapabilities.ts
   aiTypes.ts
   parseGenerationPlan.ts
+
+app-builder/frontend/src/ai/
   compileGenerationPlan.ts
   generationLayout.ts
   validateGenerationProposal.ts
@@ -531,6 +534,8 @@ app-builder/frontend/src/hooks/useAiGenerationPrototype.ts
 app-builder/frontend/src/components/ai/
   AiGenerateDialog.tsx
 ```
+
+The shared package is pure TypeScript and has no React, browser, Express, database, or Android dependency. The frontend and backend toolchains reference it through the local `@apptura/shared` package. The frontend uses it at runtime today, backend tests enforce the same contract, and the future backend generation route will import it directly.
 
 `generationContext.ts`, a production `useAiGeneration` hook, request progress, and backend API integration remain later work.
 
@@ -705,7 +710,8 @@ Track:
 - Completed: build exact-placement and reference validation
 - Completed: build bounded clamping and nearest-free-space repair
 - Completed: preview and apply a hardcoded Crew Directory fixture
-- Remaining: publish a versioned AI capability catalog for backend prompts
+- Completed: extract the plan contract and strict parser into `@apptura/shared/ai`
+- Completed: publish a versioned AI capability catalog for future backend prompts
 - Remaining: complete manual Android rendering QA for the generated fixture
 
 Exit condition: fixture plans compile into valid projects and render on web and Android.

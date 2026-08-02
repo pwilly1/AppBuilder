@@ -118,6 +118,7 @@ Current layout capabilities:
 - Frontend is deployed to Azure Static Web Apps.
 - Backend is deployed to Azure App Service.
 - CI/CD runs through GitHub Actions.
+- A local `@apptura/shared` TypeScript package is compiled into consumer builds; it is not deployed as a separate service.
 
 ## Existing But Not Primary Public-Demo Blocks
 
@@ -254,6 +255,8 @@ Status: deterministic prototype implemented; model-backed generation planned.
 
 The editor currently compiles a strict, hardcoded Crew Directory plan into two pages and one collection. It previews the isolated result, preserves or repairs exact grid positions, resolves bindings and actions, rejects broken references, and applies acceptance as one undoable transaction.
 
+The versioned plan contract, strict parser, and supported-capability catalog are exposed through `@apptura/shared/ai`. The frontend uses them now, backend tests verify the same boundary, and the future model route will consume them directly. Editor compilation and proposal preview remain frontend-owned.
+
 The future backend model will return the same constrained plan. Model calls, prompts, authenticated AI routes, limits, and correction requests are not implemented yet.
 
 Good first AI features:
@@ -282,4 +285,4 @@ The initial architecture will not use RAG, embeddings, fine-tuning, autonomous a
 - Page-variable values are runtime-only preview state. They reset when a page runtime is recreated and are not persisted as hosted app data.
 - Project collections, public and owner-scoped reads, latest/specific/current-user Text/Hero bindings, ownership enforcement, and Button actions that create-or-update or delete the signed-in user's newest owned record are implemented. End-user-selected record mutation, relationships, and filtering are not.
 - Export and app-store pipeline features are not implemented.
-- GenAI generation is planned, not currently implemented.
+- GenAI has a deterministic fixture/compiler prototype and shared contract boundary, but natural-language model generation and production AI APIs are not implemented.
