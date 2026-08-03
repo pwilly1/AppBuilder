@@ -195,6 +195,44 @@ Returns one project owned by the authenticated user.
 
 Success: `200`. Missing projects and projects owned by another user return `404`.
 
+### `POST /projects/:projectId/ai/proposals`
+
+Creates a validated, transient AI generation proposal for a project owned by the authenticated builder. The current backend uses a deterministic fake provider so the boundary can be exercised without a paid model or API credential.
+
+Request:
+
+```json
+{
+  "prompt": "Create a crew operations page",
+  "scope": "page"
+}
+```
+
+`scope` currently defaults to and only supports `page`. Prompts are required and limited to 2,000 characters. Unknown request properties are rejected.
+
+Success: `200`
+
+```json
+{
+  "proposalId": "generated-uuid",
+  "planVersion": 1,
+  "capabilityCatalogVersion": 1,
+  "contextRevision": "2026-08-02T12:00:00.000Z",
+  "summary": "Generated a deterministic page draft...",
+  "plan": {},
+  "warnings": []
+}
+```
+
+Behavior notes:
+
+- Authentication is required and non-owned projects return `404`.
+- Provider output is size-bounded and parsed through the strict `@apptura/shared/ai` contract.
+- Invalid provider output returns `422` with structured plan issues.
+- Provider failures return a controlled `502` without exposing upstream details.
+- The endpoint does not save the proposal, update the project, or call the editor compiler.
+- The frontend generation dialog is not connected to this route yet.
+
 ### `PATCH /projects/:id`
 
 Merges the supplied object into the stored project and returns the updated project.

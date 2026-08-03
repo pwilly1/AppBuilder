@@ -1,7 +1,10 @@
 import express from 'express';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
+import { AiGenerationService } from './ai/AiGenerationService.js';
+import { FakeAiModelClient } from './ai/providers/FakeAiModelClient.js';
 import { APP_USER_JWT_SECRET, CORS_ORIGIN, JWT_SECRET, MONGO_URI, PORT } from './config/index.js';
+import { AiGenerationController } from './controllers/AiGenerationController.js';
 import { AppDataController } from './controllers/AppDataController.js';
 import { AppUserController } from './controllers/AppUserController.js';
 import { AssetController } from './controllers/AssetController.js';
@@ -13,6 +16,7 @@ import { MongoAppUserRepository } from './repositories/AppUserRepository.js';
 import { MongoProjectRepository } from './repositories/MongoProjectRepository.js';
 import { MongoUserRepository } from './repositories/UserRepository.js';
 import { makeAppDataRoutes, makePublicAppDataRoutes } from './routes/AppDataRoutes.js';
+import { makeAiGenerationRoutes } from './routes/AiGenerationRoutes.js';
 import { makePublicAppUserRoutes } from './routes/AppUserRoutes.js';
 import { makeAssetRoutes } from './routes/AssetRoutes.js';
 import { makeAuthRoutes } from './routes/AuthRoutes.js';
@@ -44,6 +48,9 @@ const appUserController = new AppUserController(
   new AppUserAuthService(appUserRepository, appUserTokens),
 );
 const projectController = new ProjectController(projects);
+const aiGenerationController = new AiGenerationController(
+  new AiGenerationService(projects, new FakeAiModelClient()),
+);
 const assetController = new AssetController(projects, new AssetStorageService());
 const appDataController = new AppDataController(
   projects,
@@ -80,6 +87,7 @@ app.use((req, res, next) => {
 app.use('/auth', makeAuthRoutes(authController, requireAuth));
 app.use('/projects', makeAssetRoutes(assetController, requireAuth));
 app.use('/projects', makeAppDataRoutes(appDataController, requireAuth));
+app.use('/projects', makeAiGenerationRoutes(aiGenerationController, requireAuth));
 app.use('/projects', makeProjectRoutes(projectController, requireAuth));
 app.use('/public', makePublicAppUserRoutes(appUserController, requireAppUser));
 app.use('/public', makePublicAppDataRoutes(appDataController, optionalAppUser, requireAppUser));

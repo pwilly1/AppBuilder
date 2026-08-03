@@ -39,7 +39,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending
 - MongoDB persistence for projects
 - Azure-hosted frontend and backend with GitHub Actions deployment
-- Deterministic AI generation foundation with a versioned shared plan contract, strict parser, capability catalog, isolated preview, and one-transaction apply flow
+- Deterministic AI generation foundation with a shared plan contract, isolated preview, one-transaction apply flow, and an authenticated fake-provider proposal boundary
 
 ## Tech Stack
 
@@ -76,7 +76,7 @@ docs/                Architecture, deployment, features, roadmap, project histor
 - [Container and Template System](docs/container-template-system.md) - current container/template design and implementation direction
 - [Dynamic Data Binding](docs/dynamic-data-binding.md) - architecture for page data, runtime values, bindings, generated-app identity, and future private user data
 - [Collection List / Repeater](docs/collection-list-repeater.md) - configurable repeated-record layout across web and Android
-- [AI App Generation](docs/ai-app-generation.md) - deterministic generation prototype, planned no-RAG model pipeline, exact layout validation, and proposal review
+- [AI App Generation](docs/ai-app-generation.md) - deterministic generation prototype, backend proposal boundary, planned no-RAG model pipeline, exact layout validation, and proposal review
 - [How to Add a Block](docs/how-to-add-a-block.md) - end-to-end web and Android block implementation workflow
 - [Features](docs/features.md) - current capabilities, planned product areas, known feature limits
 - [Roadmap](docs/roadmap.md) - priorities, milestones, and next work

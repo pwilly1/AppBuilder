@@ -2,9 +2,9 @@
 
 ## Status
 
-Prototype foundation implemented. The editor can parse and compile a strict page-scoped `AppGenerationPlanV1` fixture, validate and repair its layout, preview the resulting pages without mutating the project, and apply the proposal as one undoable project transaction.
+Prototype foundation and first backend proposal boundary implemented. The editor can parse and compile a strict page-scoped `AppGenerationPlanV1` fixture, validate and repair its layout, preview the resulting pages without mutating the project, and apply the proposal as one undoable project transaction.
 
-The prototype uses a deterministic Crew Directory fixture. Backend model calls, prompts, authenticated proposal endpoints, usage limits, and model correction are not implemented yet.
+The backend now exposes authenticated `POST /projects/:projectId/ai/proposals` behind a provider-neutral model-client interface. It verifies project ownership, builds privacy-limited structural context, validates provider output through `@apptura/shared/ai`, and never saves project changes. The injected provider is still deterministic and fake; real model calls, prompt construction, usage limits, correction, and frontend endpoint integration are not implemented yet.
 
 ## Purpose
 
@@ -459,22 +459,29 @@ Every operation must be visible in the review step. Destructive operations requi
 
 ## Backend Structure
 
-Proposed modules:
+Implemented modules:
 
 ```text
 app-builder/backend/src/ai/
   AiModelClient.ts
   AiGenerationService.ts
   AiContextBuilder.ts
-  AiPromptBuilder.ts
-  AiPlanContracts.ts
-  AiPlanValidator.ts
   AiGenerationErrors.ts
   providers/
-    InitialModelProvider.ts
+    FakeAiModelClient.ts
 
 app-builder/backend/src/controllers/AiGenerationController.ts
 app-builder/backend/src/routes/AiGenerationRoutes.ts
+```
+
+Planned modules:
+
+```text
+app-builder/backend/src/ai/
+  AiPromptBuilder.ts
+  providers/
+    InitialModelProvider.ts
+
 app-builder/backend/src/middleware/aiRateLimits.ts
 app-builder/backend/src/models/AiGenerationRun.ts
 ```
@@ -489,18 +496,23 @@ interface AiModelClient {
 
 One real provider is sufficient initially. The interface exists so tests can use a fake provider and the rest of the application does not depend directly on one SDK.
 
-Possible endpoints:
+Current endpoint:
+
+```text
+POST /projects/:projectId/ai/proposals
+```
+
+Planned endpoints:
 
 ```text
 GET  /ai/capabilities
-POST /projects/:projectId/ai/proposals
 POST /projects/:projectId/ai/proposals/:proposalId/correct
 POST /ai/app-proposals
 ```
 
 `POST /ai/app-proposals` is deferred until prompt-to-app work begins.
 
-The backend response should include:
+The current backend response includes:
 
 - proposal ID
 - plan version
@@ -508,7 +520,8 @@ The backend response should include:
 - user-facing summary
 - validated plan
 - warnings
-- repair summary
+
+Layout repairs are still produced later by the frontend compiler because it owns canonical editor grid validation against the builder's current project state.
 
 The backend should not expose hidden reasoning or model chain-of-thought.
 
@@ -535,7 +548,7 @@ app-builder/frontend/src/components/ai/
   AiGenerateDialog.tsx
 ```
 
-The shared package is pure TypeScript and has no React, browser, Express, database, or Android dependency. The frontend and backend toolchains reference it through the local `@apptura/shared` package. The frontend uses it at runtime today, backend tests enforce the same contract, and the future backend generation route will import it directly.
+The shared package is pure TypeScript and has no React, browser, Express, database, or Android dependency. The frontend and backend toolchains reference it through the local `@apptura/shared` package. The editor compiler and backend generation service both consume it, and backend tests enforce the same contract.
 
 `generationContext.ts`, a production `useAiGeneration` hook, request progress, and backend API integration remain later work.
 
@@ -718,11 +731,13 @@ Exit condition: fixture plans compile into valid projects and render on web and 
 
 ### Phase 1: Backend AI Foundation
 
-- add the model-client boundary
-- add a fake provider
+- Completed: add the model-client boundary
+- Completed: add a fake provider
+- Completed: build privacy-limited structural project context
+- Completed: add an authenticated ownership-checked proposal route
+- Completed: validate bounded provider output through `@apptura/shared/ai`
 - add one real provider
-- build controlled context and prompts
-- add authenticated proposal routes
+- build controlled provider prompts
 - add rate limits, timeouts, and usage records
 - add one model correction endpoint
 

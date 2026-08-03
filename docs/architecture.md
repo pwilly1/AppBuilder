@@ -20,7 +20,7 @@ Android native preview
 
 The central product idea is schema-driven app creation. The web editor saves a project schema, and preview/runtime clients render that schema.
 
-The frontend and backend toolchains share a small pure TypeScript package at `app-builder/shared`. The frontend and backend AI tests consume it now; the future backend generation route will use the same parser and catalog. This package is a source-code boundary, not a fourth deployed service: each consumer compiles or packages the shared code into its own application.
+The frontend and backend toolchains share a small pure TypeScript package at `app-builder/shared`. The editor and authenticated backend AI proposal route consume the same parser and catalog. This package is a source-code boundary, not a fourth deployed service: each consumer compiles or packages the shared code into its own application.
 
 ## Repository Structure
 
@@ -37,8 +37,9 @@ app-builder/shared/src
   ai/              Versioned AI plan types, strict parser, and capability catalog
 
 app-builder/backend/src
+  ai/              AI context, provider boundary, proposal validation, and provider adapters
   config/          Environment variable loading
-  controllers/     HTTP adapters for auth, projects, assets, and app data
+  controllers/     HTTP adapters for auth, projects, assets, app data, and AI proposals
   middleware/      Request authentication helpers
   models/          Mongoose models
   repositories/    Data access abstractions
@@ -62,6 +63,17 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 4. The editor renders the active page through `EditorLayout` and `PageRenderer`.
 5. Block changes update frontend state and are saved back through `PATCH /projects/:id`.
 6. MongoDB stores the project schema.
+
+### Requesting an AI proposal
+
+1. An authenticated builder posts a bounded prompt to `POST /projects/:projectId/ai/proposals`.
+2. `AiGenerationService` loads only a project owned by that builder.
+3. `AiContextBuilder` copies a compact structural summary: project name, page metadata and block types, collection field schemas, and the versioned capability catalog. It excludes owner identity, block property contents, app-user accounts, and app-data records.
+4. The provider-neutral `AiModelClient` returns untrusted JSON. The current implementation injects `FakeAiModelClient`; no paid model or credential is involved yet.
+5. The service enforces request/output bounds and parses the response with `@apptura/shared/ai`.
+6. The route returns a transient proposal with a project context revision. It does not update MongoDB or apply editor changes.
+
+The frontend still uses the local Crew Directory fixture. Connecting the editor dialog to this endpoint is a later milestone after a real provider and controlled prompt builder exist.
 
 ### Managing project data
 
@@ -346,6 +358,7 @@ The backend provides:
 
 - auth routes under `/auth`
 - project routes under `/projects`
+- authenticated AI proposal generation under `/projects/:projectId/ai/proposals`
 - project image upload under `/projects/:id/assets/images`
 - public project routes under `/public`
 - project-scoped generated-app account routes under `/public/projects/:id/app-auth`
@@ -364,9 +377,11 @@ Important files:
 | `src/routes/AuthRoutes.ts` | Signup/login/token endpoints |
 | `src/routes/AppUserRoutes.ts` | Generated-app signup/login/session endpoints |
 | `src/routes/ProjectRoutes.ts` | Authenticated project CRUD routes |
+| `src/routes/AiGenerationRoutes.ts` | Authenticated AI proposal route |
 | `src/routes/AssetRoutes.ts` | Authenticated project image-upload route |
 | `src/routes/AppDataRoutes.ts` | Authenticated and public hosted app-data routes |
 | `src/controllers/ProjectController.ts` | Project HTTP request/response handling |
+| `src/controllers/AiGenerationController.ts` | AI proposal HTTP request/response and controlled error mapping |
 | `src/controllers/AssetController.ts` | Image-upload HTTP request/response handling |
 | `src/controllers/AppDataController.ts` | App-data HTTP request/response handling |
 | `src/models/AppDataRecord.ts` | Canonical mutable hosted app-data records plus legacy document compatibility |
@@ -374,6 +389,10 @@ Important files:
 | `src/services/AppSubmissionService.ts` | Compatibility aliases for older form-submission terminology |
 | `src/services/AssetStorageService.ts` | Azure Blob Storage upload logic for project image assets |
 | `src/services/ProjectManager.ts` | Typed project ownership and mutation rules |
+| `src/ai/AiGenerationService.ts` | Ownership-aware proposal orchestration, request bounds, shared parsing, and response metadata |
+| `src/ai/AiContextBuilder.ts` | Privacy-limited project and capability context for model clients |
+| `src/ai/AiModelClient.ts` | Provider-independent model interface |
+| `src/ai/providers/FakeAiModelClient.ts` | Deterministic no-cost provider used by the first backend milestone and tests |
 | `src/services/AuthService.ts` | Authentication logic |
 | `src/services/AppUserAuthService.ts` | Project-scoped generated-app account behavior |
 | `src/services/AppUserTokenService.ts` | Generated-app JWT creation and project-scoped validation |
@@ -446,7 +465,9 @@ AI features produce a constrained generation plan that deterministic Apptura cod
 
 AI generation will not use RAG in the initial architecture, will not write directly to project storage, and will not create a separate app format. Accepted proposals must enter the existing project history as one undoable transaction.
 
-The first deterministic prototype implements this boundary with a strict page-scoped fixture: compilation and preview operate on an isolated project value, stale proposals cannot be accepted, and only explicit acceptance enters `applyProjectTransaction`. The versioned plan contract, strict parser, and capability catalog are published internally from `@apptura/shared/ai`, while editor-state compilation, layout repair, final project validation, and preview remain frontend-owned. No model or backend AI route exists yet.
+The deterministic editor prototype implements this boundary with a strict page-scoped fixture: compilation and preview operate on an isolated project value, stale proposals cannot be accepted, and only explicit acceptance enters `applyProjectTransaction`. The versioned plan contract, strict parser, and capability catalog are published internally from `@apptura/shared/ai`, while editor-state compilation, layout repair, final project validation, and preview remain frontend-owned.
+
+The backend now exposes an authenticated, ownership-checked proposal route behind a narrow model-client interface. Its initial fake provider proves request, context, output-validation, and error boundaries without credentials or project writes. A real provider, prompt builder, timeouts, rate limits, usage persistence, correction requests, and editor endpoint integration remain unfinished.
 
 The complete contract, validation loop, security boundary, testing strategy, and phased rollout are documented in [AI App Generation](ai-app-generation.md).
 
@@ -461,6 +482,6 @@ The complete contract, validation loop, security boundary, testing strategy, and
 
 - [Block and Schema Reference](block-reference.md) - exact project, block, layout, and migration contract
 - [Collection List / Repeater](collection-list-repeater.md) - implemented first-milestone multi-record layout and row-context architecture
-- [AI App Generation](ai-app-generation.md) - planned AI proposal, compiler, exact-placement validation, and review architecture
+- [AI App Generation](ai-app-generation.md) - current deterministic compiler and backend proposal boundary plus the planned model-backed rollout
 - [How to Add a Block](how-to-add-a-block.md) - required implementation path across web and Android
 - [API Reference](api-reference.md) - current backend route surface

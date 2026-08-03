@@ -741,3 +741,22 @@ Representative areas:
 - `frontend/src/components/ai/AiGenerateDialog.tsx`
 - `backend/test/aiGenerationCompiler.test.ts`
 - `docs/ai-app-generation.md`
+
+## Phase 41: Authenticated AI Proposal Boundary
+
+Date: August 2, 2026
+
+The first backend AI boundary now sits behind an authenticated, project-owned route. A provider-neutral `AiModelClient`, privacy-limited context builder, deterministic fake provider, and proposal service validate bounded provider output through the shared `AppGenerationPlanV1` parser. Successful requests return transient proposal metadata without updating MongoDB or applying editor changes.
+
+The fake provider keeps this milestone deterministic and free of credentials while route tests verify authentication, ownership, controlled errors, context privacy, output validation, and project immutability. A real provider, prompt builder, timeout/rate-limit controls, usage records, correction requests, and frontend endpoint integration remain later work.
+
+Representative areas:
+
+- `backend/src/ai/AiModelClient.ts`
+- `backend/src/ai/AiContextBuilder.ts`
+- `backend/src/ai/AiGenerationService.ts`
+- `backend/src/ai/providers/FakeAiModelClient.ts`
+- `backend/src/controllers/AiGenerationController.ts`
+- `backend/src/routes/AiGenerationRoutes.ts`
+- `backend/test/aiGenerationRoutes.test.ts`
+- `docs/ai-app-generation.md`

@@ -222,8 +222,10 @@ Implementation must follow [AI App Generation](ai-app-generation.md): no RAG in 
 | Completed | Define and validate the page-scoped `AppGenerationPlanV1` prototype. |
 | Completed | Build the deterministic compiler, exact-placement validator, bounded repair, fixture preview, and one-transaction apply flow. |
 | Completed | Extract the plan contract and parser into `@apptura/shared/ai` and publish the versioned capability catalog. |
+| Completed | Add a provider-neutral backend client, fake provider, privacy-limited context, authenticated proposal route, and strict output validation. |
 | Next | Verify the generated Crew Directory fixture in web preview, save/reload, undo/redo, and Android runtime. |
-| Planned | Add the authenticated backend model-client and proposal boundary. |
+| Planned | Add one real model provider, controlled prompts, timeouts, rate limits, and usage records. |
+| Planned | Connect the editor generation dialog to backend proposals and add one bounded correction request. |
 | Planned | Prompt-to-section with proposal preview and one undoable apply operation. |
 | Planned | Prompt-to-page generation. |
 | Later | Prompt-to-app starter flow. |

@@ -85,7 +85,7 @@ props.scaleY
 - Pages may define `access.mode` as `public`, `signedIn`, or `signedOut`, plus an optional redirect page. Web and Android preview navigation must use the shared access rules, preserve login return targets, and fail safely on invalid/cyclic redirects. Treat this as a navigation guard only; backend access policies remain the security boundary.
 - The left editor rail is now a tabbed workspace: Pages for page management, Blocks for insertion/templates, and Data for page variables plus project collections. Keep workflow docs and QA steps aligned with that split.
 - The public `/editor/demo` route is now a five-screen `FieldReady` sample app that exercises portable atomic blocks, containers, page backgrounds, page access, navigation, checkbox/toggle state, live page-variable binding, and a project collection schema with persistence intentionally disabled.
-- AI generation must follow `ai-app-generation.md`: the deterministic page-scoped fixture compiler is implemented, while model/backend generation remains planned. Keep no initial RAG, no direct model-authored project writes, exact model-proposed grid placement only after deterministic validation, preview before apply, stale-proposal protection, and one undoable project transaction.
+- AI generation must follow `ai-app-generation.md`: the deterministic page-scoped fixture compiler and authenticated fake-provider backend proposal boundary are implemented. Keep no initial RAG, no direct model-authored project writes, exact model-proposed grid placement only after deterministic validation, preview before apply, stale-proposal protection, and one undoable project transaction. Real provider calls, prompt construction, limits, correction, and frontend endpoint integration remain planned.
 - `app-builder/shared` is a narrow framework-free package, not a service. It currently owns the AI plan contract, strict parser, and capability catalog. Keep React/editor state in frontend and credentials, provider calls, authenticated routes, quotas, and persistence in backend.
 
 ## Current Block Inventory
@@ -169,6 +169,12 @@ Business/demo-experiment blocks still present in code but not the preferred publ
 | File | Purpose |
 | --- | --- |
 | `app-builder/backend/src/index.ts` | Express app setup, CORS, routes, Mongo connection |
+| `app-builder/backend/src/ai/AiModelClient.ts` | Provider-neutral AI generation interface |
+| `app-builder/backend/src/ai/AiContextBuilder.ts` | Privacy-limited project and capability context |
+| `app-builder/backend/src/ai/AiGenerationService.ts` | Ownership-aware generation orchestration and strict output validation |
+| `app-builder/backend/src/ai/providers/FakeAiModelClient.ts` | Deterministic provider used before a paid model is connected |
+| `app-builder/backend/src/controllers/AiGenerationController.ts` | Authenticated proposal HTTP adapter and safe error contract |
+| `app-builder/backend/src/routes/AiGenerationRoutes.ts` | `POST /projects/:projectId/ai/proposals` route |
 | `app-builder/backend/src/config/index.ts` | Env variable loading |
 | `app-builder/backend/src/routes/AuthRoutes.ts` | Auth endpoints |
 | `app-builder/backend/src/auth/AuthContracts.ts` | Shared auth validation, normalization, and controlled error contracts |
