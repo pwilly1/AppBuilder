@@ -1,13 +1,20 @@
 import type { AppGenerationPlanV1 } from '@apptura/shared/ai';
-import type { AiModelClient, AiModelRequest } from '../AiModelClient.js';
+import type {
+  AiModelClient,
+  AiModelRequest,
+  AiModelResult,
+} from '../AiModelClient.js';
 
 export type FakeAiPlanFactory = (request: AiModelRequest) => unknown | Promise<unknown>;
 
 export class FakeAiModelClient implements AiModelClient {
+  readonly providerName = 'fake';
+  readonly modelName = 'deterministic-fixture';
+
   constructor(private readonly createPlan: FakeAiPlanFactory = createDefaultFakePlan) {}
 
-  async generatePlan(request: AiModelRequest): Promise<unknown> {
-    return this.createPlan(request);
+  async generatePlan(request: AiModelRequest): Promise<AiModelResult> {
+    return { plan: await this.createPlan(request) };
   }
 }
 

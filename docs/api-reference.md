@@ -197,7 +197,7 @@ Success: `200`. Missing projects and projects owned by another user return `404`
 
 ### `POST /projects/:projectId/ai/proposals`
 
-Creates a validated, transient AI generation proposal for a project owned by the authenticated builder. The current backend uses a deterministic fake provider so the boundary can be exercised without a paid model or API credential.
+Creates a validated, transient AI generation proposal for a project owned by the authenticated builder. `AI_PROVIDER=fake` uses the deterministic no-cost provider. `AI_PROVIDER=openai` uses the configured OpenAI Responses API model with strict structured output. Both paths pass through the same shared parser and never modify the project.
 
 Request:
 
@@ -220,7 +220,24 @@ Success: `200`
   "contextRevision": "2026-08-02T12:00:00.000Z",
   "summary": "Generated a deterministic page draft...",
   "plan": {},
-  "warnings": []
+  "warnings": [],
+  "generation": {
+    "provider": "openai",
+    "model": "gpt-5.6-terra",
+    "usage": {
+      "inputTokens": 1200,
+      "outputTokens": 450,
+      "totalTokens": 1650,
+      "cachedInputTokens": 0,
+      "reasoningOutputTokens": 200
+    }
+  },
+  "quota": {
+    "limit": 20,
+    "used": 1,
+    "remaining": 19,
+    "resetsAt": "2026-08-04T13:00:00.000Z"
+  }
 }
 ```
 
@@ -229,9 +246,53 @@ Behavior notes:
 - Authentication is required and non-owned projects return `404`.
 - Provider output is size-bounded and parsed through the strict `@apptura/shared/ai` contract.
 - Invalid provider output returns `422` with structured plan issues.
+- Account quota is reserved before the provider call. Exhausted quotas return `429`, a `Retry-After` header, and the current quota state.
 - Provider failures return a controlled `502` without exposing upstream details.
+- Accepted requests create prompt-free usage records containing status, model, duration, and provider token totals.
 - The endpoint does not save the proposal, update the project, or call the editor compiler.
 - The frontend generation dialog is not connected to this route yet.
+
+### `GET /projects/:projectId/ai/usage`
+
+Returns AI generation quota and usage totals for an owned project. Authentication is required, and non-owned projects return `404`.
+
+Success: `200`
+
+```json
+{
+  "quota": {
+    "limit": 20,
+    "used": 3,
+    "remaining": 17,
+    "resetsAt": "2026-08-04T13:00:00.000Z"
+  },
+  "periodStart": "2026-07-05T12:15:00.000Z",
+  "account": {
+    "requests": 8,
+    "succeeded": 7,
+    "failed": 1,
+    "inProgress": 0,
+    "inputTokens": 8000,
+    "outputTokens": 3200,
+    "totalTokens": 11200,
+    "cachedInputTokens": 500,
+    "reasoningOutputTokens": 1200
+  },
+  "project": {
+    "requests": 3,
+    "succeeded": 3,
+    "failed": 0,
+    "inProgress": 0,
+    "inputTokens": 3000,
+    "outputTokens": 1200,
+    "totalTokens": 4200,
+    "cachedInputTokens": 0,
+    "reasoningOutputTokens": 400
+  }
+}
+```
+
+The quota is account-wide. `account` and `project` totals cover the configurable reporting period, which defaults to 30 days. Raw prompts and generated plans are not stored in usage records.
 
 ### `PATCH /projects/:id`
 

@@ -1,8 +1,11 @@
 import express from 'express';
 import helmet from 'helmet';
 import mongoose from 'mongoose';
+import { readAiProviderConfig } from './ai/AiProviderConfig.js';
 import { AiGenerationService } from './ai/AiGenerationService.js';
-import { FakeAiModelClient } from './ai/providers/FakeAiModelClient.js';
+import { readAiUsageConfig } from './ai/AiUsageConfig.js';
+import { AiUsageService } from './ai/AiUsageService.js';
+import { createAiModelClient } from './ai/createAiModelClient.js';
 import { APP_USER_JWT_SECRET, CORS_ORIGIN, JWT_SECRET, MONGO_URI, PORT } from './config/index.js';
 import { AiGenerationController } from './controllers/AiGenerationController.js';
 import { AppDataController } from './controllers/AppDataController.js';
@@ -13,6 +16,7 @@ import { ProjectController } from './controllers/ProjectController.js';
 import { createRequireAuth } from './middleware/auth.js';
 import { createOptionalAppUser, createRequireAppUser } from './middleware/appUserAuth.js';
 import { MongoAppUserRepository } from './repositories/AppUserRepository.js';
+import { MongoAiUsageRepository } from './repositories/AiUsageRepository.js';
 import { MongoProjectRepository } from './repositories/MongoProjectRepository.js';
 import { MongoUserRepository } from './repositories/UserRepository.js';
 import { makeAppDataRoutes, makePublicAppDataRoutes } from './routes/AppDataRoutes.js';
@@ -48,8 +52,17 @@ const appUserController = new AppUserController(
   new AppUserAuthService(appUserRepository, appUserTokens),
 );
 const projectController = new ProjectController(projects);
+const aiProviderConfig = readAiProviderConfig();
+const aiUsage = new AiUsageService(
+  new MongoAiUsageRepository(),
+  readAiUsageConfig(),
+);
 const aiGenerationController = new AiGenerationController(
-  new AiGenerationService(projects, new FakeAiModelClient()),
+  new AiGenerationService(
+    projects,
+    createAiModelClient(aiProviderConfig),
+    aiUsage,
+  ),
 );
 const assetController = new AssetController(projects, new AssetStorageService());
 const appDataController = new AppDataController(

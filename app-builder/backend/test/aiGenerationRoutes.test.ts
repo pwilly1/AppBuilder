@@ -5,7 +5,14 @@ import test from 'node:test';
 import type { AppGenerationPlanV1 } from '@apptura/shared/ai';
 import express, { type RequestHandler } from 'express';
 import type { AiModelRequest } from '../src/ai/AiModelClient.js';
+import { AiGenerationRateLimitError } from '../src/ai/AiGenerationErrors.js';
 import { AiGenerationService } from '../src/ai/AiGenerationService.js';
+import type {
+  AiUsageAttempt,
+  AiUsageCompletion,
+  AiUsageSummary,
+  AiUsageTracker,
+} from '../src/ai/AiUsageService.js';
 import { FakeAiModelClient } from '../src/ai/providers/FakeAiModelClient.js';
 import { AiGenerationController } from '../src/controllers/AiGenerationController.js';
 import type { AuthenticatedRequest } from '../src/controllers/controllerUtils.js';
@@ -63,7 +70,8 @@ test('authenticated proposal route validates output without mutating the project
     modelRequest = request;
     return VALID_PLAN;
   });
-  const service = createService(model);
+  const usage = new StubAiUsageTracker();
+  const service = createService(model, usage);
 
   await withServer(createApp(service, allowOwner), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals`, {
@@ -80,16 +88,25 @@ test('authenticated proposal route validates output without mutating the project
     assert.equal(body.contextRevision, '2026-08-02T12:00:00.000Z');
     assert.deepEqual(body.plan, VALID_PLAN);
     assert.deepEqual(body.warnings, []);
+    assert.deepEqual(body.generation, {
+      provider: 'fake',
+      model: 'deterministic-fixture',
+      usage: ZERO_TOKEN_USAGE,
+    });
+    assert.deepEqual(body.quota, usage.quota);
   });
 
   assert.equal(JSON.stringify(PROJECT), before);
   assert.ok(modelRequest);
   assert.equal(modelRequest.prompt, 'Create an operations page.');
+  assert.match(modelRequest.safetyIdentifier ?? '', /^[a-f0-9]{64}$/);
+  assert.equal(modelRequest.safetyIdentifier?.includes(PROJECT.ownerId), false);
   assert.equal(modelRequest.context.project.pages[0]?.blockTypes[0], 'hero');
   assert.equal(modelRequest.context.project.collections[0]?.fields[0]?.key, 'name');
   const contextJson = JSON.stringify(modelRequest.context);
   assert.equal(contextJson.includes('owner-1'), false);
   assert.equal(contextJson.includes('Private block content'), false);
+  assert.equal(usage.completions[0]?.status, 'succeeded');
 });
 
 test('default fake provider returns a contract-valid deterministic page', async () => {
@@ -139,6 +156,7 @@ test('proposal route rejects projects the builder does not own', async () => {
       calls += 1;
       return VALID_PLAN;
     }),
+    new StubAiUsageTracker(),
     () => 'proposal-1',
   );
 
@@ -156,7 +174,11 @@ test('proposal route rejects projects the builder does not own', async () => {
 });
 
 test('proposal route returns structured validation issues for invalid provider output', async () => {
-  const service = createService(new FakeAiModelClient(() => ({ planVersion: 1 })));
+  const usage = new StubAiUsageTracker();
+  const service = createService(
+    new FakeAiModelClient(() => ({ planVersion: 1 })),
+    usage,
+  );
 
   await withServer(createApp(service, allowOwner), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals`, {
@@ -169,12 +191,14 @@ test('proposal route returns structured validation issues for invalid provider o
     assert.equal(body.error, 'The AI provider returned an invalid generation plan.');
     assert.ok(body.issues.length > 0);
   });
+  assert.equal(usage.completions[0]?.status, 'invalid_output');
 });
 
 test('proposal route hides provider failure details', async () => {
+  const usage = new StubAiUsageTracker();
   const service = createService(new FakeAiModelClient(() => {
     throw new Error('private-provider-key-and-upstream-details');
-  }));
+  }), usage);
 
   await withServer(createApp(service, allowOwner), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals`, {
@@ -187,6 +211,7 @@ test('proposal route hides provider failure details', async () => {
     assert.equal(body.error, 'The AI provider could not generate a proposal.');
     assert.equal(JSON.stringify(body).includes('private-provider-key'), false);
   });
+  assert.equal(usage.completions[0]?.status, 'provider_error');
 });
 
 test('proposal route validates bounded request input before calling the provider', async () => {
@@ -209,12 +234,57 @@ test('proposal route validates bounded request input before calling the provider
   assert.equal(calls, 0);
 });
 
+test('proposal route returns a controlled account quota response before calling the provider', async () => {
+  let calls = 0;
+  const quota = {
+    limit: 20,
+    used: 20,
+    remaining: 0,
+    resetsAt: new Date(Date.now() + 60_000).toISOString(),
+  };
+  const usage = new StubAiUsageTracker(new AiGenerationRateLimitError(quota));
+  const service = createService(new FakeAiModelClient(() => {
+    calls += 1;
+    return VALID_PLAN;
+  }), usage);
+
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: 'Create a page.' }),
+    });
+    assert.equal(response.status, 429);
+    assert.ok(response.headers.get('retry-after'));
+    assert.deepEqual(await response.json(), {
+      error: 'AI generation limit reached. Try again after the quota resets.',
+      quota,
+    });
+  });
+
+  assert.equal(calls, 0);
+});
+
+test('usage route returns account and project totals for an owned project', async () => {
+  const usage = new StubAiUsageTracker();
+  const service = createService(new FakeAiModelClient(), usage);
+
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/usage`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), usage.summary);
+  });
+});
+
 const allowOwner: RequestHandler = (req, _res, next) => {
   (req as AuthenticatedRequest).userId = 'owner-1';
   next();
 };
 
-function createService(model: FakeAiModelClient) {
+function createService(
+  model: FakeAiModelClient,
+  usage: AiUsageTracker = new StubAiUsageTracker(),
+) {
   return new AiGenerationService(
     {
       findOwned: async (projectId: string, ownerId: string) => (
@@ -222,8 +292,72 @@ function createService(model: FakeAiModelClient) {
       ),
     },
     model,
+    usage,
     () => 'proposal-1',
   );
+}
+
+const ZERO_TOKEN_USAGE = {
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0,
+  cachedInputTokens: 0,
+  reasoningOutputTokens: 0,
+};
+
+class StubAiUsageTracker implements AiUsageTracker {
+  readonly quota = {
+    limit: 20,
+    used: 1,
+    remaining: 19,
+    resetsAt: '2026-08-04T13:00:00.000Z',
+  };
+  readonly summary: AiUsageSummary = {
+    quota: this.quota,
+    periodStart: '2026-07-05T12:00:00.000Z',
+    account: {
+      requests: 2,
+      succeeded: 1,
+      failed: 1,
+      inProgress: 0,
+      inputTokens: 100,
+      outputTokens: 50,
+      totalTokens: 150,
+      cachedInputTokens: 10,
+      reasoningOutputTokens: 20,
+    },
+    project: {
+      requests: 1,
+      succeeded: 1,
+      failed: 0,
+      inProgress: 0,
+      inputTokens: 60,
+      outputTokens: 30,
+      totalTokens: 90,
+      cachedInputTokens: 0,
+      reasoningOutputTokens: 10,
+    },
+  };
+  readonly completions: AiUsageCompletion[] = [];
+
+  constructor(private readonly beginError?: Error) {}
+
+  async beginAttempt(): Promise<AiUsageAttempt> {
+    if (this.beginError) throw this.beginError;
+    return {
+      requestId: 'usage-request-1',
+      startedAt: new Date('2026-08-04T12:00:00.000Z'),
+      quota: this.quota,
+    };
+  }
+
+  async finishAttempt(_attempt: AiUsageAttempt, completion: AiUsageCompletion): Promise<void> {
+    this.completions.push(completion);
+  }
+
+  async getSummary(): Promise<AiUsageSummary> {
+    return this.summary;
+  }
 }
 
 function createApp(service: AiGenerationService, requireAuth: RequestHandler) {

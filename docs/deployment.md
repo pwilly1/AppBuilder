@@ -108,6 +108,12 @@ PORT=8080 or Azure-provided port behavior
 AZURE_STORAGE_CONNECTION_STRING=...
 AZURE_STORAGE_CONTAINER_NAME=apptura-assets
 AZURE_STORAGE_PUBLIC_BASE_URL=https://...
+AI_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-5.6-terra
+AI_REQUEST_TIMEOUT_MS=60000
+AI_GENERATION_REQUESTS_PER_HOUR=20
+AI_USAGE_SUMMARY_DAYS=30
 ```
 
 `APP_USER_JWT_SECRET` should be a different long random value in production. The backend falls back to `JWT_SECRET` for compatibility, but generated-app tokens still use a distinct payload type and cannot be accepted as builder sessions.
@@ -122,6 +128,10 @@ EMAIL_FROM=...
 `CORS_ORIGIN` can contain comma-separated origins if more than one frontend URL needs access.
 
 Image uploads require Azure Blob Storage configuration. The backend stores image bytes in the configured container and returns a URL for the Image block schema. The returned URL must be readable by web preview and Android preview. Use a public-read container, CDN/static website base URL, or another public asset base URL through `AZURE_STORAGE_PUBLIC_BASE_URL`.
+
+The OpenAI key must be a project-scoped service-account key stored only in Azure App Service settings. Do not add it to the frontend Static Web App, a `VITE_` variable, GitHub source, or deployment logs. Use `AI_PROVIDER=fake` only when intentionally deploying the deterministic test provider.
+
+`AI_GENERATION_REQUESTS_PER_HOUR` is an account-wide generation ceiling enforced through MongoDB, so it remains effective across backend restarts and multiple instances. `AI_USAGE_SUMMARY_DAYS` controls the reporting window returned by the usage endpoint. Both settings are optional and default to `20` requests per hour and `30` days.
 
 ## CORS Relationship
 

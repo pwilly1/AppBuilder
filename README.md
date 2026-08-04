@@ -39,7 +39,7 @@ The current product focus is a stable public demo, a clean grid-based editor, an
 - Editor toolbar note for Android preview setup while public APK/app-store distribution is pending
 - MongoDB persistence for projects
 - Azure-hosted frontend and backend with GitHub Actions deployment
-- Deterministic AI generation foundation with a shared plan contract, isolated preview, one-transaction apply flow, and an authenticated fake-provider proposal boundary
+- AI generation foundation with a shared plan contract, isolated preview, one-transaction apply flow, authenticated fake/OpenAI providers, and persistent per-account usage controls
 
 ## Tech Stack
 

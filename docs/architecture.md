@@ -69,11 +69,12 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 1. An authenticated builder posts a bounded prompt to `POST /projects/:projectId/ai/proposals`.
 2. `AiGenerationService` loads only a project owned by that builder.
 3. `AiContextBuilder` copies a compact structural summary: project name, page metadata and block types, collection field schemas, and the versioned capability catalog. It excludes owner identity, block property contents, app-user accounts, and app-data records.
-4. The provider-neutral `AiModelClient` returns untrusted JSON. The current implementation injects `FakeAiModelClient`; no paid model or credential is involved yet.
-5. The service enforces request/output bounds and parses the response with `@apptura/shared/ai`.
-6. The route returns a transient proposal with a project context revision. It does not update MongoDB or apply editor changes.
+4. `AiUsageService` atomically reserves one request from the builder's Mongo-backed hourly quota and creates a prompt-free usage attempt record.
+5. `createAiModelClient` selects the deterministic fake provider or the backend-only OpenAI provider from validated environment configuration. The OpenAI adapter sends controlled instructions, structural context, and a hashed builder safety identifier through the Responses API with response storage disabled.
+6. The service records provider token metadata and success or controlled failure status, enforces request/output bounds, and parses the response with `@apptura/shared/ai`.
+7. The route returns a transient proposal with a project context revision, request token usage, and remaining quota. It does not update the project or apply editor changes.
 
-The frontend still uses the local Crew Directory fixture. Connecting the editor dialog to this endpoint is a later milestone after a real provider and controlled prompt builder exist.
+The frontend still uses the local Crew Directory fixture. Connecting the editor dialog to the real proposal endpoint is the next integration milestone.
 
 ### Managing project data
 
@@ -359,6 +360,7 @@ The backend provides:
 - auth routes under `/auth`
 - project routes under `/projects`
 - authenticated AI proposal generation under `/projects/:projectId/ai/proposals`
+- authenticated AI usage summaries under `/projects/:projectId/ai/usage`
 - project image upload under `/projects/:id/assets/images`
 - public project routes under `/public`
 - project-scoped generated-app account routes under `/public/projects/:id/app-auth`
@@ -392,7 +394,16 @@ Important files:
 | `src/ai/AiGenerationService.ts` | Ownership-aware proposal orchestration, request bounds, shared parsing, and response metadata |
 | `src/ai/AiContextBuilder.ts` | Privacy-limited project and capability context for model clients |
 | `src/ai/AiModelClient.ts` | Provider-independent model interface |
-| `src/ai/providers/FakeAiModelClient.ts` | Deterministic no-cost provider used by the first backend milestone and tests |
+| `src/ai/AiProviderConfig.ts` | Validated fake/OpenAI provider, model, key, and timeout configuration |
+| `src/ai/AiUsageConfig.ts` | Validated account quota and usage reporting configuration |
+| `src/ai/AiUsageService.ts` | Account quota reservation, request lifecycle tracking, and usage summaries |
+| `src/ai/createAiModelClient.ts` | Startup factory that isolates provider selection from routes and services |
+| `src/ai/providers/FakeAiModelClient.ts` | Deterministic no-cost provider used by tests and optional local development |
+| `src/ai/providers/OpenAiModelClient.ts` | OpenAI Responses API adapter, controlled instructions, refusal handling, and JSON parsing |
+| `src/ai/providers/OpenAiGenerationSchema.ts` | Provider-facing strict JSON schema corresponding to the shared plan contract |
+| `src/repositories/AiUsageRepository.ts` | Atomic Mongo quota buckets and usage aggregation |
+| `src/models/AiQuotaBucket.ts` | Short-lived per-account hourly quota counters |
+| `src/models/AiUsageRecord.ts` | Prompt-free generation status, latency, and token audit records |
 | `src/services/AuthService.ts` | Authentication logic |
 | `src/services/AppUserAuthService.ts` | Project-scoped generated-app account behavior |
 | `src/services/AppUserTokenService.ts` | Generated-app JWT creation and project-scoped validation |
@@ -467,7 +478,7 @@ AI generation will not use RAG in the initial architecture, will not write direc
 
 The deterministic editor prototype implements this boundary with a strict page-scoped fixture: compilation and preview operate on an isolated project value, stale proposals cannot be accepted, and only explicit acceptance enters `applyProjectTransaction`. The versioned plan contract, strict parser, and capability catalog are published internally from `@apptura/shared/ai`, while editor-state compilation, layout repair, final project validation, and preview remain frontend-owned.
 
-The backend now exposes an authenticated, ownership-checked proposal route behind a narrow model-client interface. Its initial fake provider proves request, context, output-validation, and error boundaries without credentials or project writes. A real provider, prompt builder, timeouts, rate limits, usage persistence, correction requests, and editor endpoint integration remain unfinished.
+The backend exposes an authenticated, ownership-checked proposal route behind a narrow model-client interface. It supports a deterministic fake provider and a backend-only OpenAI adapter with controlled instructions, strict structured output, request timeout configuration, refusal/incomplete-response handling, and a second validation pass through `@apptura/shared/ai`. Mongo-backed account quotas are reserved before provider calls, and prompt-free usage records preserve request status, latency, and provider token totals. Correction requests and editor endpoint integration remain unfinished.
 
 The complete contract, validation loop, security boundary, testing strategy, and phased rollout are documented in [AI App Generation](ai-app-generation.md).
 

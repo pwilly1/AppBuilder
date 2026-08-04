@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   AI_GENERATION_CAPABILITIES,
   AI_GENERATION_SUPPORTED_SCOPES,
@@ -17,7 +17,17 @@ import {
   AiGenerationRequestError,
   AiModelProviderError,
 } from './AiGenerationErrors.js';
-import type { AiModelClient } from './AiModelClient.js';
+import {
+  AiModelClientError,
+  type AiModelClient,
+  type AiModelResult,
+  type AiModelTokenUsage,
+} from './AiModelClient.js';
+import type {
+  AiQuotaSummary,
+  AiUsageSummary,
+  AiUsageTracker,
+} from './AiUsageService.js';
 
 const AI_PROMPT_MAX_LENGTH = 2_000;
 const AI_PROVIDER_OUTPUT_MAX_BYTES = 256 * 1024;
@@ -32,6 +42,12 @@ export type AiGenerationProposal = {
   summary: string;
   plan: AppGenerationPlanV1;
   warnings: string[];
+  generation: {
+    provider: string;
+    model: string;
+    usage: AiModelTokenUsage;
+  };
+  quota: AiQuotaSummary;
 };
 
 type AiGenerationRequest = {
@@ -43,6 +59,7 @@ export class AiGenerationService {
   constructor(
     private readonly projects: OwnedProjectReader,
     private readonly model: AiModelClient,
+    private readonly usage: AiUsageTracker,
     private readonly createProposalId: () => string = randomUUID,
   ) {}
 
@@ -55,46 +72,79 @@ export class AiGenerationService {
     const project = await this.projects.findOwned(projectId, ownerId);
     if (!project) throw new ProjectNotFoundError();
 
-    let rawPlan: unknown;
+    const attempt = await this.usage.beginAttempt({
+      ownerId,
+      projectId,
+      scope: request.scope,
+      provider: this.model.providerName,
+      model: this.model.modelName,
+    });
+
+    let modelResult: AiModelResult;
     try {
-      rawPlan = await this.model.generatePlan({
+      modelResult = await this.model.generatePlan({
         prompt: request.prompt,
         scope: request.scope,
         context: buildAiGenerationContext(project),
+        safetyIdentifier: createSafetyIdentifier(ownerId),
       });
     } catch (error) {
+      const failure = readModelFailure(error);
+      await this.usage.finishAttempt(attempt, {
+        status: 'provider_error',
+        ...(failure.usage ? { usage: failure.usage } : {}),
+        ...(failure.responseId ? { providerResponseId: failure.responseId } : {}),
+        ...(failure.code ? { errorCode: failure.code } : {}),
+      });
       throw new AiModelProviderError(error);
     }
 
-    assertProviderOutputSize(rawPlan);
-    const parsed = parseAppGenerationPlan(rawPlan);
-    if (!parsed.success) {
-      throw new AiGenerationOutputError(
-        'The AI provider returned an invalid generation plan.',
-        parsed.issues,
-      );
-    }
-    if (parsed.data.scope !== request.scope) {
-      throw new AiGenerationOutputError(
-        'The AI provider returned a plan for the wrong generation scope.',
-        [{
-          code: 'scope-mismatch',
-          path: '$.scope',
-          message: `Expected scope "${request.scope}".`,
-        }],
-      );
+    let plan: AppGenerationPlanV1;
+    try {
+      plan = validateProviderPlan(modelResult.plan, request.scope);
+    } catch (error) {
+      await this.usage.finishAttempt(attempt, {
+        status: 'invalid_output',
+        ...(modelResult.usage ? { usage: modelResult.usage } : {}),
+        ...(modelResult.responseId ? { providerResponseId: modelResult.responseId } : {}),
+        errorCode: 'invalid_generation_plan',
+      });
+      throw error;
     }
 
+    const proposalId = this.createProposalId();
+    await this.usage.finishAttempt(attempt, {
+      status: 'succeeded',
+      ...(modelResult.usage ? { usage: modelResult.usage } : {}),
+      ...(modelResult.responseId ? { providerResponseId: modelResult.responseId } : {}),
+    });
+
     return {
-      proposalId: this.createProposalId(),
-      planVersion: parsed.data.planVersion,
+      proposalId,
+      planVersion: plan.planVersion,
       capabilityCatalogVersion: AI_GENERATION_CAPABILITIES.catalogVersion,
       contextRevision: getContextRevision(project),
-      summary: parsed.data.summary,
-      plan: parsed.data,
+      summary: plan.summary,
+      plan,
       warnings: [],
+      generation: {
+        provider: this.model.providerName,
+        model: this.model.modelName,
+        usage: modelResult.usage ?? emptyTokenUsage(),
+      },
+      quota: attempt.quota,
     };
   }
+
+  async getUsage(ownerId: string, projectId: string): Promise<AiUsageSummary> {
+    const project = await this.projects.findOwned(projectId, ownerId);
+    if (!project) throw new ProjectNotFoundError();
+    return this.usage.getSummary(ownerId, projectId);
+  }
+}
+
+function createSafetyIdentifier(ownerId: string): string {
+  return createHash('sha256').update(`apptura-builder:${ownerId}`).digest('hex');
 }
 
 function parseGenerationRequest(input: unknown): AiGenerationRequest {
@@ -147,6 +197,62 @@ function assertProviderOutputSize(value: unknown): void {
       [{ code: 'output-too-large', path: '$', message: 'Generation plan exceeds the output limit.' }],
     );
   }
+}
+
+function validateProviderPlan(value: unknown, scope: AiGenerationScope): AppGenerationPlanV1 {
+  assertProviderOutputSize(value);
+  const parsed = parseAppGenerationPlan(value);
+  if (!parsed.success) {
+    throw new AiGenerationOutputError(
+      'The AI provider returned an invalid generation plan.',
+      parsed.issues,
+    );
+  }
+  if (parsed.data.scope !== scope) {
+    throw new AiGenerationOutputError(
+      'The AI provider returned a plan for the wrong generation scope.',
+      [{
+        code: 'scope-mismatch',
+        path: '$.scope',
+        message: `Expected scope "${scope}".`,
+      }],
+    );
+  }
+  return parsed.data;
+}
+
+function readModelFailure(error: unknown): {
+  usage?: AiModelTokenUsage;
+  responseId?: string;
+  code?: string;
+} {
+  if (error instanceof AiModelClientError) {
+    return {
+      ...(error.usage ? { usage: error.usage } : {}),
+      ...(error.responseId ? { responseId: error.responseId } : {}),
+      ...(error.code ? { code: sanitizeErrorCode(error.code) } : {}),
+    };
+  }
+  if (!error || typeof error !== 'object') return {};
+  const code = (error as Record<string, unknown>).code;
+  return typeof code === 'string' && code
+    ? { code: sanitizeErrorCode(code) }
+    : {};
+}
+
+function sanitizeErrorCode(code: string): string {
+  const normalized = code.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
+  return normalized || 'provider_error';
+}
+
+function emptyTokenUsage(): AiModelTokenUsage {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    cachedInputTokens: 0,
+    reasoningOutputTokens: 0,
+  };
 }
 
 function getContextRevision(project: ProjectRecord): string | null {

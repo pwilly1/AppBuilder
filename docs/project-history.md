@@ -760,3 +760,22 @@ Representative areas:
 - `backend/src/routes/AiGenerationRoutes.ts`
 - `backend/test/aiGenerationRoutes.test.ts`
 - `docs/ai-app-generation.md`
+
+## Phase 42: Backend OpenAI Provider Bridge
+
+Date: August 4, 2026
+
+The AI proposal boundary now supports a real backend-only OpenAI provider without changing the frontend trust model. Startup reads validated `AI_PROVIDER`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and `AI_REQUEST_TIMEOUT_MS` settings, then constructs either the deterministic fake client or an OpenAI Responses API adapter through a small factory. Builder account IDs are hashed into a safety identifier before reaching the provider, response storage is disabled, output must satisfy a strict provider-side JSON schema, and the returned object is still re-validated through the shared `AppGenerationPlanV1` parser before the route responds.
+
+This phase keeps the same safety boundary: no project mutation, no frontend credential exposure, no direct model-authored writes, and no bypass around the shared allowlisted parser. Frontend dialog integration, usage/rate limits, and correction requests remain future work.
+
+Representative areas:
+
+- `backend/src/ai/AiProviderConfig.ts`
+- `backend/src/ai/createAiModelClient.ts`
+- `backend/src/ai/providers/OpenAiModelClient.ts`
+- `backend/src/ai/providers/OpenAiGenerationSchema.ts`
+- `backend/src/ai/AiGenerationService.ts`
+- `backend/test/aiProviderConfig.test.ts`
+- `backend/test/openAiModelClient.test.ts`
+- `docs/ai-app-generation.md`

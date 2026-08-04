@@ -2,9 +2,9 @@
 
 ## Status
 
-Prototype foundation and first backend proposal boundary implemented. The editor can parse and compile a strict page-scoped `AppGenerationPlanV1` fixture, validate and repair its layout, preview the resulting pages without mutating the project, and apply the proposal as one undoable project transaction.
+Prototype foundation and real backend provider bridge implemented. The editor can parse and compile a strict page-scoped `AppGenerationPlanV1` fixture, validate and repair its layout, preview the resulting pages without mutating the project, and apply the proposal as one undoable project transaction.
 
-The backend now exposes authenticated `POST /projects/:projectId/ai/proposals` behind a provider-neutral model-client interface. It verifies project ownership, builds privacy-limited structural context, validates provider output through `@apptura/shared/ai`, and never saves project changes. The injected provider is still deterministic and fake; real model calls, prompt construction, usage limits, correction, and frontend endpoint integration are not implemented yet.
+The backend exposes authenticated `POST /projects/:projectId/ai/proposals` behind a provider-neutral model-client interface. It verifies project ownership, builds privacy-limited structural context, and supports deterministic fake or OpenAI providers. The OpenAI adapter uses controlled instructions and strict structured output; every returned object is still treated as untrusted and validated through `@apptura/shared/ai`. Mongo-backed account quotas and prompt-free usage records protect provider spend. The route never saves project changes. Correction and frontend endpoint integration are not implemented yet.
 
 ## Purpose
 
@@ -463,12 +463,16 @@ Implemented modules:
 
 ```text
 app-builder/backend/src/ai/
+  AiProviderConfig.ts
   AiModelClient.ts
   AiGenerationService.ts
   AiContextBuilder.ts
   AiGenerationErrors.ts
+  createAiModelClient.ts
   providers/
     FakeAiModelClient.ts
+    OpenAiGenerationSchema.ts
+    OpenAiModelClient.ts
 
 app-builder/backend/src/controllers/AiGenerationController.ts
 app-builder/backend/src/routes/AiGenerationRoutes.ts
@@ -479,8 +483,6 @@ Planned modules:
 ```text
 app-builder/backend/src/ai/
   AiPromptBuilder.ts
-  providers/
-    InitialModelProvider.ts
 
 app-builder/backend/src/middleware/aiRateLimits.ts
 app-builder/backend/src/models/AiGenerationRun.ts
@@ -494,12 +496,26 @@ interface AiModelClient {
 }
 ```
 
-One real provider is sufficient initially. The interface exists so tests can use a fake provider and the rest of the application does not depend directly on one SDK.
+The first real provider is OpenAI. The interface keeps tests on a fake provider and prevents the SDK from leaking into controllers, services, shared contracts, or frontend code.
+
+Provider configuration is backend-only:
+
+```text
+AI_PROVIDER=fake|openai
+OPENAI_API_KEY=service-account-secret
+OPENAI_MODEL=gpt-5.6-terra
+AI_REQUEST_TIMEOUT_MS=60000
+AI_GENERATION_REQUESTS_PER_HOUR=20
+AI_USAGE_SUMMARY_DAYS=30
+```
+
+When `AI_PROVIDER=openai`, startup fails clearly if the key or timeout is invalid. The provider sends a hashed builder identifier rather than a raw account ID, disables response storage, handles refusals and incomplete output, removes schema-required `null` placeholders, and returns the resulting object to the existing shared parser.
 
 Current endpoint:
 
 ```text
 POST /projects/:projectId/ai/proposals
+GET  /projects/:projectId/ai/usage
 ```
 
 Planned endpoints:
@@ -520,6 +536,8 @@ The current backend response includes:
 - user-facing summary
 - validated plan
 - warnings
+- provider/model and token usage for the request
+- account quota limit, usage, remaining requests, and reset time
 
 Layout repairs are still produced later by the frontend compiler because it owns canonical editor grid validation against the builder's current project state.
 
@@ -576,7 +594,7 @@ Required safeguards:
 - prompt length limit
 - request body limit
 - output size limit
-- per-IP and per-account rate limits
+- Mongo-backed per-account rate limits before provider calls
 - provider timeout
 - one validation retry maximum
 - safe error responses
@@ -591,7 +609,7 @@ Text already stored in a project is untrusted context. Prompt construction must 
 
 ## Usage And Cost Controls
 
-An `AiGenerationRun` record should contain:
+Each accepted request creates an `AiUsageRecord` containing:
 
 ```text
 ownerId
@@ -600,14 +618,18 @@ scope
 provider
 model
 status
-inputTokenCount
-outputTokenCount
-latencyMs
-validationErrorCodes
+inputTokens
+outputTokens
+totalTokens
+cachedInputTokens
+reasoningOutputTokens
+durationMs
+providerResponseId
+sanitizedErrorCode
 createdAt
 ```
 
-Raw prompts and complete model responses should not be stored by default.
+Raw prompts and complete model responses are not stored. A separate short-lived `AiQuotaBucket` atomically limits accepted requests per account and hour, including deployments with multiple backend instances.
 
 Usage records support:
 
@@ -733,12 +755,13 @@ Exit condition: fixture plans compile into valid projects and render on web and 
 
 - Completed: add the model-client boundary
 - Completed: add a fake provider
+- Completed: add a backend-only OpenAI Responses API provider
+- Completed: add validated provider/model/key/timeout configuration
+- Completed: build controlled provider instructions and strict structured output
 - Completed: build privacy-limited structural project context
 - Completed: add an authenticated ownership-checked proposal route
 - Completed: validate bounded provider output through `@apptura/shared/ai`
-- add one real provider
-- build controlled provider prompts
-- add rate limits, timeouts, and usage records
+- Completed: add Mongo-backed account rate limits, usage records, provider token totals, and usage summaries
 - add one model correction endpoint
 
 Exit condition: the backend returns validated plans without mutating projects.
@@ -789,8 +812,8 @@ Exit condition: AI can modify existing work without replacing unrelated project 
 ### Phase 6: Production Hardening
 
 - expand prompt evaluations
-- add usage reporting
-- add quota and billing controls
+- add frontend usage reporting
+- add plan-based quota and billing controls beyond the current hourly ceiling
 - monitor failures and latency
 - expand style variation
 - add systematic Android parity coverage

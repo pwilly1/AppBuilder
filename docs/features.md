@@ -251,13 +251,13 @@ A future plugin system could allow third-party components, connectors, and actio
 
 ### GenAI App Building
 
-Status: deterministic editor prototype and authenticated fake-provider backend boundary implemented; real model-backed generation planned.
+Status: deterministic editor prototype and authenticated provider-selectable backend boundary implemented; editor-to-backend generation integration is planned.
 
 The editor currently compiles a strict, hardcoded Crew Directory plan into two pages and one collection. It previews the isolated result, preserves or repairs exact grid positions, resolves bindings and actions, rejects broken references, and applies acceptance as one undoable transaction.
 
 The versioned plan contract, strict parser, and supported-capability catalog are exposed through `@apptura/shared/ai`. The frontend compiler and backend proposal service consume the same boundary. Editor compilation and proposal preview remain frontend-owned.
 
-The backend now has a provider-neutral model client, privacy-limited project context, deterministic fake provider, and authenticated ownership-checked proposal route. It validates untrusted output and never writes projects. A real model provider, controlled prompt builder, limits, usage persistence, correction requests, and frontend endpoint integration are not implemented yet.
+The backend now has a provider-neutral model client, privacy-limited project context, deterministic fake provider, OpenAI Responses API adapter, and authenticated ownership-checked proposal route. OpenAI output is constrained with a strict JSON schema and then validated again by the shared parser. The service never writes projects. Mongo-backed hourly account quotas, request status records, provider token totals, and a project-owned usage summary endpoint protect the real provider without storing prompts or generated plans. Correction requests and frontend endpoint integration are not implemented yet.
 
 Good first AI features:
 

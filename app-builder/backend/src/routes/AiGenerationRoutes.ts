@@ -6,6 +6,7 @@ export function makeAiGenerationRoutes(
   requireAuth: RequestHandler,
 ) {
   const router = Router();
+  router.get('/:projectId/ai/usage', requireAuth, controller.getUsage);
   router.post('/:projectId/ai/proposals', requireAuth, controller.createProposal);
   return router;
 }
