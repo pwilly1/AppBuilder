@@ -221,6 +221,7 @@ Success: `200`
   "summary": "Generated a deterministic page draft...",
   "plan": {},
   "warnings": [],
+  "correctionAttempt": 0,
   "generation": {
     "provider": "openai",
     "model": "gpt-5.6-terra",
@@ -250,7 +251,43 @@ Behavior notes:
 - Provider failures return a controlled `502` without exposing upstream details.
 - Accepted requests create prompt-free usage records containing status, model, duration, and provider token totals.
 - The endpoint does not save the proposal, update the project, or call the editor compiler.
-- The frontend generation dialog is not connected to this route yet.
+- The editor calls this route with the builder token, then re-parses and deterministically compiles the returned `plan` before showing an isolated preview.
+
+### `POST /projects/:projectId/ai/proposals/corrections`
+
+Requests a bounded layout correction after the frontend compiler rejects an otherwise valid plan. Authentication and project ownership are required. The frontend may request correction attempts `1` and `2`; each request consumes one normal AI quota attempt.
+
+Request:
+
+```json
+{
+  "prompt": "Create a crew operations page",
+  "scope": "page",
+  "correctionAttempt": 1,
+  "previousPlan": {},
+  "issues": [
+    {
+      "code": "layout-full",
+      "path": "pages.operations.blocks.description.grid",
+      "message": "No collision-free grid placement is available for this block.",
+      "details": {
+        "pageKey": "operations",
+        "blockKey": "description",
+        "proposedGrid": { "colStart": 2, "rowStart": 8, "colSpan": 12, "rowSpan": 4 },
+        "requiredSpan": { "cols": 6, "rows": 3 },
+        "availableSpan": { "cols": 16, "rows": 29 },
+        "siblingBlockKeys": ["title"]
+      }
+    }
+  ]
+}
+```
+
+`previousPlan` must pass the shared parser and match the requested scope. Issue arrays, strings, grids, spans, and related-block lists are bounded and unknown properties are rejected. The model receives the previous plan, sanitized diagnostics, and versioned grid guidance.
+
+Success uses the same proposal response as the initial endpoint, with `correctionAttempt` set to `1` or `2`. Before responding, the backend preserves the previous plan's exact page and block sets, collections, fields, non-layout content, and parent relationships. It allows corrected grid/alignment plus a small allowlist of layout-related font and padding properties. When the compiler explicitly reports a `missing-reference`, the affected action, binding, collection source, or access target may be replaced or removed; unrelated references remain protected. Attempts to add/remove pages or blocks, change block types, or change parents return `422`.
+
+The endpoint never updates the project. It does not automatically split pages or remove blocks.
 
 ### `GET /projects/:projectId/ai/usage`
 

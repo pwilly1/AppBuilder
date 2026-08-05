@@ -14,7 +14,11 @@ export function getHeroRootStyle(contentScale = 1, contentPadding = 16): CSSProp
   }
 }
 
-export function getHeroHeadlineStyle(headlineSize?: number, contentScale = 1): CSSProperties {
+export function getHeroHeadlineStyle(
+  headlineSize?: number,
+  contentScale = 1,
+  textColor = '#0f172a',
+): CSSProperties {
   return {
     margin: 0,
     width: '100%',
@@ -25,7 +29,7 @@ export function getHeroHeadlineStyle(headlineSize?: number, contentScale = 1): C
     fontSize: (headlineSize ?? 28) * contentScale,
     fontWeight: 700,
     lineHeight: 1.15,
-    color: '#0f172a',
+    color: textColor,
     whiteSpace: 'pre-wrap',
     overflowWrap: 'break-word',
   }
@@ -35,16 +39,18 @@ export function HeroLayout({
   headline,
   headlineSize,
   contentPadding,
+  textColor,
   contentScale = 1,
 }: {
   headline: ReactNode
   headlineSize?: number
   contentPadding?: number
+  textColor?: string
   contentScale?: number
 }) {
   return (
     <div style={getHeroRootStyle(contentScale, contentPadding)}>
-      <div style={getHeroHeadlineStyle(headlineSize, contentScale)}>{headline}</div>
+      <div style={getHeroHeadlineStyle(headlineSize, contentScale, textColor)}>{headline}</div>
     </div>
   )
 }
@@ -53,12 +59,14 @@ export function Hero({
   headline,
   headlineSize,
   contentPadding,
+  textColor,
   contentScale = 1,
 }: {
   headline: string
   headlineSize?: number
   contentPadding?: number
+  textColor?: string
   contentScale?: number
 }) {
-  return <HeroLayout headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} contentScale={contentScale} />
+  return <HeroLayout headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} textColor={textColor} contentScale={contentScale} />
 }

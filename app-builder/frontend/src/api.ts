@@ -1,4 +1,10 @@
 // © 2025 Preston Willis. All rights reserved.
+import type {
+  AiGenerationPlanIssue,
+  AiGenerationScope,
+  AppGenerationPlanV1,
+} from '@apptura/shared/ai';
+
 export function setToken(token: string) {
   localStorage.setItem('app_token', token);
 }
@@ -7,6 +13,52 @@ export function getToken(): string | null {
 }
 
 const API_BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+
+export type AiQuotaSummary = {
+  limit: number;
+  used: number;
+  remaining: number;
+  resetsAt: string;
+};
+
+export type AiTokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cachedInputTokens: number;
+  reasoningOutputTokens: number;
+};
+
+export type AiGenerationProposalResponse = {
+  proposalId: string;
+  planVersion: number;
+  capabilityCatalogVersion: number;
+  contextRevision: string | null;
+  summary: string;
+  plan: unknown;
+  warnings: string[];
+  correctionAttempt: number;
+  generation: {
+    provider: string;
+    model: string;
+    usage: AiTokenUsage;
+  };
+  quota: AiQuotaSummary;
+};
+
+export type AiUsageTotals = AiTokenUsage & {
+  requests: number;
+  succeeded: number;
+  failed: number;
+  inProgress: number;
+};
+
+export type AiGenerationUsageResponse = {
+  quota: AiQuotaSummary;
+  periodStart: string;
+  account: AiUsageTotals;
+  project: AiUsageTotals;
+};
 
 function apiUrl(path: string) {
   if (!API_BASE_URL) return path;
@@ -189,6 +241,46 @@ export function deleteProject(id: string) {
 
 export function getProject(id: string) {
   return request(`/projects/${id}`);
+}
+
+export function createAiGenerationProposal(
+  projectId: string,
+  prompt: string,
+  options: { scope?: AiGenerationScope; signal?: AbortSignal } = {},
+) {
+  return request(`/projects/${projectId}/ai/proposals`, {
+    method: 'POST',
+    body: JSON.stringify({ prompt, scope: options.scope ?? 'page' }),
+    signal: options.signal,
+  }) as Promise<AiGenerationProposalResponse>;
+}
+
+export function correctAiGenerationProposal(
+  projectId: string,
+  input: {
+    prompt: string;
+    scope: AiGenerationScope;
+    correctionAttempt: number;
+    previousPlan: AppGenerationPlanV1;
+    issues: AiGenerationPlanIssue[];
+    signal?: AbortSignal;
+  },
+) {
+  return request(`/projects/${projectId}/ai/proposals/corrections`, {
+    method: 'POST',
+    body: JSON.stringify({
+      prompt: input.prompt,
+      scope: input.scope,
+      correctionAttempt: input.correctionAttempt,
+      previousPlan: input.previousPlan,
+      issues: input.issues,
+    }),
+    signal: input.signal,
+  }) as Promise<AiGenerationProposalResponse>;
+}
+
+export function getAiGenerationUsage(projectId: string, signal?: AbortSignal) {
+  return request(`/projects/${projectId}/ai/usage`, { signal }) as Promise<AiGenerationUsageResponse>;
 }
 
 export type UploadedImageAsset = {

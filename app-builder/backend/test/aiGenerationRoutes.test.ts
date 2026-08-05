@@ -109,6 +109,151 @@ test('authenticated proposal route validates output without mutating the project
   assert.equal(usage.completions[0]?.status, 'succeeded');
 });
 
+test('correction route sends compiler diagnostics and preserves plan semantics', async () => {
+  let modelRequest: AiModelRequest | undefined;
+  const correctedPlan = structuredClone(VALID_PLAN);
+  correctedPlan.pages[0]!.title = 'Changed by provider';
+  const correctedHero = correctedPlan.pages[0]!.blocks[0]!;
+  if (correctedHero.type !== 'hero') throw new Error('Expected hero fixture');
+  correctedHero.content.headline = 'Changed by provider';
+  correctedHero.content.headlineSize = 22;
+  correctedHero.grid = { colStart: 1, rowStart: 1, colSpan: 16, rowSpan: 3 };
+
+  const model = new FakeAiModelClient((request) => {
+    modelRequest = request;
+    return correctedPlan;
+  });
+  const service = createService(model);
+
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals/corrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: 'Create an operations page.',
+        scope: 'page',
+        correctionAttempt: 1,
+        previousPlan: VALID_PLAN,
+        issues: [{
+          code: 'layout-full',
+          path: 'pages.operations.blocks.title.grid',
+          message: 'No collision-free grid placement is available for this block.',
+          details: {
+            pageKey: 'operations',
+            blockKey: 'title',
+            proposedGrid: { colStart: 2, rowStart: 2, colSpan: 14, rowSpan: 3 },
+            requiredSpan: { cols: 6, rows: 2 },
+            availableSpan: { cols: 16, rows: 29 },
+            siblingBlockKeys: [],
+          },
+        }],
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json() as { correctionAttempt: number; plan: AppGenerationPlanV1 };
+    assert.equal(body.correctionAttempt, 1);
+    assert.equal(body.plan.pages[0]?.title, VALID_PLAN.pages[0]?.title);
+    const block = body.plan.pages[0]?.blocks[0];
+    assert.equal(block?.type, 'hero');
+    if (block?.type !== 'hero') throw new Error('Expected corrected hero');
+    assert.equal(block.content.headline, 'Operations');
+    assert.equal(block.content.headlineSize, 22);
+    assert.deepEqual(block.grid, { colStart: 1, rowStart: 1, colSpan: 16, rowSpan: 3 });
+  });
+
+  assert.ok(modelRequest?.correction);
+  assert.equal(modelRequest.correction.attempt, 1);
+  assert.deepEqual(modelRequest.correction.previousPlan, VALID_PLAN);
+  assert.equal(modelRequest.correction.issues[0]?.details?.blockKey, 'title');
+});
+
+test('correction route can remove a redirect that the compiler reported as unknown', async () => {
+  const previousPlan = structuredClone(VALID_PLAN);
+  previousPlan.pages[0]!.key = 'car-maintenance';
+  previousPlan.pages[0]!.access = { mode: 'signedIn', redirectPageKey: 'home' };
+  const correctedPlan = structuredClone(previousPlan);
+  correctedPlan.pages[0]!.access = { mode: 'public', redirectPageKey: 'home' };
+  const service = createService(new FakeAiModelClient(() => correctedPlan));
+
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals/corrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: 'Create a car maintenance page.',
+        scope: 'page',
+        correctionAttempt: 1,
+        previousPlan,
+        issues: [{
+          code: 'missing-reference',
+          path: 'pages.car-maintenance.access.redirectPageKey',
+          message: 'Unknown redirect page key "home".',
+        }],
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json() as { plan: AppGenerationPlanV1 };
+    assert.deepEqual(body.plan.pages[0]?.access, { mode: 'signedIn' });
+  });
+});
+
+test('correction route rejects attempts outside the bounded retry window', async () => {
+  let calls = 0;
+  const service = createService(new FakeAiModelClient(() => {
+    calls += 1;
+    return VALID_PLAN;
+  }));
+
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals/corrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: 'Create an operations page.',
+        scope: 'page',
+        correctionAttempt: 3,
+        previousPlan: VALID_PLAN,
+        issues: [{ code: 'layout-full', path: '$.pages', message: 'Layout is full.' }],
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.match((await response.json() as { error: string }).error, /correctionAttempt/);
+  });
+
+  assert.equal(calls, 0);
+});
+
+test('correction route rejects provider attempts to add or remove blocks', async () => {
+  const unsafePlan = structuredClone(VALID_PLAN);
+  unsafePlan.pages[0]!.blocks.push({
+    key: 'unexpected-block',
+    type: 'text',
+    content: { value: 'Unexpected' },
+    grid: { colStart: 1, rowStart: 8, colSpan: 8, rowSpan: 2 },
+  });
+  const service = createService(new FakeAiModelClient(() => unsafePlan));
+
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals/corrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: 'Create an operations page.',
+        scope: 'page',
+        correctionAttempt: 1,
+        previousPlan: VALID_PLAN,
+        issues: [{ code: 'layout-full', path: '$.pages', message: 'Layout is full.' }],
+      }),
+    });
+    assert.equal(response.status, 422);
+    const body = await response.json() as { error: string; issues: Array<{ code: string }> };
+    assert.equal(body.error, 'The AI provider returned an unsafe layout correction.');
+    assert.equal(body.issues[0]?.code, 'correction-structure-mismatch');
+  });
+});
+
 test('default fake provider returns a contract-valid deterministic page', async () => {
   const service = createService(new FakeAiModelClient());
 

@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   AI_GENERATION_CAPABILITIES,
-  AI_GENERATION_SUPPORTED_SCOPES,
   parseAppGenerationPlan,
+  type AiGenerationPlanIssue,
   type AiGenerationScope,
   type AppGenerationPlanV1,
 } from '@apptura/shared/ai';
@@ -12,11 +12,17 @@ import {
   type ProjectManager,
 } from '../services/ProjectManager.js';
 import { buildAiGenerationContext } from './AiContextBuilder.js';
+import { preserveCorrectionContract } from './AiCorrectionContract.js';
 import {
   AiGenerationOutputError,
-  AiGenerationRequestError,
   AiModelProviderError,
 } from './AiGenerationErrors.js';
+import {
+  AI_GENERATION_PLAN_MAX_BYTES,
+  parseCorrectionRequest,
+  parseGenerationRequest,
+  type AiGenerationRequest,
+} from './AiGenerationRequest.js';
 import {
   AiModelClientError,
   type AiModelClient,
@@ -29,9 +35,6 @@ import type {
   AiUsageTracker,
 } from './AiUsageService.js';
 
-const AI_PROMPT_MAX_LENGTH = 2_000;
-const AI_PROVIDER_OUTPUT_MAX_BYTES = 256 * 1024;
-
 type OwnedProjectReader = Pick<ProjectManager, 'findOwned'>;
 
 export type AiGenerationProposal = {
@@ -42,17 +45,13 @@ export type AiGenerationProposal = {
   summary: string;
   plan: AppGenerationPlanV1;
   warnings: string[];
+  correctionAttempt: number;
   generation: {
     provider: string;
     model: string;
     usage: AiModelTokenUsage;
   };
   quota: AiQuotaSummary;
-};
-
-type AiGenerationRequest = {
-  prompt: string;
-  scope: AiGenerationScope;
 };
 
 export class AiGenerationService {
@@ -72,6 +71,37 @@ export class AiGenerationService {
     const project = await this.projects.findOwned(projectId, ownerId);
     if (!project) throw new ProjectNotFoundError();
 
+    return this.runProposal(ownerId, projectId, project, request);
+  }
+
+  async correctProposal(
+    ownerId: string,
+    projectId: string,
+    input: unknown,
+  ): Promise<AiGenerationProposal> {
+    const request = parseCorrectionRequest(input);
+    const project = await this.projects.findOwned(projectId, ownerId);
+    if (!project) throw new ProjectNotFoundError();
+
+    return this.runProposal(ownerId, projectId, project, request, {
+      attempt: request.correctionAttempt,
+      previousPlan: request.previousPlan,
+      issues: request.issues,
+    });
+  }
+
+  private async runProposal(
+    ownerId: string,
+    projectId: string,
+    project: ProjectRecord,
+    request: AiGenerationRequest,
+    correction?: {
+      attempt: number;
+      previousPlan: AppGenerationPlanV1;
+      issues: AiGenerationPlanIssue[];
+    },
+  ): Promise<AiGenerationProposal> {
+
     const attempt = await this.usage.beginAttempt({
       ownerId,
       projectId,
@@ -87,6 +117,7 @@ export class AiGenerationService {
         scope: request.scope,
         context: buildAiGenerationContext(project),
         safetyIdentifier: createSafetyIdentifier(ownerId),
+        ...(correction ? { correction } : {}),
       });
     } catch (error) {
       const failure = readModelFailure(error);
@@ -102,6 +133,13 @@ export class AiGenerationService {
     let plan: AppGenerationPlanV1;
     try {
       plan = validateProviderPlan(modelResult.plan, request.scope);
+      if (correction) {
+        plan = preserveCorrectionContract(
+          correction.previousPlan,
+          plan,
+          correction.issues,
+        );
+      }
     } catch (error) {
       await this.usage.finishAttempt(attempt, {
         status: 'invalid_output',
@@ -127,6 +165,7 @@ export class AiGenerationService {
       summary: plan.summary,
       plan,
       warnings: [],
+      correctionAttempt: correction?.attempt ?? 0,
       generation: {
         provider: this.model.providerName,
         model: this.model.modelName,
@@ -147,37 +186,6 @@ function createSafetyIdentifier(ownerId: string): string {
   return createHash('sha256').update(`apptura-builder:${ownerId}`).digest('hex');
 }
 
-function parseGenerationRequest(input: unknown): AiGenerationRequest {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new AiGenerationRequestError('A generation request body is required.');
-  }
-  const body = input as Record<string, unknown>;
-  const unknownKey = Object.keys(body).find((key) => key !== 'prompt' && key !== 'scope');
-  if (unknownKey) {
-    throw new AiGenerationRequestError(`Unsupported request property "${unknownKey}".`);
-  }
-
-  if (typeof body.prompt !== 'string' || !body.prompt.trim()) {
-    throw new AiGenerationRequestError('Prompt is required.');
-  }
-  const prompt = body.prompt.trim();
-  if (prompt.length > AI_PROMPT_MAX_LENGTH) {
-    throw new AiGenerationRequestError(`Prompt must be ${AI_PROMPT_MAX_LENGTH} characters or fewer.`);
-  }
-
-  const scopeValue = body.scope ?? 'page';
-  if (
-    typeof scopeValue !== 'string'
-    || !AI_GENERATION_SUPPORTED_SCOPES.includes(scopeValue as AiGenerationScope)
-  ) {
-    throw new AiGenerationRequestError(
-      `Scope must be one of: ${AI_GENERATION_SUPPORTED_SCOPES.join(', ')}.`,
-    );
-  }
-
-  return { prompt, scope: scopeValue as AiGenerationScope };
-}
-
 function assertProviderOutputSize(value: unknown): void {
   let serialized: string | undefined;
   try {
@@ -191,7 +199,7 @@ function assertProviderOutputSize(value: unknown): void {
       [{ code: 'invalid-output', path: '$', message: 'Expected a JSON-compatible object.' }],
     );
   }
-  if (Buffer.byteLength(serialized, 'utf8') > AI_PROVIDER_OUTPUT_MAX_BYTES) {
+  if (Buffer.byteLength(serialized, 'utf8') > AI_GENERATION_PLAN_MAX_BYTES) {
     throw new AiGenerationOutputError(
       'The AI provider returned a generation plan that was too large.',
       [{ code: 'output-too-large', path: '$', message: 'Generation plan exceeds the output limit.' }],

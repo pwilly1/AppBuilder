@@ -8,7 +8,7 @@ import PagesPanel from '../components/PagesPanel'
 import PageVariablesPanel from '../components/PageVariablesPanel'
 import ProjectDataSummary from '../components/ProjectDataSummary'
 import { AiGenerateDialog } from '../components/ai/AiGenerateDialog'
-import { useAiGenerationPrototype } from '../hooks/useAiGenerationPrototype'
+import { useAiGeneration } from '../hooks/useAiGeneration'
 import type { Block, Page, PageAccess, PageStateVariable, Project } from '../shared/schema/types'
 import { normalizePageAccess, resolvePageAccess } from '../shared/runtime/pageAccess'
 import type { TemplateDefinition } from '../shared/schema/templates'
@@ -116,7 +116,18 @@ export default function EditorLayout(props: Props) {
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('blocks')
   const [, setAppUserSessionRevision] = useState(0)
   const [pendingProtectedPageId, setPendingProtectedPageId] = useState<string | null>(null)
-  const aiGeneration = useAiGenerationPrototype(project)
+  const aiGeneration = useAiGeneration(project, projectId)
+  const aiGenerationDisabledReason = previewMode
+    ? 'Return to edit mode to generate a page.'
+    : isDemoMode
+      ? 'AI generation is disabled in the public demo to protect provider usage.'
+      : !isAuthenticated
+        ? 'Sign in before using AI generation.'
+        : !projectId
+          ? 'Save this project before using AI generation.'
+          : !applyProjectTransaction
+            ? 'Project transactions are unavailable.'
+            : null
   const appUserSignedIn = Boolean(projectId && getAppUserToken(projectId))
   const runtimeRequestedPageId = appUserSignedIn && pendingProtectedPageId
     ? pendingProtectedPageId
@@ -208,7 +219,7 @@ export default function EditorLayout(props: Props) {
     )
     setSelectedBlock(null)
     setActiveContainerId(null)
-    aiGeneration.closePrototype()
+    aiGeneration.closeGeneration()
   }
 
   function handleAddBlock(block: Block) {
@@ -657,8 +668,9 @@ export default function EditorLayout(props: Props) {
             <button
               type="button"
               className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50"
-              onClick={aiGeneration.openPrototype}
-              disabled={previewMode || !applyProjectTransaction}
+              onClick={aiGeneration.openGeneration}
+              disabled={Boolean(aiGenerationDisabledReason)}
+              title={aiGenerationDisabledReason ?? 'Generate a validated page proposal with AI'}
             >
               Generate with AI
             </button>
@@ -931,9 +943,17 @@ export default function EditorLayout(props: Props) {
         open={aiGeneration.open}
         proposal={aiGeneration.proposal}
         issues={aiGeneration.issues}
+        error={aiGeneration.error}
+        warnings={aiGeneration.warnings}
+        quota={aiGeneration.quota}
+        quotaError={aiGeneration.quotaError}
+        isGenerating={aiGeneration.isGenerating}
+        isQuotaLoading={aiGeneration.isQuotaLoading}
+        refinementAttempt={aiGeneration.refinementAttempt}
         isStale={aiGeneration.isStale}
-        onClose={aiGeneration.closePrototype}
-        onRegenerate={aiGeneration.regeneratePrototype}
+        promptMaxLength={aiGeneration.promptMaxLength}
+        onClose={aiGeneration.closeGeneration}
+        onGenerate={aiGeneration.generate}
         onAccept={acceptAiGenerationProposal}
       />
 

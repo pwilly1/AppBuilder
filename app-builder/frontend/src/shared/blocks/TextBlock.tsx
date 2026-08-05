@@ -9,6 +9,7 @@ type TextBlockProps = {
   contentPadding?: number
   contentScale?: number
   textColor?: string
+  labelColor?: string
   editable?: boolean
   textInputMode?: 'singleLine' | 'multiline'
   inputType?: string
@@ -32,6 +33,7 @@ export function TextBlock({
   contentPadding = 12,
   contentScale = 1,
   textColor = '#0f172a',
+  labelColor,
   editable = false,
   textInputMode = 'singleLine',
   inputType = 'text',
@@ -102,7 +104,7 @@ export function TextBlock({
             minWidth: 0,
             fontSize: safeFontSize,
             lineHeight: 1.45,
-            color: textColor,
+            color: labelColor || textColor,
             whiteSpace: 'pre-wrap',
             overflowWrap: 'break-word',
           }}

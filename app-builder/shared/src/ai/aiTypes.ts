@@ -23,6 +23,22 @@ export type AiGenerationPlanIssue = {
   code: string
   path: string
   message: string
+  details?: AiGenerationIssueDetails
+}
+
+export type GridSpan = {
+  cols: number
+  rows: number
+}
+
+export type AiGenerationIssueDetails = {
+  pageKey?: string
+  blockKey?: string
+  proposedGrid?: GridPlacement
+  normalizedGrid?: GridPlacement
+  requiredSpan?: GridSpan
+  availableSpan?: GridSpan
+  siblingBlockKeys?: string[]
 }
 
 export type AiGenerationPlanParseResult =

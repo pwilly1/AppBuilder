@@ -251,13 +251,13 @@ A future plugin system could allow third-party components, connectors, and actio
 
 ### GenAI App Building
 
-Status: deterministic editor prototype and authenticated provider-selectable backend boundary implemented; editor-to-backend generation integration is planned.
+Status: first authenticated prompt-to-page flow implemented end to end.
 
-The editor currently compiles a strict, hardcoded Crew Directory plan into two pages and one collection. It previews the isolated result, preserves or repairs exact grid positions, resolves bindings and actions, rejects broken references, and applies acceptance as one undoable transaction.
+The editor accepts a bounded page prompt, calls the project-owned backend proposal route, and shows request progress and hourly quota state. It re-parses every returned plan, compiles it into the normal project schema, previews the isolated result, preserves or repairs exact grid positions, resolves bindings and actions, rejects broken references, repairs unreadable generated color combinations, and applies acceptance as one undoable transaction. Contrast repair is schema-based rather than browser-only, so Hero, Text, editable fields, and Button colors remain consistent in web and Android preview.
 
 The versioned plan contract, strict parser, and supported-capability catalog are exposed through `@apptura/shared/ai`. The frontend compiler and backend proposal service consume the same boundary. Editor compilation and proposal preview remain frontend-owned.
 
-The backend now has a provider-neutral model client, privacy-limited project context, deterministic fake provider, OpenAI Responses API adapter, and authenticated ownership-checked proposal route. OpenAI output is constrained with a strict JSON schema and then validated again by the shared parser. The service never writes projects. Mongo-backed hourly account quotas, request status records, provider token totals, and a project-owned usage summary endpoint protect the real provider without storing prompts or generated plans. Correction requests and frontend endpoint integration are not implemented yet.
+The backend has a provider-neutral model client, privacy-limited project context, deterministic fake provider, OpenAI Responses API adapter, and authenticated ownership-checked proposal and correction routes. OpenAI output is constrained with a strict JSON schema and then validated by the shared parser. The service never writes projects. Mongo-backed hourly account quotas, request status records, provider token totals, and a project-owned usage summary endpoint protect the real provider without storing prompts or generated plans. The frontend may coordinate two bounded layout corrections; corrections preserve page and block sets, parent relationships, and non-layout content while allowing compiler-reported broken references to be repaired. Corrections do not split pages.
 
 Good first AI features:
 
@@ -285,4 +285,4 @@ The initial architecture will not use RAG, embeddings, fine-tuning, autonomous a
 - Page-variable values are runtime-only preview state. They reset when a page runtime is recreated and are not persisted as hosted app data.
 - Project collections, public and owner-scoped reads, latest/specific/current-user Text/Hero bindings, ownership enforcement, and Button actions that create-or-update or delete the signed-in user's newest owned record are implemented. End-user-selected record mutation, relationships, and filtering are not.
 - Export and app-store pipeline features are not implemented.
-- GenAI has a deterministic fixture/compiler, shared contract, and authenticated fake-provider proposal API, but natural-language model generation and production AI controls are not implemented.
+- GenAI supports authenticated natural-language page proposals, deterministic compile/validation, isolated preview, one-transaction apply, hourly account quotas, and up to two bounded correction attempts. Prompt-to-app, AI editing, billing plans, and systematic Android parity coverage are not implemented.

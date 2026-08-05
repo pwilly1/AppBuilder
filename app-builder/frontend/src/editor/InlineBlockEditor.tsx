@@ -149,7 +149,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
               onCancel()
             }
           }}
-          className="h-full w-full resize-none border-none bg-transparent text-slate-900 outline-none"
+          className="h-full w-full resize-none border-none bg-transparent outline-none"
           style={{
             display: 'block',
             margin: 0,
@@ -157,6 +157,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
             padding: 0,
             boxSizing: 'border-box',
             fontFamily: 'inherit',
+            color: String(draft.textColor ?? '#0f172a'),
             fontSize: fontSize * contentScale,
             lineHeight: 1.45,
             width: `calc(100% + ${editWidthCompensationPx}px)`,
@@ -174,7 +175,11 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
     const contentScale = getBlockContentScale(block)
     const contentPadding = Number(lastAcceptedHeroDraftRef.current.contentPadding ?? 16) || 16
     const heroRootStyle = getHeroRootStyle(contentScale, contentPadding)
-    const heroHeadlineStyle = getHeroHeadlineStyle(Number(lastAcceptedHeroDraftRef.current.headlineSize ?? 28) || 28, contentScale)
+    const heroHeadlineStyle = getHeroHeadlineStyle(
+      Number(lastAcceptedHeroDraftRef.current.headlineSize ?? 28) || 28,
+      contentScale,
+      String(lastAcceptedHeroDraftRef.current.textColor ?? '#0f172a'),
+    )
     const editWidthCompensationPx = 4
 
     return (

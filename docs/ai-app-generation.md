@@ -2,9 +2,9 @@
 
 ## Status
 
-Prototype foundation and real backend provider bridge implemented. The editor can parse and compile a strict page-scoped `AppGenerationPlanV1` fixture, validate and repair its layout, preview the resulting pages without mutating the project, and apply the proposal as one undoable project transaction.
+Prompt-to-page generation is connected end to end. An authenticated builder can enter a bounded prompt in the editor, receive a transient backend proposal from either the deterministic fake provider or the configured OpenAI provider, and review the compiled result before applying it as one undoable project transaction.
 
-The backend exposes authenticated `POST /projects/:projectId/ai/proposals` behind a provider-neutral model-client interface. It verifies project ownership, builds privacy-limited structural context, and supports deterministic fake or OpenAI providers. The OpenAI adapter uses controlled instructions and strict structured output; every returned object is still treated as untrusted and validated through `@apptura/shared/ai`. Mongo-backed account quotas and prompt-free usage records protect provider spend. The route never saves project changes. Correction and frontend endpoint integration are not implemented yet.
+The backend verifies project ownership, builds privacy-limited structural context, and constrains provider output with the shared plan contract. The frontend still treats the response as untrusted: it parses the plan again, compiles it through the block registry, repairs and validates layout, and renders an isolated preview. When compilation still fails, the frontend can request up to two bounded model corrections with structured compiler diagnostics. Mongo-backed account quotas and prompt-free usage records protect provider spend. Proposal and correction routes never save project changes.
 
 ## Purpose
 
@@ -28,7 +28,7 @@ AI must not create a separate app format or generate React and Kotlin source as 
 2. The model may propose exact grid positions and block dimensions.
 3. Apptura validates every proposed position before presenting it to the user.
 4. Apptura may repair simple layout errors deterministically.
-5. Apptura may give the model one controlled correction attempt for complex validation errors.
+5. Apptura may give the model up to two controlled correction attempts for complex validation errors.
 6. The model produces an intermediate generation plan rather than unrestricted project JSON.
 7. Deterministic Apptura code generates IDs, resolves references, applies defaults, and constructs the final project schema.
 8. Generated changes are previewed before they affect the project.
@@ -105,7 +105,7 @@ AI generation dialog
   -> generation proposal
   -> frontend deterministic compiler
   -> canonical project and layout validator
-  -> optional single correction request when validation fails
+  -> up to two bounded correction requests when validation fails
   -> isolated preview
   -> applyProjectTransaction
   -> undo/redo and autosave
@@ -312,16 +312,21 @@ The frontend compiler may repair:
 
 - positions that need grid snapping
 - blocks that need to be clamped inside their parent
+- text-bearing blocks whose proposed spans are too small for their configured content
 - a single collision that can be resolved by moving to the nearest free area
+- fragmented sibling layouts that can fit after a bounded top-to-bottom reflow
 - a child-owner height that can safely grow within its existing bounds
+- unreadable foreground/background combinations in generated Hero, Text, editable Text, Button, and bordered Collection List blocks
 
-Repairs must preserve the proposed dimensions and relative order when possible.
+Repairs preserve the proposed position, dimensions, relative order, and any model color that already meets the configured contrast threshold. Hero and static Text foregrounds are checked against their page or repeated-item surface. Editable Text separately checks entered text, placeholder text, field labels, and visible borders. Button foregrounds are checked against the button surface, and buttons that disappear into the surrounding page receive a distinct surface color. These repaired colors are stored in normal block props, so web and Android render the same result.
+
+Hero, text, editable-text, and button spans may grow deterministically when their configured font size, padding, label, placeholder, or copy would otherwise be clipped. If nearest-space repair fails because earlier model coordinates fragmented the page, the compiler makes one bounded attempt to repack that sibling group from top to bottom without changing its normalized spans or order. A proposal still fails safely when the blocks genuinely cannot fit within 29 rows. The compiler uses the same 390-unit, 16-column, 28-unit-row geometry shared by the web editor and Android preview; it does not depend on browser DOM measurement.
 
 The proposal summary must tell the builder when Apptura changed the model's first layout.
 
 ### Model Correction
 
-The frontend may send complex validation errors to a correction endpoint once.
+The frontend sends complex validation errors to a correction endpoint only when deterministic repair cannot produce a valid preview. It may make at most two correction requests after the initial draft, for three provider calls total.
 
 ```text
 model draft
@@ -329,21 +334,26 @@ model draft
   -> frontend compilation and layout validation
   -> structured issue list
   -> correction endpoint
-  -> one corrected draft
+  -> corrected draft
   -> frontend compilation and layout validation
+  -> optional second bounded correction
 ```
 
-If the corrected draft remains invalid, generation fails safely. The system must not enter an unbounded retry loop.
+Each issue packet is bounded and sanitized. It can identify the semantic page and block keys, proposed and normalized grid placement, required and available spans, and nearby sibling keys. The model also receives versioned 16-column by 29-row layout guidance. If the second corrected draft remains invalid, generation fails safely. The system never enters an unbounded retry loop.
+
+A correction may move or resize existing blocks and may reduce layout-related font sizes or padding. The backend preserves the previous plan's pages, blocks, collections, fields, non-layout content, and parent relationships. When the compiler explicitly reports a `missing-reference`, the affected action, binding, collection source, or access target may be replaced or removed; unrelated references remain protected. It rejects block-type changes and any attempt to add or remove pages or blocks. Automatic page splitting and block removal are not correction strategies.
+
+Page references in a generation plan are local to that plan. A `targetPageKey` or `redirectPageKey` must match a `page.key` included in the returned plan; an existing project's title or path, such as `Home` or `/home`, is context rather than a valid generation key in the current milestone.
 
 Complex errors include:
 
 - many overlapping sections
-- content that cannot fit on one page
+- content that needs denser but still readable placement
 - unresolved references
 - invalid authentication flow
-- layout that must be split across pages
+- layout that exceeds the fixed page budget after deterministic repair
 
-The first implementation does not need interactive model tool calling. The frontend coordinates the correction request because it owns the canonical layout validator. The backend remains responsible for calling the model and enforcing the one-correction limit.
+The first implementation does not use interactive model tool calling. The frontend coordinates correction requests because it owns the canonical layout validator. The backend validates each previous plan and issue packet, calls the model, preserves the correction contract, counts every attempt against the normal quota, and rejects attempt numbers outside the two-correction window.
 
 ## Compiler Responsibilities
 
@@ -356,7 +366,7 @@ Compilation order:
 3. Create collections from safe access presets.
 4. Create pages and unique paths.
 5. Create blocks through the block registry.
-6. Apply proposed valid grid placements.
+6. Normalize proposed grid placements, expand undersized text-bearing blocks, and resolve resulting collisions.
 7. Resolve parent keys into `parentId`.
 8. Resolve page keys into navigation IDs.
 9. Resolve collection and field keys into schema IDs.
@@ -375,10 +385,10 @@ Newly generated schema should be valid by construction. Migration and hierarchy 
 The initial editor flow:
 
 1. Builder chooses **Generate with AI**.
-2. Builder chooses section, page, or app scope.
-3. Builder describes the desired result.
-4. Frontend sends a bounded request and project summary.
-5. Backend verifies authentication and project ownership.
+2. Builder describes the desired page or small page flow.
+3. Frontend sends a bounded prompt with the supported `page` scope.
+4. Backend verifies authentication and project ownership.
+5. Backend loads the owned project and builds a privacy-limited structural summary.
 6. Backend returns a validated generation proposal.
 7. Frontend compiles the proposal against a cloned project.
 8. Frontend validates and renders an isolated preview.
@@ -545,7 +555,7 @@ The backend should not expose hidden reasoning or model chain-of-thought.
 
 ## Shared And Frontend Structure
 
-Current prototype modules:
+Current modules:
 
 ```text
 app-builder/shared/src/ai/
@@ -560,15 +570,15 @@ app-builder/frontend/src/ai/
   fixtures/
     crewDirectoryPlan.ts
 
-app-builder/frontend/src/hooks/useAiGenerationPrototype.ts
+app-builder/frontend/src/hooks/useAiGeneration.ts
 
 app-builder/frontend/src/components/ai/
   AiGenerateDialog.tsx
 ```
 
-The shared package is pure TypeScript and has no React, browser, Express, database, or Android dependency. The frontend and backend toolchains reference it through the local `@apptura/shared` package. The editor compiler and backend generation service both consume it, and backend tests enforce the same contract.
+The shared package is pure TypeScript and has no React, browser, Express, database, or Android dependency. The frontend and backend toolchains reference it through the local `@apptura/shared` package. The editor compiler and backend generation service both consume it, and backend tests enforce the same contract. The Crew Directory fixture remains test input for deterministic compiler coverage; the production editor no longer uses it as its proposal source.
 
-`generationContext.ts`, a production `useAiGeneration` hook, request progress, and backend API integration remain later work.
+`useAiGeneration` owns request cancellation, loading and error state, quota refresh, a second shared-parser pass, compilation against the current project snapshot, and stale-proposal detection. `AiGenerateDialog` owns prompt entry and isolated proposal review. Provider settings and token counts remain backend concerns and are not exposed to normal builders.
 
 The editor should expose one clear **Generate with AI** entry point. It should not expose model names, temperature, token counts, or provider settings to normal builders.
 
@@ -596,7 +606,7 @@ Required safeguards:
 - output size limit
 - Mongo-backed per-account rate limits before provider calls
 - provider timeout
-- one validation retry maximum
+- two validation corrections maximum after the initial draft
 - safe error responses
 - no credentials in logs
 - no app-user records in context
@@ -644,7 +654,8 @@ Additional controls:
 - one active generation request per project
 - idempotency keys
 - no provider retry for service outages
-- one correction attempt for invalid model output
+- every correction consumes one normal quota attempt
+- no automatic page splitting or block removal during correction
 - feature disabled when backend credentials are missing
 
 ## Error Contract
@@ -744,6 +755,8 @@ Track:
 - Completed: build the deterministic compiler
 - Completed: build exact-placement and reference validation
 - Completed: build bounded clamping and nearest-free-space repair
+- Completed: add deterministic content-fit sizing for generated hero, text, editable-text, and button blocks
+- Completed: add bounded sibling reflow when scattered model coordinates fragment otherwise sufficient page space
 - Completed: preview and apply a hardcoded Crew Directory fixture
 - Completed: extract the plan contract and strict parser into `@apptura/shared/ai`
 - Completed: publish a versioned AI capability catalog for future backend prompts
@@ -762,28 +775,29 @@ Exit condition: fixture plans compile into valid projects and render on web and 
 - Completed: add an authenticated ownership-checked proposal route
 - Completed: validate bounded provider output through `@apptura/shared/ai`
 - Completed: add Mongo-backed account rate limits, usage records, provider token totals, and usage summaries
-- add one model correction endpoint
+- Completed: add a bounded model correction endpoint with structured compiler diagnostics
+- Completed: enforce stable page/block structure, protected non-layout content, and issue-gated reference changes during correction
 
 Exit condition: the backend returns validated plans without mutating projects.
 
-### Phase 2: Prompt-To-Section
+### Phase 2: Editor Prompt Integration
 
-- add the editor dialog
-- compile and preview one generated section
-- accept or cancel
-- apply as one project transaction
+- Completed: connect the editor dialog to the authenticated proposal route
+- Completed: show bounded prompt entry, request progress, quota state, and controlled errors
+- Completed: parse, compile, validate, and preview returned page plans without mutating the project
+- Completed: accept or cancel and apply acceptance as one project transaction
+- Remaining: complete manual save/reload, undo/redo, web preview, and Android parity QA with live generated plans
 
-Exit condition: generated sections survive undo, redo, save, reload, web preview, and Android preview.
+Exit condition: live generated pages survive undo, redo, save, reload, web preview, and Android preview.
 
-### Phase 3: Prompt-To-Page
+### Phase 3: Prompt-To-Page Expansion
 
-- create new pages
-- support multiple sections
-- support exact AI grid positions
-- reuse collections
-- compile actions and bindings
-- apply page access
-- detect stale proposals
+- Completed: create one or more new pages
+- Completed: support exact AI grid positions with deterministic repair
+- Completed: create collections and compile actions, bindings, and page access
+- Completed: detect stale proposals
+- Planned: improve multi-section composition and style variation
+- Planned: reuse compatible existing collections instead of always creating new ones
 
 Exit condition: generated pages work without manual schema repair.
 
@@ -812,29 +826,29 @@ Exit condition: AI can modify existing work without replacing unrelated project 
 ### Phase 6: Production Hardening
 
 - expand prompt evaluations
-- add frontend usage reporting
+- add account and project usage analytics beyond the current quota indicator
 - add plan-based quota and billing controls beyond the current hourly ceiling
 - monitor failures and latency
 - expand style variation
 - add systematic Android parity coverage
 
-## First Implementation Target
+## Implemented Generation Path
 
-Build the deterministic path before connecting a paid model:
+The editor now uses this production path:
 
 ```text
-hardcoded Crew Directory AppGenerationPlanV1
-  -> strict validation
-  -> compile two pages, one collection, Hero, Text, Collection List, and Button
-  -> resolve navigation, current-item bindings, and submission mappings
-  -> validate exact grid positions
-  -> preview cloned project
-  -> accept as one undoable transaction
-  -> save/reload
-  -> render on web and Android
+bounded builder prompt
+  -> authenticated owned-project proposal request
+  -> fake or OpenAI provider
+  -> backend shared-parser validation
+  -> frontend shared-parser validation
+  -> deterministic compilation and layout validation
+  -> isolated preview
+  -> explicit one-transaction apply
+  -> existing autosave and runtime rendering
 ```
 
-The deterministic web path is implemented. After web and Android QA, the next phase is to return the same contract from an authenticated backend model client instead of the hardcoded fixture.
+The deterministic fixture remains in automated tests. The next AI milestone is manual end-to-end parity QA for live generated and corrected plans through save/reload, undo/redo, web preview, and Android preview.
 
 ## Related Documentation
 

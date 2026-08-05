@@ -1,4 +1,5 @@
 import { normalizeGeneratedPageLayout, type AiGenerationLayoutRepair } from './generationLayout'
+import { repairGeneratedBlockColors } from './generationColors'
 import { validateCompiledGenerationProject } from './validateGenerationProposal'
 import type {
   AiBlockPlan,
@@ -210,14 +211,18 @@ function compileBlock(
     ))
   }
 
-  const props = compileBlockProps(
+  const props = repairGeneratedBlockColors(
     pagePlan,
     blockPlan,
-    blockIdByPageAndKey,
-    pageIdByKey,
-    collectionIdByKey,
-    plan,
-    issues,
+    compileBlockProps(
+      pagePlan,
+      blockPlan,
+      blockIdByPageAndKey,
+      pageIdByKey,
+      collectionIdByKey,
+      plan,
+      issues,
+    ),
   )
   const base = createBlock(blockPlan.type, props)
   const bindings = compileBlockBindings(

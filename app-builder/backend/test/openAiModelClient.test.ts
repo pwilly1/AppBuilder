@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   AI_GENERATION_CAPABILITIES,
+  AI_GENERATION_LAYOUT_GUIDANCE,
   parseAppGenerationPlan,
 } from '@apptura/shared/ai';
 import type { AiGenerationContext } from '../src/ai/AiContextBuilder.js';
@@ -98,6 +99,9 @@ test('OpenAI client requests strict structured output and returns parser-compati
   assert.equal(captured.truncation, 'disabled');
   assert.equal(captured.safety_identifier, MODEL_REQUEST.safetyIdentifier);
   assert.deepEqual(captured.reasoning, { effort: 'medium' });
+  assert.match(String(captured.instructions), /Do not create extra pages, remove blocks/);
+  assert.match(String(captured.instructions), /redirectPageKey must exactly match a page key/);
+  assert.match(String(captured.instructions), /Text and entered values must have strong contrast/);
 
   const format = captured.text?.format as Record<string, unknown>;
   assert.equal(format.type, 'json_schema');
@@ -105,7 +109,66 @@ test('OpenAI client requests strict structured output and returns parser-compati
   const input = JSON.parse(captured.input as string) as Record<string, unknown>;
   assert.equal(input.userRequest, MODEL_REQUEST.prompt);
   assert.deepEqual(input.allowedCapabilities, AI_GENERATION_CAPABILITIES);
+  assert.deepEqual(input.layoutGuidance, AI_GENERATION_LAYOUT_GUIDANCE);
+  assert.equal(input.correction, undefined);
   assert.equal(JSON.stringify(result.plan).includes('null'), false);
+});
+
+test('OpenAI client includes bounded correction context without changing the output schema', async () => {
+  let captured: Parameters<OpenAiResponseCreator>[0] | undefined;
+  const previousPlan = {
+    planVersion: 1 as const,
+    scope: 'page' as const,
+    summary: 'Operations page.',
+    collections: [],
+    pages: [{
+      key: 'operations',
+      title: 'Operations',
+      blocks: [{
+        key: 'title',
+        type: 'hero' as const,
+        content: { headline: 'Operations' },
+        grid: { colStart: 2, rowStart: 2, colSpan: 14, rowSpan: 3 },
+      }],
+    }],
+  };
+  const client = createClient(async (params) => {
+    captured = params;
+    return {
+      id: 'resp-correction-1',
+      output_text: JSON.stringify(previousPlan),
+      status: 'completed',
+      output: [],
+    };
+  });
+
+  await client.generatePlan({
+    ...MODEL_REQUEST,
+    correction: {
+      attempt: 1,
+      previousPlan,
+      issues: [{
+        code: 'layout-full',
+        path: 'pages.operations.blocks.title.grid',
+        message: 'No collision-free grid placement is available.',
+        details: { pageKey: 'operations', blockKey: 'title' },
+      }],
+    },
+  });
+
+  assert.ok(captured);
+  const input = JSON.parse(captured.input as string) as Record<string, unknown>;
+  assert.deepEqual(input.correction, {
+    attempt: 1,
+    previousPlan,
+    compilerIssues: [{
+      code: 'layout-full',
+      path: 'pages.operations.blocks.title.grid',
+      message: 'No collision-free grid placement is available.',
+      details: { pageKey: 'operations', blockKey: 'title' },
+    }],
+  });
+  assert.equal((captured.text?.format as Record<string, unknown>).name, 'apptura_generation_plan_v1');
 });
 
 test('OpenAI client rejects refusals, incomplete responses, and malformed output', async () => {

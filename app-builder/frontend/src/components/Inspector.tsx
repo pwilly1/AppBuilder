@@ -126,6 +126,7 @@ export default function Inspector({
   const [repeaterError, setRepeaterError] = React.useState<string | null>(null);
   const textEditable = block?.type === 'text' && Boolean(watch('editable'));
   const textInputMode = watch('textInputMode') as string | undefined;
+  const textShowFieldLabel = Boolean(watch('showFieldLabel'));
   const repeaterCollectionId = watch('collectionId') as string | undefined;
   const repeaterScope = watch('scope') as string | undefined;
 
@@ -1047,6 +1048,12 @@ export default function Inspector({
                     <FieldLabel>Placeholder color</FieldLabel>
                     <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('placeholderColor')} />
                   </div>
+                  {textShowFieldLabel ? (
+                    <div className="grid gap-2">
+                      <FieldLabel>Label color</FieldLabel>
+                      <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('labelColor')} />
+                    </div>
+                  ) : null}
                   <div className="grid gap-2">
                     <FieldLabel>Border color</FieldLabel>
                     <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('borderColor')} />
@@ -1081,6 +1088,10 @@ export default function Inspector({
               <div className="grid gap-2">
                 <FieldLabel>Headline size (px)</FieldLabel>
                 <TextInput type="number" className="max-w-[120px]" {...register('headlineSize')} />
+              </div>
+              <div className="grid gap-2">
+                <FieldLabel>Text color</FieldLabel>
+                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
               </div>
             </FormSection>
           </>

@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { AI_GENERATION_LAYOUT_GUIDANCE } from '@apptura/shared/ai';
 import type {
   ResponseCreateParamsNonStreaming,
   ResponseUsage,
@@ -22,7 +23,17 @@ const GENERATION_INSTRUCTIONS = [
   'Use only the capabilities, block types, actions, bindings, and collection presets supplied in the input.',
   'Use the requested scope exactly. The current milestone supports page generation only.',
   'Use semantic keys for references. Keys must be unique within their collection or page.',
+  'Every targetPageKey and redirectPageKey must exactly match a page key included in the returned plan. Existing project page titles and paths are context only, not valid plan keys.',
   'Lay out each page on a 16-column by 29-row grid and avoid overlapping sibling blocks.',
+  'Give content readable space: heroes usually need at least 6 columns and 2 rows, static text at least 4 columns, editable text fields at least 6 columns and 3 rows, and buttons at least 4 columns and 2 rows.',
+  'Reserve enough rows for wrapped text and keep deliberate vertical space between separate content groups.',
+  'Keep every page within 29 rows after accounting for all block heights.',
+  'Choose readable foreground and background combinations. Text and entered values must have strong contrast, placeholders must remain legible, and buttons must remain visually distinct from the page behind them.',
+  'The deterministic compiler may replace unsafe color combinations while preserving colors that already meet its contrast requirements.',
+  'Do not create extra pages, remove blocks, or change block types to solve layout problems.',
+  'When correction data is supplied, preserve every page, block, collection, field, action, binding, parent relationship, and semantic content from the previous plan.',
+  'If a compiler issue explicitly reports an unknown reference, change or remove only that broken reference while preserving the surrounding behavior.',
+  'A correction may move or resize blocks and may reduce layout-related font sizes or padding when needed for a readable fit.',
   'Repeater child coordinates are relative to the repeated item and may only use hero, text, or button blocks.',
   'Use parentKey only when placing a supported child inside a repeater.',
   'Do not include explanations, markdown, unsupported properties, IDs, executable code, or CSS.',
@@ -80,6 +91,14 @@ export class OpenAiModelClient implements AiModelClient {
         userRequest: request.prompt,
         existingProject: request.context.project,
         allowedCapabilities: request.context.capabilities,
+        layoutGuidance: AI_GENERATION_LAYOUT_GUIDANCE,
+        ...(request.correction ? {
+          correction: {
+            attempt: request.correction.attempt,
+            previousPlan: request.correction.previousPlan,
+            compilerIssues: request.correction.issues,
+          },
+        } : {}),
       }),
       reasoning: { effort: 'medium' },
       max_output_tokens: AI_MAX_OUTPUT_TOKENS,

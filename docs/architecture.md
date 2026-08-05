@@ -70,11 +70,15 @@ app-builder/native-preview/Android/app/src/main/java/com/apptura/nativepreview
 2. `AiGenerationService` loads only a project owned by that builder.
 3. `AiContextBuilder` copies a compact structural summary: project name, page metadata and block types, collection field schemas, and the versioned capability catalog. It excludes owner identity, block property contents, app-user accounts, and app-data records.
 4. `AiUsageService` atomically reserves one request from the builder's Mongo-backed hourly quota and creates a prompt-free usage attempt record.
-5. `createAiModelClient` selects the deterministic fake provider or the backend-only OpenAI provider from validated environment configuration. The OpenAI adapter sends controlled instructions, structural context, and a hashed builder safety identifier through the Responses API with response storage disabled.
+5. `createAiModelClient` selects the deterministic fake provider or the backend-only OpenAI provider from validated environment configuration. The OpenAI adapter sends controlled instructions, structural context, versioned grid guidance, and a hashed builder safety identifier through the Responses API with response storage disabled.
 6. The service records provider token metadata and success or controlled failure status, enforces request/output bounds, and parses the response with `@apptura/shared/ai`.
 7. The route returns a transient proposal with a project context revision, request token usage, and remaining quota. It does not update the project or apply editor changes.
+8. The frontend parses the returned plan again and compiles it against the current project snapshot. If deterministic repair still fails, it can post the prior plan plus bounded semantic compiler diagnostics to `POST /projects/:projectId/ai/proposals/corrections` up to two times.
+9. The backend counts each correction against quota and preserves prior page/block sets, collections, parent relationships, and non-layout content while allowing grid, alignment, bounded layout-style adjustments, and issue-gated repair of actions, bindings, collection sources, or access targets reported as `missing-reference`. It does not split pages or remove blocks.
+10. A valid result is previewed in isolation, and Apply is blocked if the source snapshot becomes stale.
+11. Explicit acceptance enters the existing history through one `applyProjectTransaction`; normal autosave persists it afterward.
 
-The frontend still uses the local Crew Directory fixture. Connecting the editor dialog to the real proposal endpoint is the next integration milestone.
+The Crew Directory fixture remains deterministic compiler test data. Production editor generation uses the authenticated endpoint and never receives provider credentials.
 
 ### Managing project data
 
@@ -360,6 +364,7 @@ The backend provides:
 - auth routes under `/auth`
 - project routes under `/projects`
 - authenticated AI proposal generation under `/projects/:projectId/ai/proposals`
+- authenticated bounded AI layout correction under `/projects/:projectId/ai/proposals/corrections`
 - authenticated AI usage summaries under `/projects/:projectId/ai/usage`
 - project image upload under `/projects/:id/assets/images`
 - public project routes under `/public`
@@ -476,9 +481,9 @@ AI features produce a constrained generation plan that deterministic Apptura cod
 
 AI generation will not use RAG in the initial architecture, will not write directly to project storage, and will not create a separate app format. Accepted proposals must enter the existing project history as one undoable transaction.
 
-The deterministic editor prototype implements this boundary with a strict page-scoped fixture: compilation and preview operate on an isolated project value, stale proposals cannot be accepted, and only explicit acceptance enters `applyProjectTransaction`. The versioned plan contract, strict parser, and capability catalog are published internally from `@apptura/shared/ai`, while editor-state compilation, layout repair, final project validation, and preview remain frontend-owned.
+The editor implements this boundary with a production `useAiGeneration` hook: request cancellation, quota status, controlled errors, compilation, and preview operate without mutating the current project; stale proposals cannot be accepted; and only explicit acceptance enters `applyProjectTransaction`. The versioned plan contract, strict parser, and capability catalog are published internally from `@apptura/shared/ai`, while editor-state compilation, layout repair, final project validation, and preview remain frontend-owned.
 
-The backend exposes an authenticated, ownership-checked proposal route behind a narrow model-client interface. It supports a deterministic fake provider and a backend-only OpenAI adapter with controlled instructions, strict structured output, request timeout configuration, refusal/incomplete-response handling, and a second validation pass through `@apptura/shared/ai`. Mongo-backed account quotas are reserved before provider calls, and prompt-free usage records preserve request status, latency, and provider token totals. Correction requests and editor endpoint integration remain unfinished.
+The backend exposes authenticated, ownership-checked proposal and correction routes behind a narrow model-client interface. It supports a deterministic fake provider and a backend-only OpenAI adapter with controlled instructions, strict structured output, request timeout configuration, refusal/incomplete-response handling, and validation through `@apptura/shared/ai`. Mongo-backed account quotas are reserved before every provider call, and prompt-free usage records preserve request status, latency, and provider token totals. The frontend performs another parser pass before compilation and coordinates at most two corrections. The backend preserves page/block structure and non-layout content, limits reference changes to compiler-reported failures, and rejects page splitting or block addition/removal during correction.
 
 The complete contract, validation loop, security boundary, testing strategy, and phased rollout are documented in [AI App Generation](ai-app-generation.md).
 

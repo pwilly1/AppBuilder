@@ -1,4 +1,8 @@
-import type { AiGenerationScope } from '@apptura/shared/ai';
+import type {
+  AiGenerationPlanIssue,
+  AiGenerationScope,
+  AppGenerationPlanV1,
+} from '@apptura/shared/ai';
 import type { AiGenerationContext } from './AiContextBuilder.js';
 
 export type AiModelRequest = {
@@ -6,6 +10,11 @@ export type AiModelRequest = {
   scope: AiGenerationScope;
   context: AiGenerationContext;
   safetyIdentifier?: string;
+  correction?: {
+    attempt: number;
+    previousPlan: AppGenerationPlanV1;
+    issues: AiGenerationPlanIssue[];
+  };
 };
 
 export type AiModelTokenUsage = {

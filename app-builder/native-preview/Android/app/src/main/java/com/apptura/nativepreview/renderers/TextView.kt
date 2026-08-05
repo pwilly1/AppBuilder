@@ -57,6 +57,7 @@ fun TextView(
     val scaledFontSize = fontSize * contentScale
     val scaledPadding = contentPadding * contentScale
     val textColor = parseTextColor(readTextString(block, "textColor", ""), Color(0xFF0F172A))
+    val labelColor = parseTextColor(readTextString(block, "labelColor", ""), textColor)
 
     if (!editable) {
         Box(
@@ -105,7 +106,7 @@ fun TextView(
             val labelSize = (scaledFontSize - 2f * contentScale).coerceAtLeast(8f)
             Text(
                 text = fieldLabel,
-                color = textColor,
+                color = labelColor,
                 fontSize = previewSp(labelSize),
                 lineHeight = previewSp(labelSize * 1.2f),
                 fontWeight = FontWeight.SemiBold,

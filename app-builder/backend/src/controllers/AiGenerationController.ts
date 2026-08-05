@@ -33,6 +33,24 @@ export class AiGenerationController {
     }
   };
 
+  correctProposal = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = getRouteParam(req, 'projectId');
+      if (!projectId) {
+        res.status(400).json({ error: 'Missing projectId' });
+        return;
+      }
+      const proposal = await this.generation.correctProposal(
+        getUserId(req),
+        projectId,
+        req.body,
+      );
+      res.status(200).json(proposal);
+    } catch (error) {
+      handleAiGenerationError(error, res, next);
+    }
+  };
+
   getUsage = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const projectId = getRouteParam(req, 'projectId');

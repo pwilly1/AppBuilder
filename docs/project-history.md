@@ -779,3 +779,46 @@ Representative areas:
 - `backend/test/aiProviderConfig.test.ts`
 - `backend/test/openAiModelClient.test.ts`
 - `docs/ai-app-generation.md`
+
+## Phase 43: Editor AI Prompt Integration
+
+Date: August 4, 2026
+
+The editor's AI workflow now uses the authenticated backend proposal boundary instead of creating its runtime proposal from the hardcoded Crew Directory fixture. Authenticated builders can enter a bounded page prompt, see the account's hourly generation allowance, and receive controlled request, validation, quota, and provider error states. The fixture remains deterministic compiler test data rather than a production proposal source.
+
+Returned plans cross the trust boundary twice: the backend validates provider output, and the frontend parses the received `plan` again before deterministic compilation. Compilation still creates blocks through the normal registry, validates and repairs grid layout, renders an isolated preview, blocks stale proposals, and applies accepted output through one undoable `applyProjectTransaction`. Closing the dialog aborts the browser request so no result is applied, although an already-started backend attempt may still finish and count against quota. Demo mode cannot consume provider credits.
+
+Generated hero, text, editable-text, and button spans are also checked against deterministic content-fit estimates before collision repair. Undersized model proposals grow to portable grid dimensions, and later siblings move to the nearest free area rather than being accepted as clipped or overlapping content.
+
+When those enlarged spans expose a fragmented model layout, the compiler now makes one bounded sibling reflow before rejecting the proposal. The reflow preserves normalized block dimensions and generation order, while genuinely overfull pages still fail validation instead of silently clipping content.
+
+Representative areas:
+
+- `frontend/src/api.ts`
+- `frontend/src/hooks/useAiGeneration.ts`
+- `frontend/src/components/ai/AiGenerateDialog.tsx`
+- `frontend/src/layout/EditorLayout.tsx`
+- `docs/ai-app-generation.md`
+
+## Phase 44: Bounded AI Layout Correction
+
+Date: August 5, 2026
+
+AI page generation now has a bounded recovery path for proposals that remain invalid after deterministic content sizing, collision movement, and sibling reflow. The frontend compiler emits semantic diagnostics with page/block keys and bounded layout details, then may request up to two corrections after the initial draft. The dialog reports that refinement is in progress instead of immediately exposing an intermediate compiler failure.
+
+Correction remains inside the original trust boundary. The backend re-parses the client-supplied prior plan, sanitizes the diagnostic packet, verifies project ownership, counts each model call against the existing quota, and validates the corrected provider output. It preserves collections, fields, semantic content, actions, bindings, and parent relationships, and rejects attempts to add or remove pages/blocks or change block types. Corrections may adjust grid placement, alignment, a narrow allowlist of typography and padding values, and a target explicitly reported as an unknown reference; they do not split pages or discard decorative content.
+
+The frontend compiler also gained deterministic generated-color validation. It preserves readable model colors while repairing low-contrast Hero and Text foregrounds, editable-field values/placeholders/labels/borders, and Button foreground/surface combinations before preview or apply. Hero and editable field labels now carry explicit schema colors through both React and Android Compose, so the repair remains portable rather than becoming a web-only override.
+
+Representative areas:
+
+- `app-builder/shared/src/ai/aiLayoutGuidance.ts`
+- `backend/src/ai/AiGenerationService.ts`
+- `backend/src/ai/AiModelClient.ts`
+- `backend/src/ai/providers/OpenAiModelClient.ts`
+- `backend/src/routes/AiGenerationRoutes.ts`
+- `frontend/src/ai/generationLayout.ts`
+- `frontend/src/hooks/useAiGeneration.ts`
+- `frontend/src/components/ai/AiGenerateDialog.tsx`
+- `backend/test/aiGenerationRoutes.test.ts`
+- `backend/test/openAiModelClient.test.ts`

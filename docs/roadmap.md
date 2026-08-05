@@ -224,11 +224,12 @@ Implementation must follow [AI App Generation](ai-app-generation.md): no RAG in 
 | Completed | Extract the plan contract and parser into `@apptura/shared/ai` and publish the versioned capability catalog. |
 | Completed | Add a provider-neutral backend client, fake provider, privacy-limited context, authenticated proposal route, and strict output validation. |
 | Completed | Add backend-only OpenAI configuration, controlled Responses API prompts, strict structured output, provider timeouts, and safe provider selection. |
-| Next | Verify the generated Crew Directory fixture in web preview, save/reload, undo/redo, and Android runtime. |
+| Completed | Preserve the Crew Directory fixture as deterministic compiler and validation test data. |
 | Completed | Add Mongo-backed per-account hourly quotas, generation usage records, token totals, and an authenticated usage summary endpoint. |
-| Planned | Connect the editor generation dialog to backend proposals and add one bounded correction request. |
-| Planned | Prompt-to-section with proposal preview and one undoable apply operation. |
-| Planned | Prompt-to-page generation. |
+| Completed | Connect the editor prompt dialog to authenticated backend proposals with progress, quota, errors, isolated preview, stale protection, and one undoable apply operation. |
+| Completed | Add up to two bounded correction requests with structured compiler diagnostics, structure/content preservation, and issue-gated reference repair. |
+| Next | Manually verify live generated and corrected plans through undo/redo, save/reload, web preview, and Android runtime. |
+| Planned | Expand prompt-to-page generation quality and supported capabilities. |
 | Later | Prompt-to-app starter flow. |
 | Later | Safe editing through explicit project patch operations. |
 | Later | Usage limits, model evaluations, cost reporting, and production monitoring. |

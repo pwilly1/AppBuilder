@@ -8,5 +8,6 @@ export function makeAiGenerationRoutes(
   const router = Router();
   router.get('/:projectId/ai/usage', requireAuth, controller.getUsage);
   router.post('/:projectId/ai/proposals', requireAuth, controller.createProposal);
+  router.post('/:projectId/ai/proposals/corrections', requireAuth, controller.correctProposal);
   return router;
 }
