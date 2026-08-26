@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PageAccess, Project } from '../../shared/schema/types';
 import { slugify, uniquePath } from './projectUtils';
 import { normalizePageBackgroundColor } from '../../shared/schema/pageAppearance';
@@ -12,6 +12,11 @@ type UseProjectPagesOptions = {
 export function useProjectPages({ project, applyChange }: UseProjectPagesOptions) {
   const [selectedPageId, setSelectedPageId] = useState<string>(() => project.pages?.[0]?.id ?? '');
   const page = project.pages.find((candidate) => candidate.id === selectedPageId);
+
+  useEffect(() => {
+    if (project.pages.some((candidate) => candidate.id === selectedPageId)) return;
+    setSelectedPageId(project.pages[0]?.id ?? '');
+  }, [project.pages, selectedPageId]);
 
   function selectPage(id: string) {
     setSelectedPageId(id);

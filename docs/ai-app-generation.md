@@ -532,7 +532,7 @@ Planned endpoints:
 
 ```text
 GET  /ai/capabilities
-POST /projects/:projectId/ai/proposals/:proposalId/correct
+POST /projects/:projectId/ai/proposals/corrections
 POST /ai/app-proposals
 ```
 
