@@ -215,7 +215,7 @@ The multi-record implementation is specified separately in the [Collection List 
 
 Goal: use AI to assist app creation without bypassing the editor schema.
 
-Implementation must follow [AI App Generation](ai-app-generation.md): no RAG in the initial architecture, model-proposed exact grid placement, deterministic validation and limited correction, preview before apply, and one undoable project transaction.
+Implementation must follow [AI App Generation](ai-app-generation.md): no RAG in the initial architecture, model-proposed semantic structure and grid intent, deterministic composition and validation, limited correction, preview before apply, and one undoable project transaction.
 
 | Status | Task |
 | --- | --- |
@@ -228,8 +228,12 @@ Implementation must follow [AI App Generation](ai-app-generation.md): no RAG in 
 | Completed | Add Mongo-backed per-account hourly quotas, generation usage records, token totals, and an authenticated usage summary endpoint. |
 | Completed | Connect the editor prompt dialog to authenticated backend proposals with progress, quota, errors, isolated preview, stale protection, and one undoable apply operation. |
 | Completed | Add up to two bounded correction requests with structured compiler diagnostics, structure/content preservation, and issue-gated reference repair. |
+| Completed | Add page visual themes, semantic block roles, visual sections, collision-safe composition repair, and proposal-level visual reporting. |
+| Completed | Add whole-page deterministic composition, recoverable visual-section normalization, and unique page/data reference aliases to reduce correction calls. |
+| Completed | Add a fixed visual prompt corpus and regression coverage for visual contracts, theme compilation, composition, and correction preservation. |
 | Next | Manually verify live generated and corrected plans through undo/redo, save/reload, web preview, and Android runtime. |
-| Planned | Expand prompt-to-page generation quality and supported capabilities. |
+| Next | Evaluate the configured live provider against the fixed visual prompt corpus and tune prompts without weakening deterministic validation. |
+| Planned | Reuse compatible existing collections instead of always creating new ones. |
 | Later | Prompt-to-app starter flow. |
 | Later | Safe editing through explicit project patch operations. |
 | Later | Usage limits, model evaluations, cost reporting, and production monitoring. |

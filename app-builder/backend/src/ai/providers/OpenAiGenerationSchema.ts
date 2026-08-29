@@ -1,6 +1,9 @@
 import {
   AI_GENERATION_COLLECTION_ACCESS_PRESETS,
+  AI_GENERATION_CORNER_STYLES,
+  AI_GENERATION_DENSITIES,
   AI_GENERATION_LIMITS,
+  AI_GENERATION_SECTION_PATTERNS,
   AI_GENERATION_SUPPORTED_SCOPES,
   APP_GENERATION_PLAN_VERSION,
 } from '@apptura/shared/ai';
@@ -120,6 +123,7 @@ const blockBase = {
 const heroBlock = strictObject({
   ...blockBase,
   type: enumSchema(['hero']),
+  visualRole: nullable(enumSchema(['heading'])),
   content: ref('heroContent'),
   headlineBinding: nullable(ref('collectionBinding')),
 });
@@ -127,6 +131,7 @@ const heroBlock = strictObject({
 const textBlock = strictObject({
   ...blockBase,
   type: enumSchema(['text']),
+  visualRole: nullable(enumSchema(['heading', 'body', 'field'])),
   content: ref('textContent'),
   valueBinding: nullable(ref('collectionBinding')),
 });
@@ -134,6 +139,7 @@ const textBlock = strictObject({
 const buttonBlock = strictObject({
   ...blockBase,
   type: enumSchema(['button']),
+  visualRole: nullable(enumSchema(['primaryAction', 'secondaryAction'])),
   content: ref('buttonContent'),
   action: nullable({
     anyOf: [ref('navigateAction'), ref('submitDataAction')],
@@ -143,6 +149,7 @@ const buttonBlock = strictObject({
 const repeaterBlock = strictObject({
   ...blockBase,
   type: enumSchema(['repeater']),
+  visualRole: nullable(enumSchema(['list'])),
   collectionKey: ref('key'),
   content: nullable(ref('repeaterContent')),
 });
@@ -166,12 +173,32 @@ const pageAccess = strictObject({
   redirectPageKey: nullable(ref('key')),
 });
 
+const visualStyle = strictObject({
+  pageBackground: ref('color'),
+  surfaceColor: ref('color'),
+  primaryColor: ref('color'),
+  primaryTextColor: ref('color'),
+  textColor: ref('color'),
+  mutedTextColor: ref('color'),
+  borderColor: ref('color'),
+  cornerStyle: enumSchema(AI_GENERATION_CORNER_STYLES),
+  density: enumSchema(AI_GENERATION_DENSITIES),
+});
+
+const pageSection = strictObject({
+  key: ref('key'),
+  pattern: enumSchema(AI_GENERATION_SECTION_PATTERNS),
+  blockKeys: arraySchema(ref('key'), 1, AI_GENERATION_LIMITS.blocksPerPage),
+});
+
 const page = strictObject({
   key: ref('key'),
   title: stringSchema({ maxLength: AI_GENERATION_LIMITS.pageTitleLength, minLength: 1 }),
   path: nullable(stringSchema({ maxLength: AI_GENERATION_LIMITS.pagePathLength })),
   backgroundColor: nullable(ref('color')),
   access: nullable(ref('pageAccess')),
+  visualStyle: ref('visualStyle'),
+  sections: arraySchema(ref('pageSection'), 1, AI_GENERATION_LIMITS.sectionsPerPage),
   blocks: arraySchema({
     anyOf: [ref('heroBlock'), ref('textBlock'), ref('buttonBlock'), ref('repeaterBlock')],
   }, 1, AI_GENERATION_LIMITS.blocksPerPage),
@@ -209,6 +236,8 @@ export const OPENAI_APP_GENERATION_PLAN_SCHEMA: JsonSchema = {
     collectionField,
     collection,
     pageAccess,
+    visualStyle,
+    pageSection,
     page,
   },
 };

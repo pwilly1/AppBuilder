@@ -22,10 +22,28 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
       path: '/crew',
       backgroundColor: '#f8fafc',
       access: { mode: 'public' },
+      visualStyle: {
+        pageBackground: '#f8fafc',
+        surfaceColor: '#ffffff',
+        primaryColor: '#2563eb',
+        primaryTextColor: '#ffffff',
+        textColor: '#0f172a',
+        mutedTextColor: '#475569',
+        borderColor: '#cbd5e1',
+        cornerStyle: 'soft',
+        density: 'comfortable',
+      },
+      sections: [
+        { key: 'directory-intro-section', pattern: 'intro', blockKeys: ['directory-title', 'directory-intro'] },
+        { key: 'directory-list-section', pattern: 'list', blockKeys: ['crew-list'] },
+        { key: 'directory-actions-section', pattern: 'actions', blockKeys: ['open-add-member'] },
+        { key: 'crew-item-section', pattern: 'split', blockKeys: ['crew-name', 'crew-role'] },
+      ],
       blocks: [
         {
           key: 'directory-title',
           type: 'hero',
+          visualRole: 'heading',
           grid: { colStart: 2, rowStart: 2, colSpan: 12, rowSpan: 3 },
           content: { headline: 'Meet the crew', headlineSize: 28, contentPadding: 8 },
           render: { alignX: 'start', alignY: 'start' },
@@ -33,6 +51,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'directory-intro',
           type: 'text',
+          visualRole: 'body',
           grid: { colStart: 2, rowStart: 5, colSpan: 12, rowSpan: 2 },
           content: {
             value: 'Browse profiles or add someone new to the directory.',
@@ -45,6 +64,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'crew-list',
           type: 'repeater',
+          visualRole: 'list',
           collectionKey: 'crew-members',
           grid: { colStart: 2, rowStart: 8, colSpan: 12, rowSpan: 15 },
           content: {
@@ -64,6 +84,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
           key: 'crew-name',
           parentKey: 'crew-list',
           type: 'text',
+          visualRole: 'body',
           grid: { colStart: 1, rowStart: 1, colSpan: 7, rowSpan: 2 },
           content: {
             value: 'Crew member',
@@ -83,6 +104,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
           key: 'crew-role',
           parentKey: 'crew-list',
           type: 'text',
+          visualRole: 'body',
           grid: { colStart: 8, rowStart: 1, colSpan: 5, rowSpan: 2 },
           content: {
             value: 'Role',
@@ -101,6 +123,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'open-add-member',
           type: 'button',
+          visualRole: 'primaryAction',
           grid: { colStart: 5, rowStart: 24, colSpan: 8, rowSpan: 2 },
           content: {
             label: 'Add crew member',
@@ -118,10 +141,27 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
       path: '/crew/new',
       backgroundColor: '#ffffff',
       access: { mode: 'public' },
+      visualStyle: {
+        pageBackground: '#ffffff',
+        surfaceColor: '#f8fafc',
+        primaryColor: '#2563eb',
+        primaryTextColor: '#ffffff',
+        textColor: '#0f172a',
+        mutedTextColor: '#475569',
+        borderColor: '#cbd5e1',
+        cornerStyle: 'soft',
+        density: 'comfortable',
+      },
+      sections: [
+        { key: 'form-intro-section', pattern: 'intro', blockKeys: ['form-title', 'form-intro'] },
+        { key: 'form-fields-section', pattern: 'form', blockKeys: ['name-input', 'role-input'] },
+        { key: 'form-actions-section', pattern: 'actions', blockKeys: ['save-member', 'back-to-directory'] },
+      ],
       blocks: [
         {
           key: 'form-title',
           type: 'hero',
+          visualRole: 'heading',
           grid: { colStart: 2, rowStart: 2, colSpan: 12, rowSpan: 3 },
           content: { headline: 'Create a crew profile', headlineSize: 26, contentPadding: 8 },
           render: { alignX: 'start', alignY: 'start' },
@@ -129,6 +169,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'form-intro',
           type: 'text',
+          visualRole: 'body',
           grid: { colStart: 2, rowStart: 5, colSpan: 12, rowSpan: 2 },
           content: {
             value: 'Add the details that should appear in the directory.',
@@ -141,6 +182,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'name-input',
           type: 'text',
+          visualRole: 'field',
           grid: { colStart: 2, rowStart: 8, colSpan: 12, rowSpan: 3 },
           content: {
             value: '',
@@ -161,6 +203,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'role-input',
           type: 'text',
+          visualRole: 'field',
           grid: { colStart: 2, rowStart: 12, colSpan: 12, rowSpan: 3 },
           content: {
             value: '',
@@ -181,6 +224,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'save-member',
           type: 'button',
+          visualRole: 'primaryAction',
           grid: { colStart: 2, rowStart: 17, colSpan: 7, rowSpan: 2 },
           content: {
             label: 'Save profile',
@@ -202,6 +246,7 @@ export const CREW_DIRECTORY_GENERATION_PLAN = {
         {
           key: 'back-to-directory',
           type: 'button',
+          visualRole: 'secondaryAction',
           grid: { colStart: 10, rowStart: 17, colSpan: 5, rowSpan: 2 },
           content: {
             label: 'Back',

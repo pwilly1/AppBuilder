@@ -36,12 +36,24 @@ export const AI_GENERATION_LAYOUT_GUIDANCE = {
     minimumControlBoundaryContrastRatio: 1.5,
     preserveReadableModelColors: true,
   },
+  composition: {
+    preferredPageGutterColumns: 1,
+    compactGapRows: 0,
+    comfortableGapRows: 1,
+    compactSectionGapRows: 1,
+    comfortableSectionGapRows: 2,
+    centerSectionBounds: true,
+    alignRelatedEdges: true,
+    equalizeRelatedFieldWidths: true,
+    balanceSplitColumns: true,
+  },
   correctionRules: [
     'Move and resize existing blocks before changing typography or padding.',
     'Use side-by-side placement when it keeps every block readable and collision-free.',
     'Preserve all semantic content, actions, bindings, collections, and parent relationships.',
     'When a compiler issue identifies an unknown reference, repair only that target key.',
     'Do not add pages, remove blocks, or replace requested blocks during layout correction.',
+    'Preserve visual roles, section membership, and the page visual style during correction unless a compiler issue explicitly identifies them.',
   ],
 } as const
 

@@ -168,6 +168,84 @@ test('correction route sends compiler diagnostics and preserves plan semantics',
   assert.equal(modelRequest.correction.issues[0]?.details?.blockKey, 'title');
 });
 
+test('correction route preserves visual style, section intent, and block roles', async () => {
+  const previousPlan = structuredClone(VALID_PLAN);
+  const previousPage = previousPlan.pages[0]!;
+  previousPage.visualStyle = {
+    pageBackground: '#f8fafc',
+    surfaceColor: '#ffffff',
+    primaryColor: '#2563eb',
+    primaryTextColor: '#ffffff',
+    textColor: '#0f172a',
+    mutedTextColor: '#475569',
+    borderColor: '#cbd5e1',
+    cornerStyle: 'soft',
+    density: 'comfortable',
+  };
+  previousPage.sections = [{
+    key: 'intro',
+    pattern: 'intro',
+    blockKeys: ['title', 'description'],
+  }];
+  previousPage.blocks[0]!.visualRole = 'heading';
+  previousPage.blocks.push({
+    key: 'description',
+    type: 'text',
+    visualRole: 'body',
+    content: { value: 'Review current operations.' },
+    grid: { colStart: 2, rowStart: 6, colSpan: 12, rowSpan: 2 },
+  });
+
+  const candidatePlan = structuredClone(previousPlan);
+  const candidatePage = candidatePlan.pages[0]!;
+  candidatePage.visualStyle = {
+    ...candidatePage.visualStyle!,
+    pageBackground: '#ff0000',
+    primaryColor: '#00ff00',
+    cornerStyle: 'square',
+  };
+  candidatePage.sections = [{
+    key: 'intro',
+    pattern: 'split',
+    blockKeys: ['description', 'title'],
+  }];
+  const candidateDescription = candidatePage.blocks[1]!;
+  if (candidateDescription.type !== 'text') throw new Error('Expected text fixture');
+  candidateDescription.visualRole = 'heading';
+  candidateDescription.content.value = 'Changed by provider';
+  candidateDescription.grid = { colStart: 3, rowStart: 7, colSpan: 10, rowSpan: 2 };
+
+  const service = createService(new FakeAiModelClient(() => candidatePlan));
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals/corrections`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: 'Create an operations page.',
+        scope: 'page',
+        correctionAttempt: 1,
+        previousPlan,
+        issues: [{
+          code: 'visual-unbalanced-section',
+          path: 'pages.operations.sections.intro',
+          message: 'The section has uneven horizontal margins.',
+        }],
+      }),
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json() as { plan: AppGenerationPlanV1 };
+    const correctedPage = body.plan.pages[0]!;
+    assert.deepEqual(correctedPage.visualStyle, previousPage.visualStyle);
+    assert.deepEqual(correctedPage.sections, previousPage.sections);
+    const correctedDescription = correctedPage.blocks.find((block) => block.key === 'description');
+    assert.equal(correctedDescription?.visualRole, 'body');
+    if (correctedDescription?.type !== 'text') throw new Error('Expected corrected text');
+    assert.equal(correctedDescription.content.value, 'Review current operations.');
+    assert.deepEqual(correctedDescription.grid, { colStart: 3, rowStart: 7, colSpan: 10, rowSpan: 2 });
+  });
+});
+
 test('correction route can remove a redirect that the compiler reported as unknown', async () => {
   const previousPlan = structuredClone(VALID_PLAN);
   previousPlan.pages[0]!.key = 'car-maintenance';

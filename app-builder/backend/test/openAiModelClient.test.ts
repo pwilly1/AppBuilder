@@ -48,9 +48,26 @@ test('OpenAI client requests strict structured output and returns parser-compati
       path: null,
       backgroundColor: null,
       access: null,
+      visualStyle: {
+        pageBackground: '#f8fafc',
+        surfaceColor: '#ffffff',
+        primaryColor: '#2563eb',
+        primaryTextColor: '#ffffff',
+        textColor: '#0f172a',
+        mutedTextColor: '#475569',
+        borderColor: '#cbd5e1',
+        cornerStyle: 'soft',
+        density: 'comfortable',
+      },
+      sections: [{
+        key: 'operations-intro',
+        pattern: 'intro',
+        blockKeys: ['operations-title'],
+      }],
       blocks: [{
         key: 'operations-title',
         parentKey: null,
+        visualRole: 'heading',
         type: 'hero',
         grid: { colStart: 2, rowStart: 2, colSpan: 14, rowSpan: 3 },
         render: null,
@@ -100,8 +117,11 @@ test('OpenAI client requests strict structured output and returns parser-compati
   assert.equal(captured.safety_identifier, MODEL_REQUEST.safetyIdentifier);
   assert.deepEqual(captured.reasoning, { effort: 'medium' });
   assert.match(String(captured.instructions), /Do not create extra pages, remove blocks/);
-  assert.match(String(captured.instructions), /redirectPageKey must exactly match a page key/);
+  assert.match(String(captured.instructions), /unique semantic alias derived from an existing page/);
+  assert.match(String(captured.instructions), /compiler owns final placement/);
   assert.match(String(captured.instructions), /Text and entered values must have strong contrast/);
+  assert.match(String(captured.instructions), /balanced outer margins/);
+  assert.match(String(captured.instructions), /visual sections/);
 
   const format = captured.text?.format as Record<string, unknown>;
   assert.equal(format.type, 'json_schema');
@@ -215,6 +235,12 @@ test('OpenAI structured-output schema covers the shared capability catalog', () 
       serializedSchema.includes(`\"enum\":[\"${actionType}\"]`),
       `missing provider schema for action type ${actionType}`,
     );
+  }
+  for (const visualRole of AI_GENERATION_CAPABILITIES.visualRoles) {
+    assert.ok(serializedSchema.includes(`\"${visualRole}\"`), `missing visual role ${visualRole}`);
+  }
+  for (const pattern of AI_GENERATION_CAPABILITIES.sectionPatterns) {
+    assert.ok(serializedSchema.includes(`\"${pattern}\"`), `missing section pattern ${pattern}`);
   }
   assertStrictObjects(OPENAI_APP_GENERATION_PLAN_SCHEMA);
 });

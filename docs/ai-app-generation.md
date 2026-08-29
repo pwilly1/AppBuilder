@@ -4,7 +4,7 @@
 
 Prompt-to-page generation is connected end to end. An authenticated builder can enter a bounded prompt in the editor, receive a transient backend proposal from either the deterministic fake provider or the configured OpenAI provider, and review the compiled result before applying it as one undoable project transaction.
 
-The backend verifies project ownership, builds privacy-limited structural context, and constrains provider output with the shared plan contract. The frontend still treats the response as untrusted: it parses the plan again, compiles it through the block registry, repairs and validates layout, and renders an isolated preview. When compilation still fails, the frontend can request up to two bounded model corrections with structured compiler diagnostics. Mongo-backed account quotas and prompt-free usage records protect provider spend. Proposal and correction routes never save project changes.
+The backend verifies project ownership, builds privacy-limited structural context, and constrains provider output with the shared plan contract. Each generated page now includes a cohesive visual style, semantic block roles, and visual section groupings. The frontend still treats the response as untrusted: it parses the plan again, compiles it through the block registry, applies the page theme to ordinary schema props, repairs layout and composition, validates the result, and renders an isolated preview. When compilation still fails, the frontend can request up to two bounded model corrections with structured compiler diagnostics. Mongo-backed account quotas and prompt-free usage records protect provider spend. Proposal and correction routes never save project changes.
 
 ## Purpose
 
@@ -36,6 +36,7 @@ AI must not create a separate app format or generate React and Kotlin source as 
 10. AI endpoints never save project changes directly.
 11. AI model credentials exist only in the backend environment.
 12. Generated schemas may use only features supported by both the web and Android runtimes.
+13. Visual intent may exist in the transient generation plan, but saved output uses only normal page appearance, block props, render settings, and grid placement.
 
 ## Non-Goals
 
@@ -65,7 +66,8 @@ Builder describes the desired result
   -> model returns an AppGenerationPlan
   -> plan validator checks the model response
   -> compiler produces normal Apptura schema
-  -> project validator checks schema, references, hierarchy, and layout
+  -> composition analyzer aligns, balances, and spaces visual sections
+  -> project validator checks schema, references, hierarchy, layout, and visual invariants
   -> editor previews the proposal
   -> builder accepts or rejects it
   -> accepted proposal becomes one project-history transaction
@@ -177,13 +179,36 @@ The contract uses temporary keys rather than database IDs:
       "title": "Crew Directory",
       "path": "/crew",
       "access": {
-        "mode": "signedIn",
-        "redirectPageKey": "sign-in"
+        "mode": "public"
       },
+      "visualStyle": {
+        "pageBackground": "#f8fafc",
+        "surfaceColor": "#ffffff",
+        "primaryColor": "#2563eb",
+        "primaryTextColor": "#ffffff",
+        "textColor": "#0f172a",
+        "mutedTextColor": "#475569",
+        "borderColor": "#cbd5e1",
+        "cornerStyle": "soft",
+        "density": "comfortable"
+      },
+      "sections": [
+        {
+          "key": "directory-intro",
+          "pattern": "intro",
+          "blockKeys": ["directory-title"]
+        },
+        {
+          "key": "directory-list",
+          "pattern": "list",
+          "blockKeys": ["crew-list"]
+        }
+      ],
       "blocks": [
         {
           "key": "directory-title",
           "type": "hero",
+          "visualRole": "heading",
           "content": {
             "headline": "Your Crew"
           },
@@ -197,6 +222,7 @@ The contract uses temporary keys rather than database IDs:
         {
           "key": "crew-list",
           "type": "repeater",
+          "visualRole": "list",
           "collectionKey": "crew-members",
           "grid": {
             "colStart": 2,
@@ -225,7 +251,9 @@ The plan must not contain:
 
 The plan schema should reject unknown properties where practical. This prevents the model from inventing unsupported capabilities.
 
-## Exact Grid Placement
+`visualStyle` is a page-level palette and density contract. `visualRole` describes a block's hierarchy or duty, and `sections` describe which related blocks should read as one group. Supported section patterns are `intro`, `form`, `list`, `split`, and `actions`. These fields are untrusted visual hints: the compiler ignores unknown members, keeps the first duplicate membership, splits mixed-owner groups, and creates inferred groups for unassigned blocks. They are not copied into the persisted project as a second styling system.
+
+## Grid Intent And Deterministic Composition
 
 AI may propose exact `GridPlacement` values:
 
@@ -238,7 +266,7 @@ type GridPlacement = {
 }
 ```
 
-This preserves more visual freedom than forcing every generated page through a fixed template.
+The coordinates preserve model intent, but they are not authoritative output. The deterministic compiler owns final sizing, margins, reading order, alignment, and spacing. It may completely recompose a visually disorganized page while preserving its blocks, content, actions, bindings, and section order.
 
 For a normal page block, coordinates are relative to the page grid.
 
@@ -283,6 +311,9 @@ The validator checks:
 - required navigation targets
 - collection and field references
 - page access redirects
+- valid visual roles for each block type
+- safe normalization of duplicate, unknown, unassigned, or mixed-owner visual section members
+- balanced section margins, shared content edges, consistent field widths, and paired-action alignment
 - Android-supported block types and behavior
 
 Example result:
@@ -317,16 +348,20 @@ The frontend compiler may repair:
 - fragmented sibling layouts that can fit after a bounded top-to-bottom reflow
 - a child-owner height that can safely grow within its existing bounds
 - unreadable foreground/background combinations in generated Hero, Text, editable Text, Button, and bordered Collection List blocks
+- accidental horizontal drift within an intro or list section
+- inconsistent field widths and edges within a form section
+- unbalanced two-column split content and paired actions
+- inconsistent spacing inside and between visual sections
 
-Repairs preserve the proposed position, dimensions, relative order, and any model color that already meets the configured contrast threshold. Hero and static Text foregrounds are checked against their page or repeated-item surface. Editable Text separately checks entered text, placeholder text, field labels, and visible borders. Button foregrounds are checked against the button surface, and buttons that disappear into the surrounding page receive a distinct surface color. These repaired colors are stored in normal block props, so web and Android render the same result.
+Repairs preserve semantic content, block order, actions, bindings, parent relationships, and any model color that already meets the configured contrast threshold. Exact coordinates and oversized dimensions are layout hints and may be replaced. Hero and static Text foregrounds are checked against their page or repeated-item surface. Editable Text separately checks entered text, placeholder text, field labels, and visible borders. Button foregrounds are checked against the button surface, and buttons that disappear into the surrounding page receive a distinct surface color. These repaired colors are stored in normal block props, so web and Android render the same result.
 
-Hero, text, editable-text, and button spans may grow deterministically when their configured font size, padding, label, placeholder, or copy would otherwise be clipped. If nearest-space repair fails because earlier model coordinates fragmented the page, the compiler makes one bounded attempt to repack that sibling group from top to bottom without changing its normalized spans or order. A proposal still fails safely when the blocks genuinely cannot fit within 29 rows. The compiler uses the same 390-unit, 16-column, 28-unit-row geometry shared by the web editor and Android preview; it does not depend on browser DOM measurement.
+The composition pass lays out complete owner grids from top to bottom rather than trying to patch one model coordinate at a time. It uses section order and patterns to apply balanced gutters, aligned full-width content, equal fields, paired split/action rows, and consistent section gaps. It tries comfortable, compact, and dense spacing before declaring the fixed page full. Hero, Text, editable Text, and Button spans are then checked against their configured font size, padding, labels, placeholders, and copy. A proposal still fails safely when its minimum readable content genuinely cannot fit within 29 rows. The compiler uses the same 390-unit, 16-column, 28-unit-row geometry shared by the web editor and Android preview; it does not depend on browser DOM measurement.
 
 The proposal summary must tell the builder when Apptura changed the model's first layout.
 
 ### Model Correction
 
-The frontend sends complex validation errors to a correction endpoint only when deterministic repair cannot produce a valid preview. It may make at most two correction requests after the initial draft, for three provider calls total.
+The frontend sends project-integrity validation errors to a correction endpoint only when deterministic repair cannot produce a valid preview. Overlap, invalid references, invalid hierarchy, and content that cannot fit the fixed page budget remain blocking. Subjective composition concerns such as uneven margins, imperfect field alignment, or inconsistent spacing are surfaced as reviewable visual warnings instead of consuming correction attempts or rejecting an otherwise valid proposal. It may make at most two correction requests after the initial draft, for three provider calls total.
 
 ```text
 model draft
@@ -341,9 +376,9 @@ model draft
 
 Each issue packet is bounded and sanitized. It can identify the semantic page and block keys, proposed and normalized grid placement, required and available spans, and nearby sibling keys. The model also receives versioned 16-column by 29-row layout guidance. If the second corrected draft remains invalid, generation fails safely. The system never enters an unbounded retry loop.
 
-A correction may move or resize existing blocks and may reduce layout-related font sizes or padding. The backend preserves the previous plan's pages, blocks, collections, fields, non-layout content, and parent relationships. When the compiler explicitly reports a `missing-reference`, the affected action, binding, collection source, or access target may be replaced or removed; unrelated references remain protected. It rejects block-type changes and any attempt to add or remove pages or blocks. Automatic page splitting and block removal are not correction strategies.
+A correction may move or resize existing blocks and may reduce layout-related font sizes or padding. The backend preserves the previous plan's pages, blocks, collections, fields, non-layout content, parent relationships, visual styles, visual roles, and section membership. When the compiler explicitly reports a `missing-reference`, the affected action, binding, collection source, or access target may be replaced or removed; unrelated references remain protected. It rejects block-type changes and any attempt to add or remove pages or blocks. Automatic page splitting and block removal are not correction strategies.
 
-Page references in a generation plan are local to that plan. A `targetPageKey` or `redirectPageKey` must match a `page.key` included in the returned plan; an existing project's title or path, such as `Home` or `/home`, is context rather than a valid generation key in the current milestone.
+Page references first resolve exact generated `page.key` values. The compiler also resolves unique aliases derived from generated or existing page titles and paths, so `Home` and `/home` can both resolve as `home`. Ambiguous aliases remain blocking rather than being guessed. Collection names, collection-field labels, and editable-field keys use the same unique-alias rule.
 
 Complex errors include:
 
@@ -366,15 +401,18 @@ Compilation order:
 3. Create collections from safe access presets.
 4. Create pages and unique paths.
 5. Create blocks through the block registry.
-6. Normalize proposed grid placements, expand undersized text-bearing blocks, and resolve resulting collisions.
-7. Resolve parent keys into `parentId`.
-8. Resolve page keys into navigation IDs.
-9. Resolve collection and field keys into schema IDs.
-10. Resolve editable fields into Button action field references.
-11. Build `currentItem` bindings inside Collection Lists.
-12. Apply page access and redirect references.
-13. Set the current project schema version.
-14. Run final project validation.
+6. Convert the transient page visual style and block roles into normal page appearance and block props.
+7. Sanitize transient visual section membership and infer sections for unassigned blocks.
+8. Compose each page or child-owner grid globally using section order, content-aware minimums, balanced gutters, and bounded density fallbacks.
+9. Normalize the composed placements, expand undersized text-bearing blocks, and validate owner bounds and collisions.
+10. Resolve parent keys into `parentId`.
+11. Resolve exact or uniquely aliased page keys into navigation IDs.
+12. Resolve exact or uniquely aliased collection and field keys into schema IDs.
+13. Resolve editable fields into Button action field references.
+14. Build `currentItem` bindings inside Collection Lists and normalize invalid top-level `currentItem` requests to `latest`.
+15. Apply page access and redirect references.
+16. Set the current project schema version.
+17. Run final project and visual validation.
 
 The existing template factory already demonstrates key allocation and reference resolution. The generation compiler should reuse or extract those pure mechanisms rather than reimplementing them inconsistently.
 
@@ -392,7 +430,7 @@ The initial editor flow:
 6. Backend returns a validated generation proposal.
 7. Frontend compiles the proposal against a cloned project.
 8. Frontend validates and renders an isolated preview.
-9. Builder reviews pages, collections, actions, warnings, and layout repairs.
+9. Builder reviews pages, collections, actions, visual direction, warnings, layout repairs, and composition repairs.
 10. Builder accepts or cancels.
 11. Acceptance uses one `applyProjectTransaction`.
 12. Existing autosave persists the accepted project.
@@ -565,7 +603,10 @@ app-builder/shared/src/ai/
 
 app-builder/frontend/src/ai/
   compileGenerationPlan.ts
+  generationAesthetics.ts
+  generationColors.ts
   generationLayout.ts
+  generationTheme.ts
   validateGenerationProposal.ts
   fixtures/
     crewDirectoryPlan.ts
@@ -589,7 +630,10 @@ The review surface should show:
 - block count
 - navigation changes
 - authentication requirements
+- visual direction and section patterns
 - layout repairs
+- composition repairs
+- non-blocking visual warnings
 - validation warnings
 - real preview
 
@@ -690,6 +734,11 @@ Recommended HTTP behavior:
 - parent bounds
 - access redirect validation
 - deterministic repair
+- visual-role compatibility
+- section membership and owner-grid validation
+- page-theme compilation into ordinary schema props
+- deterministic section centering, field alignment, spacing, and paired-action balance
+- correction preservation for visual style, section intent, and block roles
 
 ### Backend Tests
 
@@ -707,7 +756,9 @@ Normal CI must not call a paid model.
 
 ### Prompt Evaluations
 
-Maintain versioned prompts such as:
+The fixed provider-agnostic corpus in `app-builder/backend/test/fixtures/aiVisualPromptCorpus.ts` currently covers twelve page categories, including authentication, directories, forms, operational checklists, list-heavy pages, and a simple landing page. Normal CI validates the corpus structure but does not call a paid model. Run it manually against a configured provider when changing prompts, schema guidance, models, or composition rules.
+
+Representative prompts include:
 
 ```text
 Create a login page.
@@ -727,6 +778,9 @@ Track:
 - reference-validation rate
 - native-supported rate
 - average correction count
+- severe visual issue count
+- non-blocking visual warning count
+- deterministic composition repair count
 - user acceptance rate
 - manual edits after acceptance
 - latency
@@ -796,7 +850,11 @@ Exit condition: live generated pages survive undo, redo, save, reload, web previ
 - Completed: support exact AI grid positions with deterministic repair
 - Completed: create collections and compile actions, bindings, and page access
 - Completed: detect stale proposals
-- Planned: improve multi-section composition and style variation
+- Completed: add page-level visual styles, semantic block roles, and explicit visual section patterns
+- Completed: add collision-safe alignment, field equalization, split/action balance, and spacing repair
+- Completed: surface visual direction, composition repairs, and non-blocking visual warnings in proposal review
+- Completed: add a fixed twelve-prompt visual evaluation corpus and contract regression coverage
+- Remaining: manually evaluate visual quality across the fixed corpus with the configured live provider
 - Planned: reuse compatible existing collections instead of always creating new ones
 
 Exit condition: generated pages work without manual schema repair.
@@ -842,13 +900,14 @@ bounded builder prompt
   -> fake or OpenAI provider
   -> backend shared-parser validation
   -> frontend shared-parser validation
-  -> deterministic compilation and layout validation
+  -> deterministic theme, layout, color, and composition repair
+  -> project and visual validation
   -> isolated preview
   -> explicit one-transaction apply
   -> existing autosave and runtime rendering
 ```
 
-The deterministic fixture remains in automated tests. The next AI milestone is manual end-to-end parity QA for live generated and corrected plans through save/reload, undo/redo, web preview, and Android preview.
+The deterministic fixture and fixed visual prompt corpus remain in automated test assets. The next AI milestone is manual visual evaluation of the live provider corpus plus end-to-end parity QA for generated and corrected plans through save/reload, undo/redo, web preview, and Android preview.
 
 ## Related Documentation
 

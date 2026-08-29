@@ -218,6 +218,27 @@ export function AiGenerateDialog({
                     </div>
                   </div>
 
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 className="font-semibold text-slate-900">Visual direction</h3>
+                    <div className="mt-3 space-y-3 text-sm text-slate-600">
+                      {proposal.plan.pages.map((page) => (
+                        <div key={page.key}>
+                          <div className="font-semibold text-slate-800">{page.title}</div>
+                          <p>
+                            {page.visualStyle
+                              ? `${capitalize(page.visualStyle.density)} spacing, ${page.visualStyle.cornerStyle} corners`
+                              : 'Uses the existing block defaults'}
+                          </p>
+                          <p>
+                            {page.sections?.length
+                              ? page.sections.map((section) => section.pattern).join(', ')
+                              : 'No visual sections supplied'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   {warnings.length ? (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
                       <h3 className="font-semibold text-amber-900">Proposal warnings</h3>
@@ -227,19 +248,31 @@ export function AiGenerateDialog({
                     </div>
                   ) : null}
 
+                  {proposal.visualWarnings.length ? (
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                      <h3 className="font-semibold text-amber-900">Visual warnings</h3>
+                      <div className="mt-3 space-y-2 text-sm leading-6 text-amber-800">
+                        {proposal.visualWarnings.map((warning, index) => (
+                          <p key={`${warning.code}:${warning.sectionKey ?? ''}:${index}`}>
+                            {warning.message}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <h3 className="font-semibold text-slate-900">Layout validation</h3>
-                    {proposal.repairs.length ? (
+                    {proposal.repairs.length || proposal.compositionRepairs.length ? (
                       <div className="mt-3 space-y-2 text-sm text-amber-800">
                         {proposal.repairs.map((repair, index) => (
                           <p key={`${repair.pageKey}:${repair.blockKey}:${index}`}>
-                            {repair.blockKey}: {repair.reason === 'clamped-to-grid'
-                              ? 'clamped inside its grid'
-                              : repair.reason === 'expanded-to-fit-content'
-                                ? 'expanded so its content fits'
-                                : repair.reason === 'reflowed-to-fit-page'
-                                  ? 'reflowed with nearby blocks so the page fits'
-                                : 'moved to the nearest free area'}
+                            {repair.blockKey}: {describeLayoutRepair(repair.reason)}
+                          </p>
+                        ))}
+                        {proposal.compositionRepairs.map((repair, index) => (
+                          <p key={`${repair.pageKey}:${repair.sectionKey}:${repair.blockKey}:${index}`}>
+                            {repair.blockKey}: {describeCompositionRepair(repair.reason)}
                           </p>
                         ))}
                       </div>
@@ -354,4 +387,25 @@ function formatResetTime(value: string): string | null {
   const timestamp = Date.parse(value)
   if (Number.isNaN(timestamp)) return null
   return new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+function describeLayoutRepair(reason: AiGenerationProposal['repairs'][number]['reason']): string {
+  if (reason === 'clamped-to-grid') return 'clamped inside its grid'
+  if (reason === 'expanded-to-fit-content') return 'expanded so its content fits'
+  if (reason === 'reflowed-to-fit-page') return 'reflowed with nearby blocks so the page fits'
+  return 'moved to the nearest free area'
+}
+
+function describeCompositionRepair(
+  reason: AiGenerationProposal['compositionRepairs'][number]['reason'],
+): string {
+  if (reason === 'centered-section') return 'centered with its section'
+  if (reason === 'aligned-section-edges') return 'aligned with related content'
+  if (reason === 'normalized-section-spacing') return 'moved onto the section spacing rhythm'
+  if (reason === 'balanced-split') return 'balanced across the section columns'
+  return 'balanced with the related actions'
+}
+
+function capitalize(value: string): string {
+  return value ? value[0].toUpperCase() + value.slice(1) : value
 }

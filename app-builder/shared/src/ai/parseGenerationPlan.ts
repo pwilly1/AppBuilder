@@ -1,11 +1,15 @@
 import {
   APP_GENERATION_PLAN_VERSION,
   AI_GENERATION_COLLECTION_ACCESS_PRESETS,
+  AI_GENERATION_CORNER_STYLES,
+  AI_GENERATION_DENSITIES,
   AI_GENERATION_LIMITS,
+  AI_GENERATION_SECTION_PATTERNS,
   AI_GENERATION_SUPPORTED_ACTION_TYPES,
   AI_GENERATION_SUPPORTED_BINDING_RECORDS,
   AI_GENERATION_SUPPORTED_BLOCK_TYPES,
   AI_GENERATION_SUPPORTED_SCOPES,
+  AI_GENERATION_VISUAL_ROLES,
 } from './aiCapabilities.js'
 import {
   type AiBlockPlan,
@@ -20,6 +24,8 @@ import {
   type AiHeroBlockPlan,
   type AiPageAccessPlan,
   type AiPagePlan,
+  type AiPageSectionPlan,
+  type AiPageVisualStyle,
   type AiRepeaterBlockPlan,
   type AiSubmitFieldPlan,
   type AiTextBlockPlan,
@@ -134,7 +140,7 @@ function parsePage(value: unknown, path: string, issues: AiGenerationPlanIssue[]
   const object = readObject(
     value,
     path,
-    ['key', 'title', 'path', 'backgroundColor', 'access', 'blocks'],
+    ['key', 'title', 'path', 'backgroundColor', 'access', 'visualStyle', 'sections', 'blocks'],
     issues,
   )
   if (!object) return null
@@ -146,11 +152,23 @@ function parsePage(value: unknown, path: string, issues: AiGenerationPlanIssue[]
   const access = object.access === undefined
     ? undefined
     : parsePageAccess(object.access, `${path}.access`, issues)
+  const visualStyle = object.visualStyle === undefined
+    ? undefined
+    : parsePageVisualStyle(object.visualStyle, `${path}.visualStyle`, issues)
+  const sections = object.sections === undefined
+    ? undefined
+    : parseArray(object.sections, `${path}.sections`, issues, parsePageSection, {
+        min: 1,
+        max: AI_GENERATION_LIMITS.sectionsPerPage,
+      })
   const blocks = parseArray(object.blocks, `${path}.blocks`, issues, parseBlock, {
     min: 1,
     max: AI_GENERATION_LIMITS.blocksPerPage,
   })
   validateUniqueKeys(blocks, `${path}.blocks`, issues)
+  if (sections) {
+    validateUniqueKeys(sections, `${path}.sections`, issues)
+  }
 
   if (!key) return null
   return {
@@ -159,8 +177,86 @@ function parsePage(value: unknown, path: string, issues: AiGenerationPlanIssue[]
     ...(requestedPath === undefined ? {} : { path: requestedPath }),
     ...(backgroundColor === undefined ? {} : { backgroundColor }),
     ...(access ? { access } : {}),
+    ...(visualStyle ? { visualStyle } : {}),
+    ...(sections ? { sections } : {}),
     blocks,
   }
+}
+
+function parsePageVisualStyle(
+  value: unknown,
+  path: string,
+  issues: AiGenerationPlanIssue[],
+): AiPageVisualStyle | null {
+  const object = readObject(
+    value,
+    path,
+    [
+      'pageBackground',
+      'surfaceColor',
+      'primaryColor',
+      'primaryTextColor',
+      'textColor',
+      'mutedTextColor',
+      'borderColor',
+      'cornerStyle',
+      'density',
+    ],
+    issues,
+  )
+  if (!object) return null
+
+  const cornerStyle = readEnum(
+    object.cornerStyle,
+    `${path}.cornerStyle`,
+    AI_GENERATION_CORNER_STYLES,
+    issues,
+  )
+  const density = readEnum(
+    object.density,
+    `${path}.density`,
+    AI_GENERATION_DENSITIES,
+    issues,
+  )
+  if (!cornerStyle || !density) return null
+
+  return {
+    pageBackground: readRequiredColor(object.pageBackground, `${path}.pageBackground`, issues),
+    surfaceColor: readRequiredColor(object.surfaceColor, `${path}.surfaceColor`, issues),
+    primaryColor: readRequiredColor(object.primaryColor, `${path}.primaryColor`, issues),
+    primaryTextColor: readRequiredColor(object.primaryTextColor, `${path}.primaryTextColor`, issues),
+    textColor: readRequiredColor(object.textColor, `${path}.textColor`, issues),
+    mutedTextColor: readRequiredColor(object.mutedTextColor, `${path}.mutedTextColor`, issues),
+    borderColor: readRequiredColor(object.borderColor, `${path}.borderColor`, issues),
+    cornerStyle,
+    density,
+  }
+}
+
+function parsePageSection(
+  value: unknown,
+  path: string,
+  issues: AiGenerationPlanIssue[],
+): AiPageSectionPlan | null {
+  const object = readObject(value, path, ['key', 'pattern', 'blockKeys'], issues)
+  if (!object) return null
+  const key = readKey(object.key, `${path}.key`, issues)
+  const pattern = readEnum(
+    object.pattern,
+    `${path}.pattern`,
+    AI_GENERATION_SECTION_PATTERNS,
+    issues,
+  )
+  const blockKeys = parseArray(
+    object.blockKeys,
+    `${path}.blockKeys`,
+    issues,
+    (entry, entryPath, entryIssues) => readKey(entry, entryPath, entryIssues) || null,
+    { min: 1, max: AI_GENERATION_LIMITS.blocksPerPage },
+  )
+  validateUniqueValues(blockKeys, `${path}.blockKeys`, 'block key', issues)
+  if (!key || !pattern) return null
+  return { key, pattern, blockKeys }
 }
 
 function parsePageAccess(
@@ -187,6 +283,7 @@ function parseBlock(value: unknown, path: string, issues: AiGenerationPlanIssue[
     [
       'key',
       'parentKey',
+      'visualRole',
       'type',
       'grid',
       'render',
@@ -204,6 +301,12 @@ function parseBlock(value: unknown, path: string, issues: AiGenerationPlanIssue[
   const parentKey = baseObject.parentKey === undefined
     ? undefined
     : readKey(baseObject.parentKey, `${path}.parentKey`, issues)
+  const visualRole = readOptionalEnum(
+    baseObject.visualRole,
+    `${path}.visualRole`,
+    AI_GENERATION_VISUAL_ROLES,
+    issues,
+  )
   const type = readRequiredString(baseObject.type, `${path}.type`, issues, 40)
   const grid = parseGridPlacement(baseObject.grid, `${path}.grid`, issues)
   const render = baseObject.render === undefined
@@ -217,11 +320,19 @@ function parseBlock(value: unknown, path: string, issues: AiGenerationPlanIssue[
       message: `"${type}" is not supported by the first AI-generation milestone.`,
     })
   }
+  if (type && visualRole && !isVisualRoleAllowed(type, visualRole)) {
+    issues.push({
+      code: 'invalid-visual-role',
+      path: `${path}.visualRole`,
+      message: `Visual role "${visualRole}" is not supported for ${type} blocks.`,
+    })
+  }
   if (!key || !grid || !SUPPORTED_BLOCK_TYPES.has(type)) return null
 
   const shared = {
     key,
     ...(parentKey ? { parentKey } : {}),
+    ...(visualRole ? { visualRole } : {}),
     grid,
     ...(render ? { render } : {}),
   }
@@ -754,6 +865,18 @@ function readOptionalColor(
   return color
 }
 
+function readRequiredColor(
+  value: unknown,
+  path: string,
+  issues: AiGenerationPlanIssue[],
+): string {
+  const color = readRequiredString(value, path, issues, 7)
+  if (color && !HEX_COLOR_PATTERN.test(color)) {
+    issues.push({ code: 'invalid-color', path, message: 'Expected a six-digit hexadecimal color.' })
+  }
+  return color
+}
+
 function rejectPresentKeys(
   object: Record<string, unknown>,
   path: string,
@@ -790,6 +913,33 @@ function validateUniqueKeys(
     }
     seen.add(entry.key)
   })
+}
+
+function validateUniqueValues(
+  values: string[],
+  path: string,
+  label: string,
+  issues: AiGenerationPlanIssue[],
+) {
+  const seen = new Set<string>()
+  values.forEach((value, index) => {
+    if (!value || !seen.has(value)) {
+      if (value) seen.add(value)
+      return
+    }
+    issues.push({
+      code: 'duplicate-key',
+      path: `${path}[${index}]`,
+      message: `Duplicate ${label} "${value}".`,
+    })
+  })
+}
+
+function isVisualRoleAllowed(type: string, role: string): boolean {
+  if (type === 'hero') return role === 'heading'
+  if (type === 'text') return role === 'heading' || role === 'body' || role === 'field'
+  if (type === 'button') return role === 'primaryAction' || role === 'secondaryAction'
+  return role === 'list'
 }
 
 function compactObject<T extends Record<string, unknown>>(value: T): T {

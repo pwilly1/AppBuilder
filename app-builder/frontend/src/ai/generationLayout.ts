@@ -155,8 +155,13 @@ export function normalizeGeneratedPageLayout(
             grid: placement,
           },
         }
+        const siblingCandidates = [...siblings, currentCandidate]
         const compacted = compactSiblingPlacements(
-          [...siblings, currentCandidate],
+          siblingCandidates,
+          ownerSpan.cols,
+          ownerSpan.rows,
+        ) ?? compactSiblingPlacements(
+          minimizeSiblingPlacements(siblingCandidates, ownerSpan.cols, ownerSpan.rows),
           ownerSpan.cols,
           ownerSpan.rows,
         )
@@ -297,6 +302,37 @@ function compactSiblingPlacements(
   return placements
 }
 
+function minimizeSiblingPlacements(
+  blocks: Block[],
+  columnCount: number,
+  rowCount: number,
+): Block[] {
+  return blocks.map((block) => {
+    const requested = block.layout?.grid
+    if (!requested) return block
+    const registryConstraints = getBlockGridConstraints(block)
+    const contentMinimum = getGeneratedContentMinimumSpan(block, requested, columnCount)
+    const grid = {
+      ...requested,
+      colSpan: Math.min(
+        columnCount,
+        Math.max(registryConstraints.minSpan.cols, contentMinimum.cols),
+      ),
+      rowSpan: Math.min(
+        rowCount,
+        Math.max(registryConstraints.minSpan.rows, contentMinimum.rows),
+      ),
+    }
+    return {
+      ...block,
+      layout: {
+        ...(block.layout || {}),
+        grid,
+      },
+    }
+  })
+}
+
 function replaceProcessedPlacement(
   processed: Block[],
   processedById: Map<string, Block>,
@@ -317,7 +353,7 @@ function replaceProcessedPlacement(
   processedById.set(blockId, next)
 }
 
-function getGeneratedContentMinimumSpan(
+export function getGeneratedContentMinimumSpan(
   block: Block,
   proposed: GridPlacement,
   ownerColumnCount: number,

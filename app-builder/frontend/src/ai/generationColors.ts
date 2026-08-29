@@ -1,4 +1,5 @@
 import type { AiBlockPlan, AiPagePlan } from '@apptura/shared/ai'
+import { resolveGeneratedPageBackground } from './generationTheme'
 
 const DEFAULT_PAGE_BACKGROUND = '#ffffff'
 const DEFAULT_TEXT_COLOR = '#0f172a'
@@ -128,8 +129,10 @@ export function getColorContrastRatio(first: string, second: string): number {
 }
 
 function getSurroundingBackground(page: AiPagePlan, block: AiBlockPlan): string {
-  const pageBackground = page.backgroundColor ?? DEFAULT_PAGE_BACKGROUND
+  const pageBackground = resolveGeneratedPageBackground(page)
   if (!block.parentKey) return pageBackground
+
+  if (page.visualStyle) return page.visualStyle.surfaceColor
 
   const parent = page.blocks.find((candidate) => candidate.key === block.parentKey)
   if (parent?.type !== 'repeater' || !parent.content?.backgroundColor) return pageBackground

@@ -25,11 +25,40 @@ export const AI_GENERATION_COLLECTION_ACCESS_PRESETS = [
   'private-submissions',
 ] as const
 
+export const AI_GENERATION_VISUAL_ROLES = [
+  'heading',
+  'body',
+  'field',
+  'primaryAction',
+  'secondaryAction',
+  'list',
+] as const
+
+export const AI_GENERATION_SECTION_PATTERNS = [
+  'intro',
+  'form',
+  'list',
+  'split',
+  'actions',
+] as const
+
+export const AI_GENERATION_CORNER_STYLES = [
+  'square',
+  'soft',
+  'rounded',
+] as const
+
+export const AI_GENERATION_DENSITIES = [
+  'compact',
+  'comfortable',
+] as const
+
 export const AI_GENERATION_LIMITS = {
   collections: 5,
   fieldsPerCollection: 30,
   pages: 5,
   blocksPerPage: 60,
+  sectionsPerPage: 20,
   keyLength: 80,
   summaryLength: 240,
   pageTitleLength: 80,
@@ -45,5 +74,9 @@ export const AI_GENERATION_CAPABILITIES = {
   actionTypes: AI_GENERATION_SUPPORTED_ACTION_TYPES,
   bindingRecords: AI_GENERATION_SUPPORTED_BINDING_RECORDS,
   collectionAccessPresets: AI_GENERATION_COLLECTION_ACCESS_PRESETS,
+  visualRoles: AI_GENERATION_VISUAL_ROLES,
+  sectionPatterns: AI_GENERATION_SECTION_PATTERNS,
+  cornerStyles: AI_GENERATION_CORNER_STYLES,
+  densities: AI_GENERATION_DENSITIES,
   limits: AI_GENERATION_LIMITS,
 } as const

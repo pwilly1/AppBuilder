@@ -1,7 +1,11 @@
 import {
   AI_GENERATION_COLLECTION_ACCESS_PRESETS,
+  AI_GENERATION_CORNER_STYLES,
+  AI_GENERATION_DENSITIES,
+  AI_GENERATION_SECTION_PATTERNS,
   AI_GENERATION_SUPPORTED_BLOCK_TYPES,
   AI_GENERATION_SUPPORTED_SCOPES,
+  AI_GENERATION_VISUAL_ROLES,
 } from './aiCapabilities.js'
 
 export type AppDataFieldType = 'text' | 'number' | 'boolean' | 'email' | 'date'
@@ -18,6 +22,10 @@ export type GridPlacement = {
 export type AiGenerationBlockType = typeof AI_GENERATION_SUPPORTED_BLOCK_TYPES[number]
 export type AiGenerationScope = typeof AI_GENERATION_SUPPORTED_SCOPES[number]
 export type AiCollectionAccessPreset = typeof AI_GENERATION_COLLECTION_ACCESS_PRESETS[number]
+export type AiGenerationVisualRole = typeof AI_GENERATION_VISUAL_ROLES[number]
+export type AiGenerationSectionPattern = typeof AI_GENERATION_SECTION_PATTERNS[number]
+export type AiGenerationCornerStyle = typeof AI_GENERATION_CORNER_STYLES[number]
+export type AiGenerationDensity = typeof AI_GENERATION_DENSITIES[number]
 
 export type AiGenerationPlanIssue = {
   code: string
@@ -97,6 +105,7 @@ export type AiButtonActionPlan = AiNavigateActionPlan | AiSubmitDataActionPlan
 type AiBlockPlanBase = {
   key: string
   parentKey?: string
+  visualRole?: AiGenerationVisualRole
   grid: GridPlacement
   render?: AiBlockRenderPlan
 }
@@ -175,12 +184,32 @@ export type AiBlockPlan =
   | AiButtonBlockPlan
   | AiRepeaterBlockPlan
 
+export type AiPageVisualStyle = {
+  pageBackground: string
+  surfaceColor: string
+  primaryColor: string
+  primaryTextColor: string
+  textColor: string
+  mutedTextColor: string
+  borderColor: string
+  cornerStyle: AiGenerationCornerStyle
+  density: AiGenerationDensity
+}
+
+export type AiPageSectionPlan = {
+  key: string
+  pattern: AiGenerationSectionPattern
+  blockKeys: string[]
+}
+
 export type AiPagePlan = {
   key: string
   title: string
   path?: string
   backgroundColor?: string
   access?: AiPageAccessPlan
+  visualStyle?: AiPageVisualStyle
+  sections?: AiPageSectionPlan[]
   blocks: AiBlockPlan[]
 }
 
