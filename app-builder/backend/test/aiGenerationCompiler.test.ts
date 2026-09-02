@@ -302,8 +302,9 @@ test('composition repair centers sections, aligns fields, and balances paired ac
   const cancel = page.blocks.find((block) => block.props.label === 'Cancel')!
   assert.equal(title.layout?.grid?.colStart, description.layout?.grid?.colStart)
   assert.equal(title.layout?.grid?.colSpan, description.layout?.grid?.colSpan)
-  assert.equal(name.layout?.grid?.colStart, role.layout?.grid?.colStart)
+  assert.equal(name.layout?.grid?.rowStart, role.layout?.grid?.rowStart)
   assert.equal(name.layout?.grid?.colSpan, role.layout?.grid?.colSpan)
+  assert.notEqual(name.layout?.grid?.colStart, role.layout?.grid?.colStart)
   assert.equal(save.layout?.grid?.rowStart, cancel.layout?.grid?.rowStart)
   assert.equal(save.layout?.grid?.colSpan, cancel.layout?.grid?.colSpan)
 })
@@ -373,10 +374,218 @@ test('whole-page composition reorganizes blocked sections instead of preserving 
     block.props.value === 'Nearby content that should not be overlapped.'
   ))
   assert.ok(name?.layout?.grid && role?.layout?.grid && nearbyCopy?.layout?.grid)
-  assert.equal(name.layout.grid.colStart, role.layout.grid.colStart)
+  assert.equal(name.layout.grid.rowStart, role.layout.grid.rowStart)
   assert.equal(name.layout.grid.colSpan, role.layout.grid.colSpan)
+  assert.notEqual(name.layout.grid.colStart, role.layout.grid.colStart)
   assert.equal(placementsOverlap(name.layout.grid, nearbyCopy.layout.grid), false)
   assert.equal(placementsOverlap(role.layout.grid, nearbyCopy.layout.grid), false)
+})
+
+test('form composition moves an interleaved primary action below every field', () => {
+  const plan: AppGenerationPlanV1 = {
+    planVersion: 1,
+    scope: 'page',
+    summary: 'Create a maintenance form with a deliberately misplaced action.',
+    collections: [],
+    pages: [{
+      key: 'maintenance-form',
+      title: 'Maintenance Form',
+      sections: [{
+        key: 'service-form',
+        pattern: 'form',
+        blockKeys: ['vehicle', 'save', 'service-type', 'notes'],
+      }],
+      blocks: [
+        {
+          key: 'vehicle',
+          type: 'text',
+          visualRole: 'field',
+          grid: { colStart: 2, rowStart: 2, colSpan: 12, rowSpan: 3 },
+          content: {
+            value: '',
+            editable: true,
+            fieldLabel: 'Vehicle',
+            showFieldLabel: true,
+            placeholder: 'Vehicle name',
+          },
+        },
+        {
+          key: 'save',
+          type: 'button',
+          visualRole: 'primaryAction',
+          grid: { colStart: 5, rowStart: 6, colSpan: 7, rowSpan: 2 },
+          content: { label: 'Save service' },
+        },
+        {
+          key: 'service-type',
+          type: 'text',
+          visualRole: 'field',
+          grid: { colStart: 2, rowStart: 9, colSpan: 12, rowSpan: 3 },
+          content: {
+            value: '',
+            editable: true,
+            fieldLabel: 'Service type',
+            showFieldLabel: true,
+            placeholder: 'Oil change',
+          },
+        },
+        {
+          key: 'notes',
+          type: 'text',
+          visualRole: 'field',
+          grid: { colStart: 2, rowStart: 13, colSpan: 12, rowSpan: 4 },
+          content: {
+            value: '',
+            editable: true,
+            textInputMode: 'multiline',
+            fieldLabel: 'Notes',
+            showFieldLabel: true,
+            placeholder: 'Add service notes',
+          },
+        },
+      ],
+    }],
+  }
+
+  const compiled = compileGenerationPlan(createBaseProject(), plan, {
+    idFactory: sequentialIdFactory(),
+  })
+  assert.equal(compiled.success, true)
+  if (!compiled.success) return
+
+  const page = compiled.proposal.project.pages.find((candidate) => candidate.title === 'Maintenance Form')
+  assert.ok(page)
+  const fields = page.blocks.filter((block) => block.props.editable === true)
+  const action = page.blocks.find((block) => block.props.label === 'Save service')
+  assert.ok(action?.layout?.grid)
+  const lastFieldRow = Math.max(...fields.map((block) => (
+    block.layout!.grid!.rowStart + block.layout!.grid!.rowSpan - 1
+  )))
+  assert.ok(action.layout.grid.rowStart > lastFieldRow)
+  for (let outer = 0; outer < fields.length; outer += 1) {
+    for (let inner = outer + 1; inner < fields.length; inner += 1) {
+      assert.equal(placementsOverlap(fields[outer].layout!.grid!, fields[inner].layout!.grid!), false)
+    }
+  }
+  assert.equal(compiled.proposal.visualWarnings.some((warning) => (
+    warning.code === 'visual-action-before-fields'
+    || warning.code === 'visual-inconsistent-fields'
+  )), false)
+  assert.equal(compiled.proposal.visualWarnings.some((warning) => warning.severity === 'severe'), false)
+})
+
+test('repeater composition creates a compact readable item template', () => {
+  const plan: AppGenerationPlanV1 = {
+    planVersion: 1,
+    scope: 'page',
+    summary: 'Create a crew directory with a three-value list row.',
+    collections: [{
+      key: 'crew-members',
+      name: 'Crew Members',
+      accessPreset: 'public-directory',
+      fields: [
+        { key: 'name', label: 'Name', type: 'text' },
+        { key: 'role', label: 'Role', type: 'text' },
+        { key: 'status', label: 'Status', type: 'text' },
+      ],
+    }],
+    pages: [{
+      key: 'crew-directory',
+      title: 'Crew Directory',
+      sections: [
+        { key: 'directory-list', pattern: 'list', blockKeys: ['crew-list'] },
+        {
+          key: 'crew-row',
+          pattern: 'list',
+          blockKeys: ['crew-name', 'crew-role', 'crew-status'],
+        },
+      ],
+      blocks: [
+        {
+          key: 'crew-list',
+          type: 'repeater',
+          visualRole: 'list',
+          collectionKey: 'crew-members',
+          grid: { colStart: 2, rowStart: 2, colSpan: 14, rowSpan: 18 },
+          content: {
+            itemRowSpan: 12,
+            gapRows: 1,
+            emptyText: 'No crew members yet',
+          },
+        },
+        {
+          key: 'crew-name',
+          parentKey: 'crew-list',
+          type: 'text',
+          visualRole: 'body',
+          grid: { colStart: 1, rowStart: 1, colSpan: 4, rowSpan: 1 },
+          content: { value: 'Crew member', fontSize: 16, contentPadding: 8 },
+          valueBinding: {
+            collectionKey: 'crew-members',
+            fieldKey: 'name',
+            record: 'currentItem',
+          },
+        },
+        {
+          key: 'crew-role',
+          parentKey: 'crew-list',
+          type: 'text',
+          visualRole: 'body',
+          grid: { colStart: 5, rowStart: 1, colSpan: 4, rowSpan: 1 },
+          content: { value: 'Role', fontSize: 14, contentPadding: 8 },
+          valueBinding: {
+            collectionKey: 'crew-members',
+            fieldKey: 'role',
+            record: 'currentItem',
+          },
+        },
+        {
+          key: 'crew-status',
+          parentKey: 'crew-list',
+          type: 'text',
+          visualRole: 'body',
+          grid: { colStart: 9, rowStart: 1, colSpan: 4, rowSpan: 1 },
+          content: { value: 'Available', fontSize: 14, contentPadding: 8 },
+          valueBinding: {
+            collectionKey: 'crew-members',
+            fieldKey: 'status',
+            record: 'currentItem',
+          },
+        },
+      ],
+    }],
+  }
+
+  const compiled = compileGenerationPlan(createBaseProject(), plan, {
+    idFactory: sequentialIdFactory(),
+  })
+  assert.equal(compiled.success, true)
+  if (!compiled.success) return
+
+  const page = compiled.proposal.project.pages.find((candidate) => candidate.title === 'Crew Directory')
+  const repeater = page?.blocks.find((block) => block.type === 'repeater')
+  assert.ok(page && repeater?.layout?.grid)
+  const children = page.blocks.filter((block) => block.parentId === repeater.id)
+  assert.equal(children.length, 3)
+  assert.ok(Number(repeater.props.itemRowSpan) < 12)
+  assert.ok(repeater.layout.grid.rowSpan <= 7)
+  for (const child of children) {
+    const grid = child.layout?.grid
+    assert.ok(grid)
+    assert.ok(grid.colStart + grid.colSpan - 1 <= repeater.layout.grid.colSpan)
+    assert.ok(grid.rowStart + grid.rowSpan - 1 <= Number(repeater.props.itemRowSpan))
+  }
+  for (let outer = 0; outer < children.length; outer += 1) {
+    for (let inner = outer + 1; inner < children.length; inner += 1) {
+      assert.equal(
+        placementsOverlap(children[outer].layout!.grid!, children[inner].layout!.grid!),
+        false,
+      )
+    }
+  }
+  const first = children[0].layout!.grid!
+  assert.ok(first.colSpan >= children[1].layout!.grid!.colSpan)
+  assert.equal(compiled.proposal.visualWarnings.some((warning) => warning.severity === 'severe'), false)
 })
 
 test('layout compilation clamps out-of-bounds coordinates and reports the repair', () => {

@@ -81,8 +81,6 @@ function ProjectCard({
     : project?.createdAt
       ? new Date(project.createdAt).toLocaleDateString()
       : '';
-  const progress = Math.min(100, (project?.pages?.[0]?.blocks?.length ?? 0) * 20);
-
   return (
     <div className="group shell-panel rounded-[1.85rem] p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_34px_72px_rgba(7,17,31,0.22)]">
       <div className="overflow-hidden rounded-[1.35rem] border border-slate-200/70 bg-white shadow-sm" style={{ height: 170 }}>
@@ -101,9 +99,6 @@ function ProjectCard({
           <div className="min-w-0 flex-1">
             <div className="truncate text-base font-semibold text-slate-800" title={project.name}>{project.name}</div>
             <div className="mt-1 text-xs text-slate-500">Updated {updated} | {project.ownerId ?? 'You'}</div>
-          </div>
-          <div className="rounded-full border border-blue-200/60 bg-[rgba(37,99,235,0.10)] px-3 py-1 text-xs font-semibold text-[var(--accent-deep)]">
-            {progress}% built
           </div>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">

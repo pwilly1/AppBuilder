@@ -11,6 +11,7 @@ import {
   placementsOverlap,
 } from '../shared/schema/gridLayout'
 import { getChildOwnerSpan } from '../shared/schema/blockHierarchy'
+import { normalizeRepeaterProps, REPEATER_MAX_ITEM_ROW_SPAN } from '../shared/schema/repeater'
 import type { Block, GridPlacement } from '../shared/schema/types'
 import { getGeneratedContentMinimumSpan } from './generationLayout'
 import { resolveGeneratedVisualRole } from './generationTheme'
@@ -59,6 +60,61 @@ type RowBand = {
 
 type CompositionMode = 'comfortable' | 'compact' | 'dense'
 
+function normalizeGeneratedRepeaterItems(blocks: Block[]): Block[] {
+  const placementById = new Map<string, GridPlacement>()
+  const itemRowsByRepeaterId = new Map<string, number>()
+
+  for (const repeater of blocks.filter((block) => block.type === 'repeater')) {
+    const children = blocks.filter((block) => block.parentId === repeater.id)
+    if (!children.length) continue
+    const ownerColumns = Math.min(
+      GRID_COLUMN_COUNT,
+      Math.max(4, repeater.layout?.grid?.colSpan ?? GRID_COLUMN_COUNT - 2),
+    )
+    const item = composeRepeaterItem(children, ownerColumns, REPEATER_MAX_ITEM_ROW_SPAN)
+    if (!item) continue
+    item.placements.forEach((grid, id) => placementById.set(id, grid))
+    itemRowsByRepeaterId.set(
+      repeater.id,
+      Math.min(REPEATER_MAX_ITEM_ROW_SPAN, Math.max(1, item.rowEnd)),
+    )
+  }
+
+  if (!placementById.size && !itemRowsByRepeaterId.size) return blocks
+  return blocks.map((block) => {
+    const childGrid = placementById.get(block.id)
+    if (childGrid) {
+      return { ...block, layout: { ...(block.layout || {}), grid: childGrid } }
+    }
+    const itemRows = itemRowsByRepeaterId.get(block.id)
+    if (itemRows === undefined) return block
+    const grid = block.layout?.grid
+    return {
+      ...block,
+      props: { ...block.props, itemRowSpan: itemRows },
+      ...(grid ? {
+        layout: {
+          ...(block.layout || {}),
+          grid: { ...grid, rowSpan: getRepeaterViewportRows(itemRows) },
+        },
+      } : {}),
+    }
+  })
+}
+
+function getRepeaterViewportRows(itemRows: number): number {
+  return Math.min(7, Math.max(5, itemRows + 1))
+}
+
+function uniqueBlocks(blocks: Block[]): Block[] {
+  const seen = new Set<string>()
+  return blocks.filter((block) => {
+    if (seen.has(block.id)) return false
+    seen.add(block.id)
+    return true
+  })
+}
+
 export function normalizeGeneratedPageComposition(
   page: AiPagePlan,
   blocks: Block[],
@@ -72,7 +128,7 @@ export function normalizeGeneratedPageComposition(
     ...page,
     sections: normalizeCompositionSections(page, blocks, blockKeyById),
   }
-  let nextBlocks = blocks
+  let nextBlocks = normalizeGeneratedRepeaterItems(blocks)
   const repairs: AiGenerationCompositionRepair[] = []
 
   const composed = proposeWholePagePlacements(normalizedPage, nextBlocks, blockKeyById)
@@ -94,6 +150,10 @@ export function normalizeGeneratedPageComposition(
   for (const section of normalizedPage.sections ?? []) {
     let members = resolveSectionMembers(section, nextBlocks, blockKeyById)
     if (!members.blocks.length) continue
+    const owner = members.ownerId
+      ? nextBlocks.find((block) => block.id === members.ownerId)
+      : undefined
+    if (owner?.type === 'repeater') continue
 
     const horizontal = proposeSectionHorizontalPlacements(
       normalizedPage,
@@ -139,7 +199,25 @@ export function normalizeGeneratedPageComposition(
     nextBlocks = applied
   }
 
-  const visualIssues = analyzeGeneratedPageComposition(normalizedPage, nextBlocks, blockKeyById)
+  let visualIssues = analyzeGeneratedPageComposition(normalizedPage, nextBlocks, blockKeyById)
+  if (visualIssues.some((issue) => issue.severity === 'severe')) {
+    const repaired = proposeWholePagePlacements(normalizedPage, nextBlocks, blockKeyById)
+    if (
+      repaired
+      && canApplyPlacements(nextBlocks.filter((block) => repaired.has(block.id)), repaired, nextBlocks)
+    ) {
+      const applied = applyPlacements(nextBlocks, repaired)
+      repairs.push(...describeSpacingRepairs(
+        page.key,
+        nextBlocks,
+        applied,
+        blockKeyById,
+        normalizedPage.sections ?? [],
+      ))
+      nextBlocks = applied
+      visualIssues = analyzeGeneratedPageComposition(normalizedPage, nextBlocks, blockKeyById)
+    }
+  }
   return {
     blocks: nextBlocks,
     repairs,
@@ -242,7 +320,17 @@ function proposeWholePagePlacements(
     const ownerSpan = getOwnerSpan(ownerSections[0], blocks)
     let ownerPlacements: Map<string, GridPlacement> | null = null
     for (const mode of modes) {
-      ownerPlacements = composeOwnerSections(ownerSections, ownerSpan, mode)
+      const owner = ownerKey === '__page__'
+        ? undefined
+        : blocks.find((block) => block.id === ownerKey)
+      ownerPlacements = composeOwnerSections(
+        page,
+        ownerSections,
+        ownerSpan,
+        mode,
+        blockKeyById,
+        owner,
+      )
       if (ownerPlacements) break
     }
     if (!ownerPlacements) return null
@@ -252,10 +340,18 @@ function proposeWholePagePlacements(
 }
 
 function composeOwnerSections(
+  page: AiPagePlan,
   sections: SectionMembers[],
   ownerSpan: { cols: number; rows: number },
   mode: CompositionMode,
+  blockKeyById: ReadonlyMap<string, string>,
+  owner?: Block,
 ): Map<string, GridPlacement> | null {
+  if (owner?.type === 'repeater') {
+    const children = uniqueBlocks(sections.flatMap((section) => section.blocks))
+    return composeRepeaterItem(children, ownerSpan.cols, ownerSpan.rows)?.placements ?? null
+  }
+
   const placements = new Map<string, GridPlacement>()
   const gutter = ownerSpan.cols >= 8 ? 1 : 0
   const contentStart = gutter + 1
@@ -274,6 +370,8 @@ function composeOwnerSections(
       contentWidth,
       ownerSpan,
       internalGap,
+      page,
+      blockKeyById,
     )
     if (!result || result.rowEnd > ownerSpan.rows - bottomInset) return null
     result.placements.forEach((grid, id) => placements.set(id, grid))
@@ -289,7 +387,22 @@ function composeSection(
   contentWidth: number,
   ownerSpan: { cols: number; rows: number },
   gapRows: number,
+  page: AiPagePlan,
+  blockKeyById: ReadonlyMap<string, string>,
 ): { placements: Map<string, GridPlacement>; rowEnd: number } | null {
+  if (members.section.pattern === 'form') {
+    return composeFormSection(
+      page,
+      members,
+      rowStart,
+      contentStart,
+      contentWidth,
+      ownerSpan,
+      gapRows,
+      blockKeyById,
+    )
+  }
+
   if (members.section.pattern === 'split' || members.section.pattern === 'actions') {
     return composePairedSection(
       members,
@@ -322,6 +435,190 @@ function composeSection(
     nextRow = placementEndRow(grid) + gapRows + 1
   }
   return { placements, rowEnd: nextRow - gapRows - 1 }
+}
+
+function composeFormSection(
+  page: AiPagePlan,
+  members: SectionMembers,
+  rowStart: number,
+  contentStart: number,
+  contentWidth: number,
+  ownerSpan: { cols: number; rows: number },
+  gapRows: number,
+  blockKeyById: ReadonlyMap<string, string>,
+): { placements: Map<string, GridPlacement>; rowEnd: number } | null {
+  const fields = members.blocks.filter((block) => isFieldBlock(page, block, blockKeyById))
+  const actions = members.blocks.filter(isActionBlock)
+  const content = members.blocks.filter((block) => !fields.includes(block) && !actions.includes(block))
+  const placements = new Map<string, GridPlacement>()
+  let nextRow = rowStart
+
+  for (const block of content) {
+    const grid = createCompositionPlacement(
+      block,
+      contentStart,
+      nextRow,
+      contentWidth,
+      ownerSpan,
+    )
+    if (!grid) return null
+    placements.set(block.id, grid)
+    nextRow = placementEndRow(grid) + gapRows + 1
+  }
+
+  const columnGap = contentWidth >= 8 ? 1 : 0
+  const columnWidth = Math.max(1, Math.floor((contentWidth - columnGap) / 2))
+  for (let index = 0; index < fields.length; index += 1) {
+    const first = fields[index]
+    const second = fields[index + 1]
+    const shouldPair = Boolean(
+      second
+      && !isMultilineField(first)
+      && !isMultilineField(second),
+    )
+    if (!shouldPair || !second) {
+      const grid = createCompositionPlacement(
+        first,
+        contentStart,
+        nextRow,
+        contentWidth,
+        ownerSpan,
+      )
+      if (!grid) return null
+      placements.set(first.id, grid)
+      nextRow = placementEndRow(grid) + gapRows + 1
+      continue
+    }
+
+    const firstGrid = createCompositionPlacement(
+      first,
+      contentStart,
+      nextRow,
+      columnWidth,
+      ownerSpan,
+    )
+    const secondGrid = createCompositionPlacement(
+      second,
+      contentStart + columnWidth + columnGap,
+      nextRow,
+      columnWidth,
+      ownerSpan,
+    )
+    if (
+      !firstGrid
+      || !secondGrid
+      || firstGrid.colSpan > columnWidth
+      || secondGrid.colSpan > columnWidth
+    ) {
+      const stackedFirst = createCompositionPlacement(
+        first,
+        contentStart,
+        nextRow,
+        contentWidth,
+        ownerSpan,
+      )
+      if (!stackedFirst) return null
+      const stackedSecond = createCompositionPlacement(
+        second,
+        contentStart,
+        placementEndRow(stackedFirst) + gapRows + 1,
+        contentWidth,
+        ownerSpan,
+      )
+      if (!stackedSecond) return null
+      placements.set(first.id, stackedFirst)
+      placements.set(second.id, stackedSecond)
+      nextRow = placementEndRow(stackedSecond) + gapRows + 1
+    } else {
+      const rowSpan = Math.max(firstGrid.rowSpan, secondGrid.rowSpan)
+      placements.set(first.id, { ...firstGrid, rowSpan })
+      placements.set(second.id, { ...secondGrid, rowSpan })
+      nextRow += rowSpan + gapRows
+    }
+    index += 1
+  }
+
+  if (actions.length) {
+    const actionResult = composePairedSection(
+      { ...members, section: { ...members.section, pattern: 'actions' }, blocks: actions },
+      nextRow,
+      contentStart,
+      contentWidth,
+      ownerSpan,
+      gapRows,
+    )
+    if (!actionResult) return null
+    actionResult.placements.forEach((grid, id) => placements.set(id, grid))
+    nextRow = actionResult.rowEnd + gapRows + 1
+  }
+
+  return { placements, rowEnd: nextRow - gapRows - 1 }
+}
+
+function composeRepeaterItem(
+  blocks: Block[],
+  ownerColumns: number,
+  ownerRows: number,
+): { placements: Map<string, GridPlacement>; rowEnd: number } | null {
+  if (!blocks.length) return { placements: new Map(), rowEnd: 1 }
+  const placements = new Map<string, GridPlacement>()
+  const columnGap = ownerColumns >= 8 ? 1 : 0
+  const columnWidth = Math.max(1, Math.floor((ownerColumns - columnGap) / 2))
+  let nextRow = 1
+  let index = 0
+
+  const placeFullWidth = (block: Block): boolean => {
+    const grid = createCompositionPlacement(block, 1, nextRow, ownerColumns, {
+      cols: ownerColumns,
+      rows: ownerRows,
+    })
+    if (!grid) return false
+    placements.set(block.id, grid)
+    nextRow = placementEndRow(grid) + 1
+    return true
+  }
+
+  // An odd item count gets one clear primary line, followed by balanced metadata rows.
+  if (blocks.length % 2 === 1) {
+    if (!placeFullWidth(blocks[0])) return null
+    index = 1
+  }
+
+  for (; index < blocks.length; index += 2) {
+    const first = blocks[index]
+    const second = blocks[index + 1]
+    if (!first) continue
+    if (!second) {
+      if (!placeFullWidth(first)) return null
+      continue
+    }
+    const firstGrid = createCompositionPlacement(first, 1, nextRow, columnWidth, {
+      cols: ownerColumns,
+      rows: ownerRows,
+    })
+    const secondGrid = createCompositionPlacement(
+      second,
+      columnWidth + columnGap + 1,
+      nextRow,
+      columnWidth,
+      { cols: ownerColumns, rows: ownerRows },
+    )
+    if (
+      !firstGrid
+      || !secondGrid
+      || firstGrid.colSpan > columnWidth
+      || secondGrid.colSpan > columnWidth
+    ) {
+      if (!placeFullWidth(first) || !placeFullWidth(second)) return null
+      continue
+    }
+    const rowSpan = Math.max(firstGrid.rowSpan, secondGrid.rowSpan)
+    placements.set(first.id, { ...firstGrid, rowSpan })
+    placements.set(second.id, { ...secondGrid, rowSpan })
+    nextRow += rowSpan
+  }
+
+  return { placements, rowEnd: Math.max(1, nextRow - 1) }
 }
 
 function composePairedSection(
@@ -424,7 +721,7 @@ function createCompositionPlacement(
   const contentMinimum = getGeneratedContentMinimumSpan(block, proposed, ownerSpan.cols)
   const finalColSpan = Math.min(ownerSpan.cols, Math.max(colSpan, contentMinimum.cols))
   const requestedListRows = block.type === 'repeater'
-    ? Math.min(10, Math.max(6, block.layout?.grid?.rowSpan ?? 6))
+    ? getRepeaterViewportRows(normalizeRepeaterProps(block.props).itemRowSpan)
     : 0
   const rowSpan = Math.min(
     ownerSpan.rows,
@@ -464,6 +761,10 @@ export function analyzeGeneratedPageComposition(
     const members = resolveSectionMembers(section, blocks, blockKeyById)
     const placed = members.blocks.filter(hasGridPlacement)
     if (!placed.length) continue
+    const owner = members.ownerId
+      ? blocks.find((block) => block.id === members.ownerId)
+      : undefined
+    const isRepeaterItem = owner?.type === 'repeater'
     const ownerSpan = getOwnerSpan(members, blocks)
     const bounds = getBounds(placed)
     if (!bounds) continue
@@ -495,7 +796,7 @@ export function analyzeGeneratedPageComposition(
       })
     }
 
-    if (section.pattern === 'intro' || section.pattern === 'list') {
+    if (!isRepeaterItem && (section.pattern === 'intro' || section.pattern === 'list')) {
       const content = placed.filter((block) => !isActionBlock(block))
       const starts = content.map((block) => block.layout!.grid!.colStart)
       if (starts.length > 1 && Math.max(...starts) - Math.min(...starts) > 1) {
@@ -512,19 +813,15 @@ export function analyzeGeneratedPageComposition(
 
     if (section.pattern === 'form') {
       const fields = placed.filter((block) => isFieldBlock(page, block, blockKeyById))
-      if (fields.length > 1) {
-        const starts = fields.map((block) => block.layout!.grid!.colStart)
-        const spans = fields.map((block) => block.layout!.grid!.colSpan)
-        if (new Set(starts).size > 1 || new Set(spans).size > 1) {
-          issues.push({
-            code: 'visual-inconsistent-fields',
-            severity: 'severe',
-            pageKey: page.key,
-            sectionKey: section.key,
-            blockKeys: keysForBlocks(fields, blockKeyById),
-            message: `Related fields in section "${section.key}" do not use the same width and alignment.`,
-          })
-        }
+      if (fields.length > 1 && hasInconsistentFormFieldRows(fields, ownerSpan.cols)) {
+        issues.push({
+          code: 'visual-inconsistent-fields',
+          severity: 'severe',
+          pageKey: page.key,
+          sectionKey: section.key,
+          blockKeys: keysForBlocks(fields, blockKeyById),
+          message: `Related fields in section "${section.key}" do not form consistent full-width or paired rows.`,
+        })
       }
       const primaryActions = placed.filter((block) => (
         getBlockRole(page, block, blockKeyById) === 'primaryAction'
@@ -796,6 +1093,8 @@ function proposeInterSectionSpacing(
   const gapRows = page.visualStyle?.density === 'compact' ? 1 : 2
 
   for (const ownerSections of byOwner.values()) {
+    const ownerId = ownerSections[0]?.ownerId
+    if (ownerId && blocks.find((block) => block.id === ownerId)?.type === 'repeater') continue
     const ordered = ownerSections
       .map((members) => ({ members, bounds: getBounds(members.blocks.filter(hasGridPlacement)) }))
       .filter((entry): entry is { members: SectionMembers; bounds: NonNullable<ReturnType<typeof getBounds>> } => Boolean(entry.bounds))
@@ -950,6 +1249,38 @@ function isFieldBlock(
 ): boolean {
   return block.type === 'text'
     && (block.props.editable === true || getBlockRole(page, block, blockKeyById) === 'field')
+}
+
+function isMultilineField(block: Block): boolean {
+  return block.type === 'text' && block.props.textInputMode === 'multiline'
+}
+
+function hasInconsistentFormFieldRows(fields: Block[], ownerColumns: number): boolean {
+  let pairSignature: string | undefined
+  for (const band of buildRowBands(fields)) {
+    const rowFields = band.blockIds
+      .map((id) => fields.find((block) => block.id === id))
+      .filter((block): block is Block => Boolean(block))
+      .sort((left, right) => left.layout!.grid!.colStart - right.layout!.grid!.colStart)
+    if (rowFields.length === 1) continue
+    if (rowFields.length !== 2) return true
+    const first = rowFields[0].layout!.grid!
+    const second = rowFields[1].layout!.grid!
+    const outsideDifference = Math.abs(
+      (first.colStart - 1) - (ownerColumns - placementEndCol(second)),
+    )
+    if (
+      first.rowStart !== second.rowStart
+      || first.rowSpan !== second.rowSpan
+      || first.colSpan !== second.colSpan
+      || outsideDifference > 1
+      || placementsOverlap(first, second)
+    ) return true
+    const signature = `${first.colStart}:${first.colSpan}:${second.colStart}:${second.colSpan}`
+    if (pairSignature && pairSignature !== signature) return true
+    pairSignature = signature
+  }
+  return false
 }
 
 function isActionBlock(block: Block): boolean {
