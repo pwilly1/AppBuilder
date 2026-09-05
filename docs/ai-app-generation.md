@@ -390,6 +390,26 @@ Complex errors include:
 
 The first implementation does not use interactive model tool calling. The frontend coordinates correction requests because it owns the canonical layout validator. The backend validates each previous plan and issue packet, calls the model, preserves the correction contract, counts every attempt against the normal quota, and rejects attempt numbers outside the two-correction window.
 
+### Rendered Visual Review
+
+After a plan compiles successfully, the editor renders the isolated proposal with the real `PageRenderer` and captures only the generated phone preview as a bounded JPEG. It sends that image and the validated plan to the authenticated visual-review endpoint. The model can inspect the actual hierarchy, spacing, balance, density, and contrast instead of reasoning from grid coordinates alone.
+
+Visual review is intentionally narrower than generation. The backend preserves the exact pages, collections, blocks, block types, parents, text, labels, actions, bindings, access rules, and data behavior. The reviewed plan may change only presentation fields such as grid placement, render alignment, visual roles and sections, page palette, typography sizes, padding, colors, borders, corners, and repeated-item spacing.
+
+The plan sent alongside the screenshot uses the compiled preview's actual grids, alignment, and supported presentation props, not the model's original coordinates before layout repair. The returned plan is parsed and compiled with `preservePresentation`: automatic layout and section recomposition are skipped, and explicit presentation props take precedence over theme defaults. Contrast repair still runs. Structural validation still rejects out-of-bounds blocks, sibling collisions, invalid hierarchy, and broken references. Invalid reviewed proposals fall back to the original valid draft instead of being silently rearranged. This preserves valid model adjustments; it does not guarantee visual quality or pixel-perfect text fit.
+
+The screenshot is held in memory for the provider request and is not uploaded to asset storage or written to project data. It must be a valid PNG or JPEG no larger than 2 MB. The preview uses placeholder collection data, so generated-app records are not included. Each visual review consumes one normal AI quota attempt. If capture, provider review, preservation, parsing, or compilation fails, the editor keeps the original valid proposal and shows a warning instead of failing generation.
+
+```text
+validated generated plan
+  -> real isolated PageRenderer output
+  -> bounded phone-preview capture
+  -> authenticated multimodal visual review
+  -> backend presentation-only preservation
+  -> frontend parse, compile, and validate
+  -> improved preview or original-valid fallback
+```
+
 ## Compiler Responsibilities
 
 The compiler converts a valid plan into the current `Project` schema.
@@ -840,6 +860,7 @@ Exit condition: the backend returns validated plans without mutating projects.
 - Completed: show bounded prompt entry, request progress, quota state, and controlled errors
 - Completed: parse, compile, validate, and preview returned page plans without mutating the project
 - Completed: accept or cancel and apply acceptance as one project transaction
+- Completed: capture the rendered phone preview and run one bounded presentation-only visual review before Apply
 - Remaining: complete manual save/reload, undo/redo, web preview, and Android parity QA with live generated plans
 
 Exit condition: live generated pages survive undo, redo, save, reload, web preview, and Android preview.
@@ -854,6 +875,7 @@ Exit condition: live generated pages survive undo, redo, save, reload, web previ
 - Completed: add collision-safe alignment, field equalization, split/action balance, and spacing repair
 - Completed: surface visual direction, composition repairs, and non-blocking visual warnings in proposal review
 - Completed: add a fixed twelve-prompt visual evaluation corpus and contract regression coverage
+- Completed: add a screenshot-backed visual review pass with semantic preservation and original-proposal fallback
 - Remaining: manually evaluate visual quality across the fixed corpus with the configured live provider
 - Planned: reuse compatible existing collections instead of always creating new ones
 
@@ -902,6 +924,8 @@ bounded builder prompt
   -> frontend shared-parser validation
   -> deterministic theme, layout, color, and composition repair
   -> project and visual validation
+  -> rendered screenshot review with presentation-only changes
+  -> parser, compiler, and validation repeated
   -> isolated preview
   -> explicit one-transaction apply
   -> existing autosave and runtime rendering

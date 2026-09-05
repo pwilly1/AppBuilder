@@ -15,6 +15,10 @@ export type AiModelRequest = {
     previousPlan: AppGenerationPlanV1;
     issues: AiGenerationPlanIssue[];
   };
+  visualReview?: {
+    previousPlan: AppGenerationPlanV1;
+    screenshotDataUrl: string;
+  };
 };
 
 export type AiModelTokenUsage = {

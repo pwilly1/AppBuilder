@@ -3,6 +3,7 @@ import {
   correctAiGenerationProposal,
   createAiGenerationProposal,
   getAiGenerationUsage,
+  reviewAiGenerationProposal,
   type AiQuotaSummary,
 } from '../api'
 import {
@@ -31,6 +32,8 @@ type AiGenerationState = {
   isGenerating: boolean
   isQuotaLoading: boolean
   refinementAttempt: number
+  isVisualReviewing: boolean
+  visualReviewRequestId: number | null
 }
 
 const CLOSED_STATE: AiGenerationState = {
@@ -45,12 +48,24 @@ const CLOSED_STATE: AiGenerationState = {
   isGenerating: false,
   isQuotaLoading: false,
   refinementAttempt: 0,
+  isVisualReviewing: false,
+  visualReviewRequestId: null,
+}
+
+type VisualReviewContext = {
+  requestId: number
+  prompt: string
+  sourceProject: Project
+  proposal: AiGenerationProposal
 }
 
 export function useAiGeneration(project: Project, projectId?: string) {
   const [state, setState] = useState<AiGenerationState>(CLOSED_STATE)
   const generationRequest = useRef<AbortController | null>(null)
   const usageRequest = useRef<AbortController | null>(null)
+  const visualReviewRequest = useRef<AbortController | null>(null)
+  const visualReviewContext = useRef<VisualReviewContext | null>(null)
+  const nextVisualReviewRequestId = useRef(0)
   const activeProjectId = useRef(projectId)
 
   const refreshUsage = useCallback(async () => {
@@ -98,8 +113,11 @@ export function useAiGeneration(project: Project, projectId?: string) {
   const closeGeneration = useCallback(() => {
     generationRequest.current?.abort()
     usageRequest.current?.abort()
+    visualReviewRequest.current?.abort()
     generationRequest.current = null
     usageRequest.current = null
+    visualReviewRequest.current = null
+    visualReviewContext.current = null
     setState(CLOSED_STATE)
   }, [])
 
@@ -127,7 +145,10 @@ export function useAiGeneration(project: Project, projectId?: string) {
 
     generationRequest.current?.abort()
     usageRequest.current?.abort()
+    visualReviewRequest.current?.abort()
     usageRequest.current = null
+    visualReviewRequest.current = null
+    visualReviewContext.current = null
     const controller = new AbortController()
     generationRequest.current = controller
     const sourceProject = project
@@ -143,6 +164,8 @@ export function useAiGeneration(project: Project, projectId?: string) {
       isGenerating: true,
       isQuotaLoading: false,
       refinementAttempt: 0,
+      isVisualReviewing: false,
+      visualReviewRequestId: null,
     }))
 
     try {
@@ -171,6 +194,13 @@ export function useAiGeneration(project: Project, projectId?: string) {
 
         const compiled = compileGenerationPlan(sourceProject, parsed.data)
         if (compiled.success) {
+          const visualReviewRequestId = ++nextVisualReviewRequestId.current
+          visualReviewContext.current = {
+            requestId: visualReviewRequestId,
+            prompt: normalizedPrompt,
+            sourceProject,
+            proposal: compiled.proposal,
+          }
           setState((current) => ({
             ...current,
             proposal: compiled.proposal,
@@ -181,6 +211,8 @@ export function useAiGeneration(project: Project, projectId?: string) {
             quota: readQuota(response.quota) ?? current.quota,
             isGenerating: false,
             refinementAttempt: 0,
+            isVisualReviewing: true,
+            visualReviewRequestId,
           }))
           return
         }
@@ -239,9 +271,80 @@ export function useAiGeneration(project: Project, projectId?: string) {
     }
   }, [project, projectId, refreshUsage])
 
+  const reviewVisual = useCallback(async (requestId: number, preview: Blob | null) => {
+    const context = visualReviewContext.current
+    if (!projectId || !context || context.requestId !== requestId) return
+    if (!preview) {
+      visualReviewContext.current = null
+      setState((current) => current.visualReviewRequestId === requestId ? {
+        ...current,
+        warnings: uniqueWarnings(current.warnings, [
+          'The visual review could not capture the preview, so the validated original draft is shown.',
+        ]),
+        isVisualReviewing: false,
+        visualReviewRequestId: null,
+      } : current)
+      return
+    }
+
+    visualReviewRequest.current?.abort()
+    const controller = new AbortController()
+    visualReviewRequest.current = controller
+    try {
+      const response = await reviewAiGenerationProposal(projectId, {
+        prompt: context.prompt,
+        scope: 'page',
+        previousPlan: context.proposal.visualReviewPlan,
+        preview,
+        signal: controller.signal,
+      })
+      if (visualReviewRequest.current !== controller || visualReviewContext.current?.requestId !== requestId) return
+
+      const parsed = parseAppGenerationPlan(response.plan)
+      const reviewed = parsed.success
+        ? compileGenerationPlan(context.sourceProject, parsed.data, { preservePresentation: true })
+        : null
+      if (reviewed?.success) {
+        setState((current) => current.visualReviewRequestId === requestId ? {
+          ...current,
+          proposal: reviewed.proposal,
+          warnings: uniqueWarnings(current.warnings, readWarnings(response.warnings)),
+          quota: readQuota(response.quota) ?? current.quota,
+          isVisualReviewing: false,
+          visualReviewRequestId: null,
+        } : current)
+      } else {
+        setState((current) => current.visualReviewRequestId === requestId ? {
+          ...current,
+          warnings: uniqueWarnings(current.warnings, [
+            'The visual review did not produce a valid improvement, so the validated original draft is shown.',
+          ]),
+          quota: readQuota(response.quota) ?? current.quota,
+          isVisualReviewing: false,
+          visualReviewRequestId: null,
+        } : current)
+      }
+    } catch (error: unknown) {
+      if (isAbortError(error) || visualReviewRequest.current !== controller) return
+      setState((current) => current.visualReviewRequestId === requestId ? {
+        ...current,
+        warnings: uniqueWarnings(current.warnings, [
+          'Visual review was unavailable, so the validated original draft is shown.',
+        ]),
+        isVisualReviewing: false,
+        visualReviewRequestId: null,
+      } : current)
+      void refreshUsage()
+    } finally {
+      if (visualReviewRequest.current === controller) visualReviewRequest.current = null
+      if (visualReviewContext.current?.requestId === requestId) visualReviewContext.current = null
+    }
+  }, [projectId, refreshUsage])
+
   useEffect(() => () => {
     generationRequest.current?.abort()
     usageRequest.current?.abort()
+    visualReviewRequest.current?.abort()
   }, [])
 
   useEffect(() => {
@@ -249,8 +352,11 @@ export function useAiGeneration(project: Project, projectId?: string) {
     activeProjectId.current = projectId
     generationRequest.current?.abort()
     usageRequest.current?.abort()
+    visualReviewRequest.current?.abort()
     generationRequest.current = null
     usageRequest.current = null
+    visualReviewRequest.current = null
+    visualReviewContext.current = null
     setState(CLOSED_STATE)
   }, [projectId])
 
@@ -261,6 +367,7 @@ export function useAiGeneration(project: Project, projectId?: string) {
     openGeneration,
     closeGeneration,
     generate,
+    reviewVisual,
     refreshUsage,
   }
 }

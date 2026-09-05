@@ -246,6 +246,95 @@ test('correction route preserves visual style, section intent, and block roles',
   });
 });
 
+test('visual review accepts a rendered preview and preserves page semantics', async () => {
+  const previousPlan = structuredClone(VALID_PLAN);
+  previousPlan.pages[0]!.visualStyle = {
+    pageBackground: '#f8fafc',
+    surfaceColor: '#ffffff',
+    primaryColor: '#2563eb',
+    primaryTextColor: '#ffffff',
+    textColor: '#0f172a',
+    mutedTextColor: '#475569',
+    borderColor: '#cbd5e1',
+    cornerStyle: 'soft',
+    density: 'comfortable',
+  };
+  let modelRequest: AiModelRequest | undefined;
+  const candidate = structuredClone(previousPlan);
+  candidate.pages[0]!.title = 'Provider changed title';
+  candidate.pages[0]!.visualStyle = {
+    ...candidate.pages[0]!.visualStyle!,
+    pageBackground: '#eef2ff',
+    primaryColor: '#1d4ed8',
+    cornerStyle: 'rounded',
+  };
+  const candidateHero = candidate.pages[0]!.blocks[0]!;
+  if (candidateHero.type !== 'hero') throw new Error('Expected hero fixture');
+  candidateHero.content.headline = 'Provider changed content';
+  candidateHero.content.headlineSize = 30;
+  candidateHero.grid = { colStart: 2, rowStart: 3, colSpan: 13, rowSpan: 4 };
+
+  const service = createService(new FakeAiModelClient((request) => {
+    modelRequest = request;
+    return candidate;
+  }));
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const form = new FormData();
+    form.append('prompt', 'Create an operations page.');
+    form.append('scope', 'page');
+    form.append('previousPlan', JSON.stringify(previousPlan));
+    form.append(
+      'preview',
+      new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], { type: 'image/jpeg' }),
+      'preview.jpg',
+    );
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals/visual-reviews`, {
+      method: 'POST',
+      body: form,
+    });
+
+    assert.equal(response.status, 200);
+    const body = await response.json() as { plan: AppGenerationPlanV1; warnings: string[] };
+    const reviewedPage = body.plan.pages[0]!;
+    assert.equal(reviewedPage.title, 'Operations');
+    assert.equal(reviewedPage.visualStyle?.pageBackground, '#eef2ff');
+    assert.equal(reviewedPage.visualStyle?.cornerStyle, 'rounded');
+    const reviewedHero = reviewedPage.blocks[0]!;
+    assert.equal(reviewedHero.type, 'hero');
+    if (reviewedHero.type !== 'hero') throw new Error('Expected hero fixture');
+    assert.equal(reviewedHero.content.headline, 'Operations');
+    assert.equal(reviewedHero.content.headlineSize, 30);
+    assert.deepEqual(reviewedHero.grid, { colStart: 2, rowStart: 3, colSpan: 13, rowSpan: 4 });
+    assert.match(body.warnings[0] ?? '', /reviewed the rendered page/i);
+  });
+
+  assert.ok(modelRequest?.visualReview);
+  assert.equal(modelRequest.visualReview.previousPlan.pages[0]?.title, 'Operations');
+  assert.match(modelRequest.visualReview.screenshotDataUrl, /^data:image\/jpeg;base64,/);
+});
+
+test('visual review rejects malformed preview images before calling the provider', async () => {
+  let calls = 0;
+  const service = createService(new FakeAiModelClient(() => {
+    calls += 1;
+    return VALID_PLAN;
+  }));
+  await withServer(createApp(service, allowOwner), async (baseUrl) => {
+    const form = new FormData();
+    form.append('prompt', 'Create an operations page.');
+    form.append('scope', 'page');
+    form.append('previousPlan', JSON.stringify(VALID_PLAN));
+    form.append('preview', new Blob(['not an image'], { type: 'image/jpeg' }), 'preview.jpg');
+    const response = await fetch(`${baseUrl}/projects/project-1/ai/proposals/visual-reviews`, {
+      method: 'POST',
+      body: form,
+    });
+    assert.equal(response.status, 400);
+    assert.match((await response.json() as { error: string }).error, /valid PNG or JPEG/);
+  });
+  assert.equal(calls, 0);
+});
+
 test('correction route can remove a redirect that the compiler reported as unknown', async () => {
   const previousPlan = structuredClone(VALID_PLAN);
   previousPlan.pages[0]!.key = 'car-maintenance';

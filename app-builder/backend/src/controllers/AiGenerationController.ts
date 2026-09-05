@@ -51,6 +51,25 @@ export class AiGenerationController {
     }
   };
 
+  reviewVisualProposal = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const projectId = getRouteParam(req, 'projectId');
+      if (!projectId) {
+        res.status(400).json({ error: 'Missing projectId' });
+        return;
+      }
+      const proposal = await this.generation.reviewVisualProposal(
+        getUserId(req),
+        projectId,
+        req.body,
+        req.file ? { buffer: req.file.buffer, mimetype: req.file.mimetype } : undefined,
+      );
+      res.status(200).json(proposal);
+    } catch (error) {
+      handleAiGenerationError(error, res, next);
+    }
+  };
+
   getUsage = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const projectId = getRouteParam(req, 'projectId');

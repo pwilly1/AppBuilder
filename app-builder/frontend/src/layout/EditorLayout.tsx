@@ -950,10 +950,13 @@ export default function EditorLayout(props: Props) {
         isGenerating={aiGeneration.isGenerating}
         isQuotaLoading={aiGeneration.isQuotaLoading}
         refinementAttempt={aiGeneration.refinementAttempt}
+        isVisualReviewing={aiGeneration.isVisualReviewing}
+        visualReviewRequestId={aiGeneration.visualReviewRequestId}
         isStale={aiGeneration.isStale}
         promptMaxLength={aiGeneration.promptMaxLength}
         onClose={aiGeneration.closeGeneration}
         onGenerate={aiGeneration.generate}
+        onVisualReview={aiGeneration.reviewVisual}
         onAccept={acceptAiGenerationProposal}
       />
 

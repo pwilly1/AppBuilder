@@ -1,4 +1,5 @@
 import { normalizeGeneratedPageLayout, type AiGenerationLayoutRepair } from './generationLayout'
+import { createRenderedReviewPage } from './generationReview'
 import { repairGeneratedBlockColors } from './generationColors'
 import {
   normalizeGeneratedPageComposition,
@@ -34,6 +35,7 @@ import { slugify, uniquePath } from '../hooks/project/projectUtils'
 
 export type AiGenerationProposal = {
   plan: AppGenerationPlanV1
+  visualReviewPlan: AppGenerationPlanV1
   project: Project
   generatedPageIds: string[]
   generatedCollectionIds: string[]
@@ -49,6 +51,7 @@ export type CompileGenerationPlanResult =
 
 type CompileOptions = {
   idFactory?: () => string
+  preservePresentation?: boolean
 }
 
 type CollectionReference = {
@@ -110,6 +113,7 @@ export function compileGenerationPlan(
     collectionIdByKey,
   )
   const generatedPages: Page[] = []
+  const renderedPlans: AiPagePlan[] = []
   const usedPages = [...baseProject.pages]
 
   for (const pagePlan of plan.pages) {
@@ -130,19 +134,25 @@ export function compileGenerationPlan(
         pageReferenceIdByKey,
         collectionReferenceByKey,
         issues,
+        options.preservePresentation,
       )
       if (block) blockKeyById.set(block.id, blockPlan.key)
       return block
     }).filter((block): block is Block => block !== null)
 
-    const layout = normalizeGeneratedPageLayout(pagePlan.key, rawBlocks, blockKeyById)
+    // Reviewed coordinates already describe the screenshot; validate them without recomposing.
+    const layout = options.preservePresentation
+      ? { blocks: rawBlocks, repairs: [], issues: [] }
+      : normalizeGeneratedPageLayout(pagePlan.key, rawBlocks, blockKeyById)
     repairs.push(...layout.repairs)
     issues.push(...layout.issues)
-    const composition = normalizeGeneratedPageComposition(
-      pagePlan,
-      layout.blocks,
-      blockKeyById,
-    )
+    const composition = options.preservePresentation
+      ? { blocks: layout.blocks, repairs: [], warnings: [], issues: [] }
+      : normalizeGeneratedPageComposition(
+          pagePlan,
+          layout.blocks,
+          blockKeyById,
+        )
     compositionRepairs.push(...composition.repairs)
     visualWarnings.push(...composition.warnings)
     issues.push(...composition.issues)
@@ -157,6 +167,7 @@ export function compileGenerationPlan(
       blocks: composition.blocks,
     }
     generatedPages.push(page)
+    renderedPlans.push(createRenderedReviewPage(pagePlan, page, blockKeyById))
     usedPages.push(page)
   }
 
@@ -183,6 +194,7 @@ export function compileGenerationPlan(
     success: true,
     proposal: {
       plan,
+      visualReviewPlan: { ...plan, pages: renderedPlans },
       project,
       generatedPageIds: generatedPages.map((page) => page.id),
       generatedCollectionIds: generatedCollections.map((collection) => collection.id),
@@ -230,6 +242,7 @@ function compileBlock(
   pageIdByKey: ReadonlyMap<string, string>,
   collectionReferenceByKey: ReadonlyMap<string, CollectionReference>,
   issues: AiGenerationPlanIssue[],
+  preservePresentation = false,
 ): Block | null {
   const id = blockIdByPageAndKey.get(pageBlockMapKey(pagePlan.key, blockPlan.key))
   if (!id) {
@@ -261,7 +274,9 @@ function compileBlock(
   const props = repairGeneratedBlockColors(
     pagePlan,
     blockPlan,
-    applyGeneratedVisualStyle(pagePlan, blockPlan, compiledProps),
+    preservePresentation
+      ? { ...applyGeneratedVisualStyle(pagePlan, blockPlan, compiledProps), ...compiledProps }
+      : applyGeneratedVisualStyle(pagePlan, blockPlan, compiledProps),
   )
   const base = createBlock(blockPlan.type, props)
   const bindings = compileBlockBindings(

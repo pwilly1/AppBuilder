@@ -19,9 +19,12 @@ import {
 } from './AiGenerationErrors.js';
 import {
   AI_GENERATION_PLAN_MAX_BYTES,
+  createVisualReviewImageDataUrl,
   parseCorrectionRequest,
   parseGenerationRequest,
+  parseVisualReviewRequest,
   type AiGenerationRequest,
+  type AiVisualReviewImage,
 } from './AiGenerationRequest.js';
 import {
   AiModelClientError,
@@ -34,6 +37,7 @@ import type {
   AiUsageSummary,
   AiUsageTracker,
 } from './AiUsageService.js';
+import { preserveVisualReviewContract } from './AiVisualReviewContract.js';
 
 type OwnedProjectReader = Pick<ProjectManager, 'findOwned'>;
 
@@ -90,6 +94,23 @@ export class AiGenerationService {
     });
   }
 
+  async reviewVisualProposal(
+    ownerId: string,
+    projectId: string,
+    input: unknown,
+    image: AiVisualReviewImage | undefined,
+  ): Promise<AiGenerationProposal> {
+    const request = parseVisualReviewRequest(input);
+    const screenshotDataUrl = createVisualReviewImageDataUrl(image);
+    const project = await this.projects.findOwned(projectId, ownerId);
+    if (!project) throw new ProjectNotFoundError();
+
+    return this.runProposal(ownerId, projectId, project, request, undefined, {
+      previousPlan: request.previousPlan,
+      screenshotDataUrl,
+    });
+  }
+
   private async runProposal(
     ownerId: string,
     projectId: string,
@@ -99,6 +120,10 @@ export class AiGenerationService {
       attempt: number;
       previousPlan: AppGenerationPlanV1;
       issues: AiGenerationPlanIssue[];
+    },
+    visualReview?: {
+      previousPlan: AppGenerationPlanV1;
+      screenshotDataUrl: string;
     },
   ): Promise<AiGenerationProposal> {
 
@@ -118,6 +143,7 @@ export class AiGenerationService {
         context: buildAiGenerationContext(project),
         safetyIdentifier: createSafetyIdentifier(ownerId),
         ...(correction ? { correction } : {}),
+        ...(visualReview ? { visualReview } : {}),
       });
     } catch (error) {
       const failure = readModelFailure(error);
@@ -139,6 +165,9 @@ export class AiGenerationService {
           plan,
           correction.issues,
         );
+      }
+      if (visualReview) {
+        plan = preserveVisualReviewContract(visualReview.previousPlan, plan);
       }
     } catch (error) {
       await this.usage.finishAttempt(attempt, {
@@ -164,7 +193,7 @@ export class AiGenerationService {
       contextRevision: getContextRevision(project),
       summary: plan.summary,
       plan,
-      warnings: [],
+      warnings: visualReview ? ['Apptura reviewed the rendered page and refined its presentation.'] : [],
       correctionAttempt: correction?.attempt ?? 0,
       generation: {
         provider: this.model.providerName,

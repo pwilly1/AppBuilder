@@ -14,6 +14,9 @@ export class FakeAiModelClient implements AiModelClient {
   constructor(private readonly createPlan: FakeAiPlanFactory = createDefaultFakePlan) {}
 
   async generatePlan(request: AiModelRequest): Promise<AiModelResult> {
+    if (request.visualReview && this.createPlan === createDefaultFakePlan) {
+      return { plan: structuredClone(request.visualReview.previousPlan) };
+    }
     return { plan: await this.createPlan(request) };
   }
 }

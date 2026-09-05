@@ -1009,6 +1009,63 @@ test('data references resolve unique collection, field, and input aliases withou
   }
 })
 
+test('visual review snapshot describes rendered grids and round-trips without recomposition', () => {
+  const plan = clone(CREW_DIRECTORY_GENERATION_PLAN)
+  const before = clone(plan)
+  const initial = compileGenerationPlan(createBaseProject(), plan)
+  assert.equal(initial.success, true)
+  if (!initial.success) return
+  const snapshot = initial.proposal.visualReviewPlan
+  const parsed = parseAppGenerationPlan(snapshot)
+  assert.equal(parsed.success, true, JSON.stringify(parsed))
+  const reviewed = compileGenerationPlan(createBaseProject(), snapshot, { preservePresentation: true })
+  assert.equal(reviewed.success, true, JSON.stringify(reviewed))
+  if (!reviewed.success) return
+  for (let index = 0; index < snapshot.pages.length; index++) {
+    const original = initial.proposal.project.pages[index + 1]
+    const result = reviewed.proposal.project.pages[index + 1]
+    assert.deepEqual(snapshot.pages[index].blocks.map((block) => block.grid), original.blocks.map((block) => block.layout?.grid))
+    assert.deepEqual(result.blocks.map((block) => block.layout?.grid), original.blocks.map((block) => block.layout?.grid))
+    assert.deepEqual(result.blocks.map((block) => block.render), original.blocks.map((block) => block.render))
+  }
+  assert.deepEqual(plan, before)
+  assert.deepEqual(reviewed.proposal.repairs, [])
+  assert.deepEqual(reviewed.proposal.compositionRepairs, [])
+})
+
+test('visual review preserves explicit presentation rather than applying theme overrides', () => {
+  const initial = compileGenerationPlan(createBaseProject(), clone(CREW_DIRECTORY_GENERATION_PLAN))
+  assert.equal(initial.success, true)
+  if (!initial.success) return
+  const plan = clone(initial.proposal.visualReviewPlan)
+  const button = plan.pages[0].blocks.find((block) => block.type === 'button')!
+  button.content = { ...button.content, fontSize: 12, backgroundColor: '#111827', textColor: '#ffffff', borderRadius: 3, buttonPaddingX: 5, buttonPaddingY: 4 }
+  button.render = { alignX: 'end', alignY: 'end' }
+  const result = compileGenerationPlan(createBaseProject(), plan, { preservePresentation: true })
+  assert.equal(result.success, true, JSON.stringify(result))
+  if (!result.success) return
+  const actual = result.proposal.project.pages[1].blocks.find((block) => block.type === 'button')!
+  for (const key of ['fontSize', 'backgroundColor', 'textColor', 'borderRadius', 'buttonPaddingX', 'buttonPaddingY']) {
+    assert.equal(actual.props[key], (button.content as Record<string, unknown>)[key])
+  }
+  assert.deepEqual(actual.layout?.grid, button.grid)
+  assert.equal(actual.render?.alignX, 'end')
+})
+
+test('visual review rejects invalid placement instead of repairing it', () => {
+  const initial = compileGenerationPlan(createBaseProject(), clone(CREW_DIRECTORY_GENERATION_PLAN))
+  assert.equal(initial.success, true)
+  if (!initial.success) return
+  for (const invalid of ['overlap', 'bounds']) {
+    const plan = clone(initial.proposal.visualReviewPlan)
+    plan.pages[0].blocks[1].grid = invalid === 'overlap'
+      ? { ...plan.pages[0].blocks[0].grid }
+      : { colStart: 100, rowStart: 100, colSpan: 4, rowSpan: 4 }
+    const result = compileGenerationPlan(createBaseProject(), plan, { preservePresentation: true })
+    assert.equal(result.success, false, invalid)
+  }
+})
+
 function createBaseProject(): Project {
   return {
     schemaVersion: CURRENT_SCHEMA_VERSION,

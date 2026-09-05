@@ -159,7 +159,7 @@ async function textRequest(path: string, options: RequestInit = {}) {
   return res.text();
 }
 
-async function multipartRequest(path: string, formData: FormData) {
+async function multipartRequest(path: string, formData: FormData, signal?: AbortSignal) {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -168,6 +168,7 @@ async function multipartRequest(path: string, formData: FormData) {
     headers,
     body: formData,
     credentials: 'same-origin',
+    signal,
   });
   if (!res.ok) {
     if (res.status === 401) {
@@ -277,6 +278,28 @@ export function correctAiGenerationProposal(
     }),
     signal: input.signal,
   }) as Promise<AiGenerationProposalResponse>;
+}
+
+export function reviewAiGenerationProposal(
+  projectId: string,
+  input: {
+    prompt: string;
+    scope: AiGenerationScope;
+    previousPlan: AppGenerationPlanV1;
+    preview: Blob;
+    signal?: AbortSignal;
+  },
+) {
+  const formData = new FormData();
+  formData.append('prompt', input.prompt);
+  formData.append('scope', input.scope);
+  formData.append('previousPlan', JSON.stringify(input.previousPlan));
+  formData.append('preview', input.preview, 'generated-page.jpg');
+  return multipartRequest(
+    `/projects/${projectId}/ai/proposals/visual-reviews`,
+    formData,
+    input.signal,
+  ) as Promise<AiGenerationProposalResponse>;
 }
 
 export function getAiGenerationUsage(projectId: string, signal?: AbortSignal) {

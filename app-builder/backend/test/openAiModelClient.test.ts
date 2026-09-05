@@ -191,6 +191,58 @@ test('OpenAI client includes bounded correction context without changing the out
   assert.equal((captured.text?.format as Record<string, unknown>).name, 'apptura_generation_plan_v1');
 });
 
+test('OpenAI client sends rendered previews as visual review image input', async () => {
+  let captured: Parameters<OpenAiResponseCreator>[0] | undefined;
+  const previousPlan = {
+    planVersion: 1 as const,
+    scope: 'page' as const,
+    summary: 'Operations page.',
+    collections: [],
+    pages: [{
+      key: 'operations',
+      title: 'Operations',
+      blocks: [{
+        key: 'title',
+        type: 'hero' as const,
+        content: { headline: 'Operations' },
+        grid: { colStart: 2, rowStart: 2, colSpan: 14, rowSpan: 3 },
+      }],
+    }],
+  };
+  const client = createClient(async (params) => {
+    captured = params;
+    return {
+      id: 'resp-visual-review-1',
+      output_text: JSON.stringify(previousPlan),
+      status: 'completed',
+      output: [],
+    };
+  });
+
+  await client.generatePlan({
+    ...MODEL_REQUEST,
+    visualReview: {
+      previousPlan,
+      screenshotDataUrl: 'data:image/jpeg;base64,/9j/',
+    },
+  });
+
+  assert.ok(captured);
+  assert.match(String(captured.instructions), /visually review one rendered Apptura page/i);
+  assert.ok(Array.isArray(captured.input));
+  const message = (captured.input as Array<Record<string, unknown>>)[0];
+  const content = message?.content as Array<Record<string, unknown>>;
+  assert.equal(content[0]?.type, 'input_text');
+  assert.equal(content[1]?.type, 'input_image');
+  assert.equal(content[1]?.image_url, 'data:image/jpeg;base64,/9j/');
+  assert.equal(content[1]?.detail, 'high');
+  const text = JSON.parse(String(content[0]?.text)) as Record<string, unknown>;
+  assert.deepEqual(
+    (text.visualReview as { previousPlan: unknown }).previousPlan,
+    previousPlan,
+  );
+});
+
 test('OpenAI client rejects refusals, incomplete responses, and malformed output', async () => {
   await assert.rejects(
     createClient(async () => ({

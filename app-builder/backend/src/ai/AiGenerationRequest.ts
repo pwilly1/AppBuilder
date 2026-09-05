@@ -11,6 +11,7 @@ import { AiGenerationRequestError } from './AiGenerationErrors.js';
 
 const AI_PROMPT_MAX_LENGTH = 2_000;
 export const AI_GENERATION_PLAN_MAX_BYTES = 256 * 1024;
+export const AI_VISUAL_REVIEW_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 export type AiGenerationRequest = {
   prompt: string;
@@ -21,6 +22,15 @@ export type AiGenerationCorrectionRequest = AiGenerationRequest & {
   correctionAttempt: number;
   previousPlan: AppGenerationPlanV1;
   issues: AiGenerationPlanIssue[];
+};
+
+export type AiGenerationVisualReviewRequest = AiGenerationRequest & {
+  previousPlan: AppGenerationPlanV1;
+};
+
+export type AiVisualReviewImage = {
+  buffer: Buffer;
+  mimetype: string;
 };
 
 export function parseGenerationRequest(input: unknown): AiGenerationRequest {
@@ -60,6 +70,49 @@ export function parseCorrectionRequest(input: unknown): AiGenerationCorrectionRe
     previousPlan: previousPlan.data,
     issues: parseCorrectionIssues(body.issues),
   };
+}
+
+export function parseVisualReviewRequest(input: unknown): AiGenerationVisualReviewRequest {
+  const body = readRequestBody(input, ['prompt', 'scope', 'previousPlan']);
+  const base = parsePromptAndScope(body);
+  if (typeof body.previousPlan !== 'string') {
+    throw new AiGenerationRequestError('previousPlan must be a JSON string.');
+  }
+  if (Buffer.byteLength(body.previousPlan, 'utf8') > AI_GENERATION_PLAN_MAX_BYTES) {
+    throw new AiGenerationRequestError('previousPlan exceeds the allowed request size.');
+  }
+
+  let rawPlan: unknown;
+  try {
+    rawPlan = JSON.parse(body.previousPlan);
+  } catch {
+    throw new AiGenerationRequestError('previousPlan must contain valid JSON.');
+  }
+  const previousPlan = parseAppGenerationPlan(rawPlan);
+  if (!previousPlan.success || previousPlan.data.scope !== base.scope) {
+    throw new AiGenerationRequestError('previousPlan must be a valid plan for the requested scope.');
+  }
+  return { ...base, previousPlan: previousPlan.data };
+}
+
+export function createVisualReviewImageDataUrl(image: AiVisualReviewImage | undefined): string {
+  if (!image?.buffer.length) {
+    throw new AiGenerationRequestError('A rendered preview image is required.');
+  }
+  if (image.buffer.length > AI_VISUAL_REVIEW_MAX_IMAGE_BYTES) {
+    throw new AiGenerationRequestError('Rendered preview image must be 2 MB or smaller.');
+  }
+
+  const isPng = image.mimetype === 'image/png'
+    && image.buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  const isJpeg = image.mimetype === 'image/jpeg'
+    && image.buffer[0] === 0xff
+    && image.buffer[1] === 0xd8
+    && image.buffer[2] === 0xff;
+  if (!isPng && !isJpeg) {
+    throw new AiGenerationRequestError('Rendered preview must be a valid PNG or JPEG image.');
+  }
+  return `data:${image.mimetype};base64,${image.buffer.toString('base64')}`;
 }
 
 function readRequestBody(

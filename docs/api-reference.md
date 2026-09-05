@@ -289,6 +289,24 @@ Success uses the same proposal response as the initial endpoint, with `correctio
 
 The endpoint never updates the project. It does not automatically split pages or remove blocks.
 
+### `POST /projects/:projectId/ai/proposals/visual-reviews`
+
+Reviews the actual rendered phone preview after a generated plan compiles successfully. Authentication and project ownership are required. Each request consumes one normal AI quota attempt.
+
+Request:
+
+- `multipart/form-data`
+- `prompt`: the original bounded builder prompt
+- `scope`: currently `page`
+- `previousPlan`: the validated plan serialized as JSON
+- `preview`: a JPEG or PNG capture of the isolated phone preview
+
+The preview must be a valid JPEG or PNG no larger than 2 MB. The backend sends it to the configured multimodal provider together with the previous plan and layout guidance. The image is not written to project data or asset storage.
+
+Success uses the normal proposal response and includes a visual-review warning. Before responding, the backend restores all protected semantics from `previousPlan`: collections, page identity and access, block identity and type, parents, content, actions, bindings, and data configuration. Only presentation fields such as page palette, visual sections and roles, grid placement, alignment, typography sizing, spacing, colors, borders, and corners may change. Unsafe provider output returns `422`.
+
+The frontend parses, compiles, and validates the reviewed plan again. If any stage fails, it retains the original valid proposal rather than preventing the builder from applying it.
+
 ### `GET /projects/:projectId/ai/usage`
 
 Returns AI generation quota and usage totals for an owned project. Authentication is required, and non-owned projects return `404`.

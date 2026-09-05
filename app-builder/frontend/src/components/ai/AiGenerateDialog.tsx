@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AI_GENERATION_MAX_CORRECTIONS,
   type AiGenerationPlanIssue,
@@ -18,10 +18,13 @@ type Props = {
   isGenerating: boolean
   isQuotaLoading: boolean
   refinementAttempt: number
+  isVisualReviewing: boolean
+  visualReviewRequestId: number | null
   isStale: boolean
   promptMaxLength: number
   onClose: () => void
   onGenerate: (prompt: string) => void
+  onVisualReview: (requestId: number, preview: Blob | null) => void
   onAccept: () => void
 }
 
@@ -36,10 +39,13 @@ export function AiGenerateDialog({
   isGenerating,
   isQuotaLoading,
   refinementAttempt,
+  isVisualReviewing,
+  visualReviewRequestId,
   isStale,
   promptMaxLength,
   onClose,
   onGenerate,
+  onVisualReview,
   onAccept,
 }: Props) {
   const generatedPages = useMemo(
@@ -48,9 +54,11 @@ export function AiGenerateDialog({
   )
   const [previewPageId, setPreviewPageId] = useState<string>('')
   const [prompt, setPrompt] = useState('')
+  const captureRootRef = useRef<HTMLDivElement | null>(null)
+  const handledVisualReviewId = useRef<number | null>(null)
   const previewPage = generatedPages.find((page) => page.id === previewPageId) ?? generatedPages[0]
   const atLimit = quota?.remaining === 0
-  const canGenerate = Boolean(prompt.trim()) && !isGenerating && !atLimit
+  const canGenerate = Boolean(prompt.trim()) && !isGenerating && !isVisualReviewing && !atLimit
 
   useEffect(() => {
     setPreviewPageId(generatedPages[0]?.id ?? '')
@@ -68,6 +76,36 @@ export function AiGenerateDialog({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onClose, open])
+
+  useEffect(() => {
+    if (
+      !proposal
+      || !isVisualReviewing
+      || visualReviewRequestId === null
+      || handledVisualReviewId.current === visualReviewRequestId
+    ) return
+    handledVisualReviewId.current = visualReviewRequestId
+
+    const capture = async () => {
+      try {
+        const { toJpeg } = await import('html-to-image')
+        await document.fonts?.ready
+        await waitForPaint()
+        const phone = captureRootRef.current?.querySelector<HTMLElement>('.phone-frame')
+        if (!phone) throw new Error('Rendered phone preview is unavailable.')
+        const dataUrl = await toJpeg(phone, {
+          quality: 0.82,
+          pixelRatio: 1,
+          cacheBust: true,
+          backgroundColor: '#ffffff',
+        })
+        onVisualReview(visualReviewRequestId, dataUrlToBlob(dataUrl))
+      } catch {
+        onVisualReview(visualReviewRequestId, null)
+      }
+    }
+    void capture()
+  }, [isVisualReviewing, onVisualReview, proposal, visualReviewRequestId])
 
   if (!open) return null
 
@@ -143,16 +181,20 @@ export function AiGenerateDialog({
           </form>
 
           <div aria-live="polite">
-          {isGenerating ? (
+          {isGenerating || isVisualReviewing ? (
             <div className="p-6">
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
                 <div className="text-sm font-semibold text-blue-900">
-                  {refinementAttempt > 0
+                  {isVisualReviewing
+                    ? 'Reviewing the rendered design...'
+                    : refinementAttempt > 0
                     ? `Refining the layout (${refinementAttempt}/${AI_GENERATION_MAX_CORRECTIONS})...`
                     : 'Building a validated proposal...'}
                 </div>
                 <p className="mt-2 text-sm leading-6 text-blue-800">
-                  {refinementAttempt > 0
+                  {isVisualReviewing
+                    ? 'Apptura is inspecting the actual phone preview for hierarchy, spacing, balance, and contrast.'
+                    : refinementAttempt > 0
                     ? 'Apptura sent the compiler diagnostics back for a safer layout without dropping blocks or adding pages.'
                     : 'The model is drafting a plan. Apptura will parse, compile, repair, and validate it before preview.'}
                 </p>
@@ -306,7 +348,7 @@ export function AiGenerateDialog({
                     ))}
                   </div>
                   {previewPage ? (
-                    <div className="pointer-events-none overflow-x-auto rounded-2xl bg-white/55 py-3">
+                    <div ref={captureRootRef} className="pointer-events-none overflow-x-auto rounded-2xl bg-white/55 py-3">
                       <PageRenderer
                         page={previewPage}
                         dataCollections={proposal.project.dataCollections}
@@ -341,7 +383,7 @@ export function AiGenerateDialog({
               type="button"
               className="btn !px-5 !py-2 text-sm"
               onClick={onAccept}
-              disabled={isStale || isGenerating}
+              disabled={isStale || isGenerating || isVisualReviewing}
             >
               Apply proposal
             </button>
@@ -350,6 +392,21 @@ export function AiGenerateDialog({
       </section>
     </div>
   )
+}
+
+function waitForPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  })
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, encoded] = dataUrl.split(',', 2)
+  const mimeType = header.match(/^data:([^;]+);base64$/)?.[1] ?? 'image/jpeg'
+  const bytes = atob(encoded)
+  const buffer = new Uint8Array(bytes.length)
+  for (let index = 0; index < bytes.length; index += 1) buffer[index] = bytes.charCodeAt(index)
+  return new Blob([buffer], { type: mimeType })
 }
 
 function QuotaStatus({
