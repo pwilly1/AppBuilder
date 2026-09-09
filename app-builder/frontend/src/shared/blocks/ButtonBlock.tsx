@@ -1,3 +1,4 @@
+import { blockFontCss } from '../schema/fonts'
 import { useState } from 'react'
 import type { BlockAction } from '../schema/types'
 import { isActionConfigured } from '../actions/blockActions'
@@ -8,6 +9,7 @@ import { useFormRuntime } from './formRuntime'
 type ButtonStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 export function ButtonBlock({
+  fontFamily,
   blockId,
   projectId,
   previewMode,
@@ -26,6 +28,7 @@ export function ButtonBlock({
   textColor = '#ffffff',
   contentScale = 1,
 }: {
+  fontFamily?: string
   blockId?: string
   projectId?: string
   previewMode?: boolean
@@ -96,6 +99,7 @@ export function ButtonBlock({
   return (
     <div
       style={{
+        fontFamily: blockFontCss(fontFamily),
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',

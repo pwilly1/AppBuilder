@@ -65,12 +65,12 @@ fun TextView(
                 .fillMaxSize()
                 .padding(scaledPadding.dp),
         ) {
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = initialValue,
                 color = textColor,
                 fontSize = previewSp(scaledFontSize),
                 lineHeight = previewSp(scaledFontSize * 1.45f),
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
             )
         }
         return
@@ -104,7 +104,7 @@ fun TextView(
     ) {
         if (showFieldLabel && fieldLabel.isNotBlank()) {
             val labelSize = (scaledFontSize - 2f * contentScale).coerceAtLeast(8f)
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = fieldLabel,
                 color = labelColor,
                 fontSize = previewSp(labelSize),
@@ -112,7 +112,7 @@ fun TextView(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
                 modifier = Modifier.padding(bottom = (6f * contentScale).dp),
             )
         }
@@ -136,7 +136,7 @@ fun TextView(
                 modifier = fieldModifier,
                 contentAlignment = if (multiline) Alignment.TopStart else Alignment.CenterStart,
             ) {
-                Text(
+                Text(fontFamily = blockFontFamily(block),
                     text = if (inputType == "password" && value.isNotBlank()) {
                         "\u2022".repeat(value.length)
                     } else {
@@ -147,7 +147,7 @@ fun TextView(
                     lineHeight = previewSp(scaledFontSize * 1.45f),
                     maxLines = if (multiline) Int.MAX_VALUE else 1,
                     overflow = if (multiline) TextOverflow.Clip else TextOverflow.Ellipsis,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
                 )
             }
             return@Column
@@ -165,7 +165,7 @@ fun TextView(
                 VisualTransformation.None
             },
             cursorBrush = SolidColor(textColor),
-            textStyle = TextStyle(
+            textStyle = TextStyle(fontFamily = blockFontFamily(block),
                 color = textColor,
                 fontSize = previewSp(scaledFontSize),
                 lineHeight = previewSp(scaledFontSize * 1.45f),
@@ -177,14 +177,14 @@ fun TextView(
                     contentAlignment = if (multiline) Alignment.TopStart else Alignment.CenterStart,
                 ) {
                     if (value.isBlank()) {
-                        Text(
+                        Text(fontFamily = blockFontFamily(block),
                             text = placeholder,
                             color = placeholderColor,
                             fontSize = previewSp(scaledFontSize),
                             lineHeight = previewSp(scaledFontSize * 1.45f),
                             maxLines = if (multiline) Int.MAX_VALUE else 1,
                             overflow = if (multiline) TextOverflow.Clip else TextOverflow.Ellipsis,
-                            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
                         )
                     }
                     innerTextField()

@@ -1,7 +1,9 @@
+import { blockFontCss } from '../schema/fonts'
 import { useEffect } from 'react'
 import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 export function ToggleBlock({
+  fontFamily,
   blockId,
   label = 'Toggle',
   fieldKey = '',
@@ -13,6 +15,7 @@ export function ToggleBlock({
   inactiveColor = '#cbd5e1',
   knobColor = '#ffffff',
 }: {
+  fontFamily?: string
   blockId?: string
   label?: string
   fieldKey?: string
@@ -46,6 +49,7 @@ export function ToggleBlock({
       aria-pressed={currentChecked}
       onClick={() => formRuntime?.setValue(resolvedFieldKey, !currentChecked, blockId)}
       style={{
+        fontFamily: blockFontCss(fontFamily),
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'flex-start',

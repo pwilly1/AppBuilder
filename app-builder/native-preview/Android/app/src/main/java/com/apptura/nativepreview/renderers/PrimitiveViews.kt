@@ -1,4 +1,4 @@
-﻿package com.apptura.nativepreview.renderers
+package com.apptura.nativepreview.renderers
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,7 +50,7 @@ fun BadgeView(block: Block) {
                 .border(1.dp, borderColor, RoundedCornerShape(borderRadius.dp))
                 .padding(horizontal = paddingX.dp, vertical = paddingY.dp)
         ) {
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = text.ifBlank { "Badge" },
                 fontSize = previewSp(fontSize),
                 lineHeight = previewSp(fontSize * 1.15f),
@@ -58,7 +58,7 @@ fun BadgeView(block: Block) {
                 color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
             )
         }
     }
@@ -101,13 +101,13 @@ fun IconView(
             },
         contentAlignment = Alignment.Center
     ) {
-        Text(
+        Text(fontFamily = blockFontFamily(block),
             text = icon,
             fontSize = previewSp(fontSize),
             lineHeight = previewSp(fontSize),
             fontWeight = FontWeight.Bold,
             color = color,
-            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+            style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
         )
     }
 }
@@ -149,24 +149,24 @@ fun CheckboxView(block: Block, formRuntime: FormRuntimeState? = null) {
             contentAlignment = Alignment.Center
         ) {
             if (checked) {
-                Text(
+                Text(fontFamily = blockFontFamily(block),
                     text = "✓",
                     fontSize = previewSp(fontSize),
                     lineHeight = previewSp(fontSize),
                     fontWeight = FontWeight.Bold,
                     color = checkColor,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                    style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
                 )
             }
         }
-        Text(
+        Text(fontFamily = blockFontFamily(block),
             text = label.ifBlank { "Checkbox" },
             fontSize = previewSp(fontSize),
             lineHeight = previewSp(fontSize * 1.2f),
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+            style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
         )
     }
 }
@@ -219,14 +219,14 @@ fun ToggleView(block: Block, formRuntime: FormRuntimeState? = null) {
                         .background(knobColor)
                 )
             }
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = label.ifBlank { "Toggle" },
                 fontSize = previewSp(fontSize),
                 lineHeight = previewSp(fontSize * 1.2f),
                 color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
             )
         }
     }
@@ -248,7 +248,7 @@ fun ProgressBarView(block: Block) {
     ) {
         if (showLabel) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(
+                Text(fontFamily = blockFontFamily(block),
                     text = label.ifBlank { "Progress" },
                     fontSize = previewSp(12f),
                     lineHeight = previewSp(13.2f),
@@ -257,15 +257,15 @@ fun ProgressBarView(block: Block) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                    style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
                 )
-                Text(
+                Text(fontFamily = blockFontFamily(block),
                     text = "${value.toInt()}%",
                     fontSize = previewSp(12f),
                     lineHeight = previewSp(13.2f),
                     fontWeight = FontWeight.Bold,
                     color = textColor,
-                    style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                    style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
                 )
             }
             Box(modifier = Modifier.height(6.dp))

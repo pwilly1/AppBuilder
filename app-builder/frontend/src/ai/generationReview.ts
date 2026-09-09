@@ -3,10 +3,10 @@ import type { Page } from '../shared/schema/types'
 
 // Copy only presentation values supported by the AI contract; keep semantic keys and behavior.
 const PRESENTATION_KEYS: Record<AiBlockPlan['type'], readonly string[]> = {
-  hero: ['headlineSize', 'contentPadding'],
-  text: ['fontSize', 'contentPadding', 'textColor', 'backgroundColor', 'placeholderColor',
+  hero: ['fontFamily', 'headlineSize', 'contentPadding'],
+  text: ['fontFamily', 'fontSize', 'contentPadding', 'textColor', 'backgroundColor', 'placeholderColor',
     'borderColor', 'borderWidth', 'borderRadius'],
-  button: ['fontSize', 'buttonPaddingX', 'buttonPaddingY', 'backgroundColor', 'textColor', 'borderRadius'],
+  button: ['fontFamily', 'fontSize', 'buttonPaddingX', 'buttonPaddingY', 'backgroundColor', 'textColor', 'borderRadius'],
   repeater: ['itemRowSpan', 'gapRows', 'backgroundColor', 'borderColor', 'borderWidth', 'borderRadius', 'opacity'],
 }
 

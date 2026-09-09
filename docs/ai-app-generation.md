@@ -392,6 +392,13 @@ The first implementation does not use interactive model tool calling. The fronte
 
 ### Rendered Visual Review
 
+Generated Hero, Text (including fields), and Button blocks support optional `content.fontFamily`:
+`default`, `lato`, `lusitana`, or `spaceMono`. The provider schema and parser restrict generation
+to these bundled families. Fonts survive compilation and the rendered-review snapshot;
+visual review can adjust them, while compiler-error corrections preserve the chosen family.
+Monospace text receives a wider sizing estimate. This is an estimate, not pixel-perfect font
+measurement; the rendered screenshot remains important for checking actual text fit.
+
 After a plan compiles successfully, the editor renders the isolated proposal with the real `PageRenderer` and captures only the generated phone preview as a bounded JPEG. It sends that image and the validated plan to the authenticated visual-review endpoint. The model can inspect the actual hierarchy, spacing, balance, density, and contrast instead of reasoning from grid coordinates alone.
 
 Visual review is intentionally narrower than generation. The backend preserves the exact pages, collections, blocks, block types, parents, text, labels, actions, bindings, access rules, and data behavior. The reviewed plan may change only presentation fields such as grid placement, render alignment, visual roles and sections, page palette, typography sizes, padding, colors, borders, corners, and repeated-item spacing.

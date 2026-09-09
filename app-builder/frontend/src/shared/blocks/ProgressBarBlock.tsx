@@ -1,10 +1,12 @@
-﻿function clampValue(value: unknown): number {
+import { blockFontCss } from '../schema/fonts'
+function clampValue(value: unknown): number {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 0
   return Math.max(0, Math.min(100, parsed))
 }
 
 export function ProgressBarBlock({
+  fontFamily,
   label = 'Progress',
   value = 65,
   showLabel = true,
@@ -13,6 +15,7 @@ export function ProgressBarBlock({
   textColor = '#475569',
   borderRadius = 999,
 }: {
+  fontFamily?: string
   label?: string
   value?: number
   showLabel?: boolean
@@ -27,6 +30,7 @@ export function ProgressBarBlock({
     <div
       aria-label="Progress bar block"
       style={{
+        fontFamily: blockFontCss(fontFamily),
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',

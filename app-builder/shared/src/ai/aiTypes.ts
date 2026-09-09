@@ -1,3 +1,4 @@
+import type { AI_GENERATION_FONT_FAMILIES } from './aiCapabilities.js'
 import {
   AI_GENERATION_COLLECTION_ACCESS_PRESETS,
   AI_GENERATION_CORNER_STYLES,
@@ -114,6 +115,7 @@ export type AiHeroBlockPlan = AiBlockPlanBase & {
   type: 'hero'
   content: {
     headline: string
+    fontFamily?: typeof AI_GENERATION_FONT_FAMILIES[number]
     headlineSize?: number
     contentPadding?: number
   }
@@ -124,6 +126,7 @@ export type AiTextBlockPlan = AiBlockPlanBase & {
   type: 'text'
   content: {
     value?: string
+    fontFamily?: typeof AI_GENERATION_FONT_FAMILIES[number]
     fontSize?: number
     contentPadding?: number
     textColor?: string
@@ -150,6 +153,7 @@ export type AiButtonBlockPlan = AiBlockPlanBase & {
     label: string
     dataSourceName?: string
     successMessage?: string
+    fontFamily?: typeof AI_GENERATION_FONT_FAMILIES[number]
     fontSize?: number
     buttonPaddingX?: number
     buttonPaddingY?: number

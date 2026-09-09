@@ -1,6 +1,8 @@
 ﻿// Schema-first types (no React imports)
 
 // © 2025 Preston Willis. All rights reserved.
+import type { BlockTypographyProps } from './fonts';
+
 export type BlockType =
   | 'container'
   | 'form'
@@ -187,7 +189,7 @@ export type Block<Props = Record<string, any>> = {
   id: string;
   type: BlockType;
   parentId?: string;
-  props: Props;
+  props: Props & BlockTypographyProps;
   bindings?: BlockBindings;
   layout?: BlockRuntimeLayout;
   render?: BlockRenderMetadata;

@@ -369,11 +369,11 @@ export function getGeneratedContentMinimumSpan(
       2,
       6,
       ownerColumnCount,
-      0.58,
+      (block.props.fontFamily === 'spaceMono' ? 0.65 : 0.58),
     )
     const layoutCols = Math.min(ownerColumnCount, Math.max(proposed.colSpan, cols))
     const availableWidth = Math.max(1, layoutCols * GENERATION_COLUMN_WIDTH - contentPadding * 2)
-    const lineCount = estimateWrappedLineCount(text, availableWidth, fontSize, 0.58)
+    const lineCount = estimateWrappedLineCount(text, availableWidth, fontSize, (block.props.fontFamily === 'spaceMono' ? 0.65 : 0.58))
     const contentHeight = contentPadding * 2 + lineCount * fontSize * 1.15 + CONTENT_HEIGHT_TOLERANCE
     return { cols, rows: Math.max(2, Math.ceil(contentHeight / GRID_ROW_HEIGHT)) }
   }
@@ -389,7 +389,7 @@ export function getGeneratedContentMinimumSpan(
       const showFieldLabel = booleanProp(block, 'showFieldLabel', false)
       const displayText = [showFieldLabel ? fieldLabel : '', value || placeholder]
         .sort((left, right) => right.length - left.length)[0] || 'Text field'
-      const textWidth = estimateUnwrappedTextWidth(displayText, fontSize, 0.54)
+      const textWidth = estimateUnwrappedTextWidth(displayText, fontSize, (block.props.fontFamily === 'spaceMono' ? 0.65 : 0.54))
       const width = contentPadding * 2 + 20 + textWidth
       const cols = clampInteger(Math.ceil(width / GENERATION_COLUMN_WIDTH), 6, ownerColumnCount)
       const multiline = stringProp(block, 'textInputMode', 'singleLine') === 'multiline'
@@ -399,7 +399,7 @@ export function getGeneratedContentMinimumSpan(
             value || placeholder,
             Math.max(1, cols * GENERATION_COLUMN_WIDTH - contentPadding * 2 - 20),
             fontSize,
-            0.54,
+            (block.props.fontFamily === 'spaceMono' ? 0.65 : 0.54),
           )
         : 1
       const contentHeight = contentPadding * 2
@@ -421,11 +421,11 @@ export function getGeneratedContentMinimumSpan(
       3,
       4,
       ownerColumnCount,
-      0.54,
+      (block.props.fontFamily === 'spaceMono' ? 0.65 : 0.54),
     )
     const layoutCols = Math.min(ownerColumnCount, Math.max(proposed.colSpan, cols))
     const availableWidth = Math.max(1, layoutCols * GENERATION_COLUMN_WIDTH - contentPadding * 2)
-    const lineCount = estimateWrappedLineCount(text, availableWidth, fontSize, 0.54)
+    const lineCount = estimateWrappedLineCount(text, availableWidth, fontSize, (block.props.fontFamily === 'spaceMono' ? 0.65 : 0.54))
     const contentHeight = contentPadding * 2 + lineCount * fontSize * 1.45 + CONTENT_HEIGHT_TOLERANCE
     return { cols, rows: Math.max(1, Math.ceil(contentHeight / GRID_ROW_HEIGHT)) }
   }
@@ -438,7 +438,7 @@ export function getGeneratedContentMinimumSpan(
     const buttonPaddingY = numberProp(block, 'buttonPaddingY', 10, 0)
     const width = contentPadding * 2
       + buttonPaddingX * 2
-      + estimateUnwrappedTextWidth(label, fontSize, 0.58)
+      + estimateUnwrappedTextWidth(label, fontSize, (block.props.fontFamily === 'spaceMono' ? 0.65 : 0.58))
       + CONTENT_HEIGHT_TOLERANCE
     const height = contentPadding * 2
       + buttonPaddingY * 2

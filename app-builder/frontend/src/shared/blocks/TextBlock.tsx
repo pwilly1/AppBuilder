@@ -1,7 +1,9 @@
+import { blockFontCss } from '../schema/fonts'
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 type TextBlockProps = {
+  fontFamily?: string
   blockId?: string
   previewMode?: boolean
   value?: string
@@ -26,6 +28,7 @@ type TextBlockProps = {
 }
 
 export function TextBlock({
+  fontFamily,
   blockId,
   previewMode,
   value = '',
@@ -102,7 +105,8 @@ export function TextBlock({
             margin: 0,
             width: '100%',
             minWidth: 0,
-            fontSize: safeFontSize,
+            fontFamily: blockFontCss(fontFamily),
+    fontSize: safeFontSize,
             lineHeight: 1.45,
             color: labelColor || textColor,
             whiteSpace: 'pre-wrap',
@@ -127,6 +131,7 @@ export function TextBlock({
     backgroundColor,
     color: textColor,
     font: 'inherit',
+    fontFamily: blockFontCss(fontFamily),
     fontSize: safeFontSize,
     lineHeight: 1.45,
     padding: `${8 * safeScale}px ${10 * safeScale}px`,
@@ -154,6 +159,7 @@ export function TextBlock({
           style={{
             flex: '0 0 auto',
             color: textColor,
+            fontFamily: blockFontCss(fontFamily),
             fontSize: Math.max(8, safeFontSize - 2 * safeScale),
             fontWeight: 600,
             lineHeight: 1.2,

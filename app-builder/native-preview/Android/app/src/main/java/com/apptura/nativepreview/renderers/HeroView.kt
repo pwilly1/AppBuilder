@@ -30,22 +30,22 @@ fun HeroView(block: Block, runtimeContext: RuntimeContext = RuntimeContext()) {
 
     Column(modifier = Modifier.fillMaxWidth().padding((contentPadding.toFloat() * contentScale).dp)) {
         val scaledHeadlineSize = headlineSize.toFloat() * contentScale
-        Text(
+        Text(fontFamily = blockFontFamily(block),
             text = headline,
             color = textColor,
             fontSize = previewSp(scaledHeadlineSize),
             lineHeight = previewSp(scaledHeadlineSize * 1.15f),
             fontWeight = FontWeight.Bold,
-            style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+            style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
         )
         if (subhead.isNotEmpty()) {
             val scaledSubheadSize = 18f * contentScale
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = subhead,
                 color = textColor,
                 fontSize = previewSp(scaledSubheadSize),
                 lineHeight = previewSp(scaledSubheadSize * 1.45f),
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
             )
         }
     }

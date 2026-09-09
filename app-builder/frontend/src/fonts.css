@@ -1,0 +1,7 @@
+/* Identical regular/bold TTFs are bundled in Android res/font. See public/fonts for licenses. */
+@font-face { font-family: 'Apptura Lato'; src: url('/fonts/Lato-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Apptura Lato'; src: url('/fonts/Lato-Bold.ttf') format('truetype'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'Apptura Lusitana'; src: url('/fonts/Lusitana-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Apptura Lusitana'; src: url('/fonts/Lusitana-Bold.ttf') format('truetype'); font-weight: 700; font-display: block; }
+@font-face { font-family: 'Apptura Space Mono'; src: url('/fonts/SpaceMono-Regular.ttf') format('truetype'); font-weight: 400; font-display: block; }
+@font-face { font-family: 'Apptura Space Mono'; src: url('/fonts/SpaceMono-Bold.ttf') format('truetype'); font-weight: 700; font-display: block; }

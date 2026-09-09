@@ -780,6 +780,8 @@ export function DraggableBlock({
         <div
           ref={contentRef}
           data-editor-block-content={block.id}
+          data-grid-metrics={JSON.stringify(gridMetrics)}
+          data-owner-rows={Math.floor((containerRef.current?.clientHeight || 0) / ((gridMetrics.rowHeight ?? GRID_ROW_HEIGHT) + (gridMetrics.gap ?? 0))) || undefined}
           style={{
             width: contentWidth ?? 'max-content',
             maxWidth: contentWidth,

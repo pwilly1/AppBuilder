@@ -77,6 +77,7 @@ function mergeVisualBlock(
       grid: { ...candidate.grid },
       ...(candidate.render ? { render: { ...candidate.render } } : {}),
       content: mergeVisualFields(previous.content, candidate.content, [
+        'fontFamily',
         'headlineSize',
         'contentPadding',
       ]),
@@ -89,6 +90,7 @@ function mergeVisualBlock(
       grid: { ...candidate.grid },
       ...(candidate.render ? { render: { ...candidate.render } } : {}),
       content: mergeVisualFields(previous.content, candidate.content, [
+        'fontFamily',
         'fontSize',
         'contentPadding',
         'textColor',
@@ -107,6 +109,7 @@ function mergeVisualBlock(
       grid: { ...candidate.grid },
       ...(candidate.render ? { render: { ...candidate.render } } : {}),
       content: mergeVisualFields(previous.content, candidate.content, [
+        'fontFamily',
         'fontSize',
         'buttonPaddingX',
         'buttonPaddingY',

@@ -1,3 +1,4 @@
+export const AI_GENERATION_FONT_FAMILIES = ['default', 'lato', 'lusitana', 'spaceMono'] as const
 export const APP_GENERATION_PLAN_VERSION = 1
 
 export const AI_GENERATION_SUPPORTED_SCOPES = ['page'] as const
@@ -78,5 +79,6 @@ export const AI_GENERATION_CAPABILITIES = {
   sectionPatterns: AI_GENERATION_SECTION_PATTERNS,
   cornerStyles: AI_GENERATION_CORNER_STYLES,
   densities: AI_GENERATION_DENSITIES,
+  fontFamilies: AI_GENERATION_FONT_FAMILIES,
   limits: AI_GENERATION_LIMITS,
 } as const

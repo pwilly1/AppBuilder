@@ -9,6 +9,7 @@ import type {
   BlockRuntimeLayout,
 } from './types'
 import { DEFAULT_REPEATER_PROPS } from './repeater'
+import { normalizeBlockFont, supportsBlockFont } from './fonts'
 
 export type BlockRegistryEntry = {
   displayName: string
@@ -373,6 +374,7 @@ export function createBlock<T extends BlockType = BlockType>(type: T, overrides:
   const def = BlockRegistry[type]
   const blockId = crypto.randomUUID()
   const props = { ...(def?.defaultProps || {}), ...(overrides || {}) }
+  if (supportsBlockFont(type)) props.fontFamily = normalizeBlockFont(props.fontFamily)
   return {
     id: blockId,
     type,

@@ -215,7 +215,7 @@ fun ButtonView(
                 contentColor = textColor,
             ),
         ) {
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = if (status == ButtonStatus.SUBMITTING) {
                     when (action) {
                         is BlockAction.SignUpAppUser -> "Creating account..."
@@ -230,11 +230,11 @@ fun ButtonView(
                 },
                 fontSize = previewSp(scaledFontSize),
                 lineHeight = previewSp(scaledFontSize * 1.2f),
-                style = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
             )
         }
         if (showsStatus && status == ButtonStatus.SUCCESS) {
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = when (action) {
                     is BlockAction.SignUpAppUser -> "Account created."
                     is BlockAction.LoginAppUser -> "Signed in."
@@ -253,7 +253,7 @@ fun ButtonView(
             )
         }
         if (showsStatus && status == ButtonStatus.ERROR) {
-            Text(
+            Text(fontFamily = blockFontFamily(block),
                 text = errorMessage,
                 fontSize = previewSp(12f),
                 color = Color(0xFFDC2626),

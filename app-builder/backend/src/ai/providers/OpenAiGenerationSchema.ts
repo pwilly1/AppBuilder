@@ -1,4 +1,5 @@
 import {
+  AI_GENERATION_FONT_FAMILIES,
   AI_GENERATION_COLLECTION_ACCESS_PRESETS,
   AI_GENERATION_CORNER_STYLES,
   AI_GENERATION_DENSITIES,
@@ -63,12 +64,14 @@ const submitDataAction = strictObject({
 
 const heroContent = strictObject({
   headline: stringSchema({ maxLength: 240, minLength: 1 }),
+  fontFamily: nullable(enumSchema([...AI_GENERATION_FONT_FAMILIES])),
   headlineSize: nullable(numberSchema(8, 96)),
   contentPadding: nullable(numberSchema(0, 80)),
 });
 
 const textContent = strictObject({
   value: nullable(stringSchema({ maxLength: 600 })),
+  fontFamily: nullable(enumSchema([...AI_GENERATION_FONT_FAMILIES])),
   fontSize: nullable(numberSchema(8, 96)),
   contentPadding: nullable(numberSchema(0, 80)),
   textColor: nullable(ref('color')),
@@ -91,6 +94,7 @@ const buttonContent = strictObject({
   label: stringSchema({ maxLength: 100, minLength: 1 }),
   dataSourceName: nullable(stringSchema({ maxLength: 80 })),
   successMessage: nullable(stringSchema({ maxLength: 160 })),
+  fontFamily: nullable(enumSchema([...AI_GENERATION_FONT_FAMILIES])),
   fontSize: nullable(numberSchema(8, 72)),
   buttonPaddingX: nullable(numberSchema(0, 80)),
   buttonPaddingY: nullable(numberSchema(0, 80)),

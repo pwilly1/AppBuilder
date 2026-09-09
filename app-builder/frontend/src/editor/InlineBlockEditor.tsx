@@ -1,3 +1,4 @@
+import { blockFontCss } from '../shared/schema/fonts'
 import { useEffect, useRef, useState, type FocusEventHandler } from 'react'
 import type { Block } from '../shared/schema/types'
 import { getHeroHeadlineStyle, getHeroRootStyle } from '../shared/blocks/Hero'
@@ -156,7 +157,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
             marginRight: -editWidthCompensationPx,
             padding: 0,
             boxSizing: 'border-box',
-            fontFamily: 'inherit',
+            fontFamily: blockFontCss(block.props.fontFamily),
             color: String(draft.textColor ?? '#0f172a'),
             fontSize: fontSize * contentScale,
             lineHeight: 1.45,
@@ -186,7 +187,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
       <div
         ref={heroEditorRef}
         className="absolute inset-0 z-[120] rounded-[1rem]"
-        style={heroRootStyle}
+        style={{ ...heroRootStyle, fontFamily: blockFontCss(block.props.fontFamily) }}
         onPointerDown={(event) => event.stopPropagation()}
         onBlur={handleOverlayBlur}
       >
@@ -280,7 +281,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
               margin: 0,
               padding: 0,
               boxSizing: 'border-box',
-              fontFamily: 'inherit',
+              fontFamily: blockFontCss(block.props.fontFamily),
               color: String(draft.textColor ?? '#ffffff'),
               fontSize: scaledFontSize,
               minWidth: 0,

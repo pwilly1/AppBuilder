@@ -1,5 +1,6 @@
 import {
   APP_GENERATION_PLAN_VERSION,
+  AI_GENERATION_FONT_FAMILIES,
   AI_GENERATION_COLLECTION_ACCESS_PRESETS,
   AI_GENERATION_CORNER_STYLES,
   AI_GENERATION_DENSITIES,
@@ -350,10 +351,11 @@ function parseHeroBlock(
   issues: AiGenerationPlanIssue[],
 ): AiHeroBlockPlan | null {
   rejectPresentKeys(object, path, ['collectionKey', 'valueBinding', 'action'], issues)
-  const content = readObject(object.content, `${path}.content`, ['headline', 'headlineSize', 'contentPadding'], issues)
+  const content = readObject(object.content, `${path}.content`, ['headline', 'headlineSize', 'contentPadding', 'fontFamily'], issues)
   if (!content) return null
 
   const headline = readRequiredString(content.headline, `${path}.content.headline`, issues, 240)
+  const fontFamily = readOptionalEnum(content.fontFamily, `${path}.content.fontFamily`, AI_GENERATION_FONT_FAMILIES, issues)
   const headlineSize = readOptionalNumber(content.headlineSize, `${path}.content.headlineSize`, issues, 8, 96)
   const contentPadding = readOptionalNumber(content.contentPadding, `${path}.content.contentPadding`, issues, 0, 80)
   const headlineBinding = object.headlineBinding === undefined
@@ -365,6 +367,7 @@ function parseHeroBlock(
     type: 'hero',
     content: {
       headline,
+      ...(fontFamily === undefined ? {} : { fontFamily }),
       ...(headlineSize === undefined ? {} : { headlineSize }),
       ...(contentPadding === undefined ? {} : { contentPadding }),
     },
@@ -384,6 +387,7 @@ function parseTextBlock(
     `${path}.content`,
     [
       'value',
+      'fontFamily',
       'fontSize',
       'contentPadding',
       'textColor',
@@ -406,6 +410,7 @@ function parseTextBlock(
   if (!content) return null
 
   const value = readOptionalString(content.value, `${path}.content.value`, issues, 600)
+  const fontFamily = readOptionalEnum(content.fontFamily, `${path}.content.fontFamily`, AI_GENERATION_FONT_FAMILIES, issues)
   const fontSize = readOptionalNumber(content.fontSize, `${path}.content.fontSize`, issues, 8, 96)
   const contentPadding = readOptionalNumber(content.contentPadding, `${path}.content.contentPadding`, issues, 0, 80)
   const textColor = readOptionalColor(content.textColor, `${path}.content.textColor`, issues)
@@ -443,6 +448,7 @@ function parseTextBlock(
     type: 'text',
     content: compactObject({
       value,
+      fontFamily,
       fontSize,
       contentPadding,
       textColor,
@@ -478,6 +484,7 @@ function parseButtonBlock(
       'label',
       'dataSourceName',
       'successMessage',
+      'fontFamily',
       'fontSize',
       'buttonPaddingX',
       'buttonPaddingY',
@@ -492,6 +499,7 @@ function parseButtonBlock(
   const label = readRequiredString(content.label, `${path}.content.label`, issues, 100)
   const dataSourceName = readOptionalString(content.dataSourceName, `${path}.content.dataSourceName`, issues, 80)
   const successMessage = readOptionalString(content.successMessage, `${path}.content.successMessage`, issues, 160)
+  const fontFamily = readOptionalEnum(content.fontFamily, `${path}.content.fontFamily`, AI_GENERATION_FONT_FAMILIES, issues)
   const fontSize = readOptionalNumber(content.fontSize, `${path}.content.fontSize`, issues, 8, 72)
   const buttonPaddingX = readOptionalNumber(content.buttonPaddingX, `${path}.content.buttonPaddingX`, issues, 0, 80)
   const buttonPaddingY = readOptionalNumber(content.buttonPaddingY, `${path}.content.buttonPaddingY`, issues, 0, 80)
@@ -509,6 +517,7 @@ function parseButtonBlock(
       label,
       dataSourceName,
       successMessage,
+      fontFamily,
       fontSize,
       buttonPaddingX,
       buttonPaddingY,

@@ -1,4 +1,6 @@
-﻿export function BadgeBlock({
+import { blockFontCss } from '../schema/fonts'
+export function BadgeBlock({
+  fontFamily,
   text = 'Badge',
   fontSize = 13,
   backgroundColor = '#f7f1e6',
@@ -8,6 +10,7 @@
   paddingX = 12,
   paddingY = 6,
 }: {
+  fontFamily?: string
   text?: string
   fontSize?: number
   backgroundColor?: string
@@ -21,6 +24,7 @@
     <div
       aria-label="Badge block"
       style={{
+        fontFamily: blockFontCss(fontFamily),
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'flex-start',

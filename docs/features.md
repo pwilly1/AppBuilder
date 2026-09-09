@@ -36,6 +36,25 @@ The current editor includes:
 - sticky left workspace rail on desktop with independent scrolling for long block/data lists
 - drag-to-place block palette with click-to-add still available
 
+### Block Fonts
+
+Hero, Text (including editable fields), Button, Badge, Checkbox, Toggle, and Progress Bar
+offer a Font family dropdown in the inspector. Choices are Default, Lato, Lusitana,
+and Space Mono. Default preserves the existing platform font; the other choices use
+identical bundled regular/bold font files on web and Android, with no external font service.
+
+Font selection applies immediately as an undoable edit. The editor loads the font and
+checks the displayed content before applying it. It keeps the current font size and
+grows the box in place only when needed, without moving neighboring blocks or extending
+past the page/container/item bounds. If there is no room, it keeps the old font and
+shows an error. Inline editing uses the selected font too.
+
+The schema stores the optional `props.fontFamily` ID (`default`, `lato`, `lusitana`, or
+`spaceMono`). Missing/unknown IDs render with the default. Custom font uploads and
+app-wide font themes are not included. Identical font files reduce metric differences,
+but browser/Compose rendering and unsupported-character fallback can still differ.
+Fit checks use currently displayed content, not every possible future bound value.
+
 ### Pages
 
 Projects support multiple pages:

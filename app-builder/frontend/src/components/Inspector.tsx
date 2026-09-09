@@ -10,6 +10,8 @@ import { isChildOwnerBlock } from '../shared/schema/blockHierarchy';
 import { normalizeRepeaterProps } from '../shared/schema/repeater';
 import BehaviorBuilder from './BehaviorBuilder';
 import { validateBehaviorDraft } from './behaviorBuilderUtils';
+import { FontFamilyControl } from './FontFamilyControl';
+import { supportsBlockFont } from '../shared/schema/fonts';
 
 type PageLite = { id: string; title?: string; path?: string };
 
@@ -781,6 +783,7 @@ export default function Inspector({
         </div>
       </div>
 
+      {supportsBlockFont(block.type) ? <FontFamilyControl key={block.id} block={block} pageBlocks={pageBlocks} onSave={onSave} /> : null}
       {supportsContentScaling ? (
         <FormSection
           title="Resize behavior"

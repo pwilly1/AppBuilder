@@ -1,7 +1,9 @@
+import { blockFontCss } from '../schema/fonts'
 import { useEffect } from 'react'
 import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 export function CheckboxBlock({
+  fontFamily,
   blockId,
   label = 'Checkbox',
   fieldKey = '',
@@ -13,6 +15,7 @@ export function CheckboxBlock({
   checkColor = '#ffffff',
   borderColor = '#94a3b8',
 }: {
+  fontFamily?: string
   blockId?: string
   label?: string
   fieldKey?: string
@@ -43,6 +46,7 @@ export function CheckboxBlock({
       aria-pressed={currentChecked}
       onClick={() => formRuntime?.setValue(resolvedFieldKey, !currentChecked, blockId)}
       style={{
+        fontFamily: blockFontCss(fontFamily),
         display: 'flex',
         alignItems: 'center',
         gap: 8,

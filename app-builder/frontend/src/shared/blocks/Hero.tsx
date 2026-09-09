@@ -1,3 +1,4 @@
+import { blockFontCss } from '../schema/fonts'
 import type { CSSProperties, ReactNode } from 'react'
 
 export function getHeroRootStyle(contentScale = 1, contentPadding = 16): CSSProperties {
@@ -36,6 +37,7 @@ export function getHeroHeadlineStyle(
 }
 
 export function HeroLayout({
+  fontFamily,
   headline,
   headlineSize,
   contentPadding,
@@ -46,16 +48,18 @@ export function HeroLayout({
   headlineSize?: number
   contentPadding?: number
   textColor?: string
+  fontFamily?: string
   contentScale?: number
 }) {
   return (
-    <div style={getHeroRootStyle(contentScale, contentPadding)}>
+    <div style={{ ...getHeroRootStyle(contentScale, contentPadding), fontFamily: blockFontCss(fontFamily) }}>
       <div style={getHeroHeadlineStyle(headlineSize, contentScale, textColor)}>{headline}</div>
     </div>
   )
 }
 
 export function Hero({
+  fontFamily,
   headline,
   headlineSize,
   contentPadding,
@@ -66,7 +70,8 @@ export function Hero({
   headlineSize?: number
   contentPadding?: number
   textColor?: string
+  fontFamily?: string
   contentScale?: number
 }) {
-  return <HeroLayout headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} textColor={textColor} contentScale={contentScale} />
+  return <HeroLayout fontFamily={fontFamily} headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} textColor={textColor} contentScale={contentScale} />
 }
