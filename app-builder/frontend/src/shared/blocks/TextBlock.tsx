@@ -1,8 +1,9 @@
-import { blockFontCss } from '../schema/fonts'
+import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 type TextBlockProps = {
+  typography?: BlockTypographyProps
   fontFamily?: string
   blockId?: string
   previewMode?: boolean
@@ -28,6 +29,7 @@ type TextBlockProps = {
 }
 
 export function TextBlock({
+  typography = {},
   fontFamily,
   blockId,
   previewMode,
@@ -100,14 +102,15 @@ export function TextBlock({
           overflow: 'hidden',
         }}
       >
-        <p
+        <p data-block-typography
           style={{
             margin: 0,
             width: '100%',
             minWidth: 0,
             fontFamily: blockFontCss(fontFamily),
-    fontSize: safeFontSize,
+            fontSize: safeFontSize,
             lineHeight: 1.45,
+            ...blockTypographyStyle(typography, safeScale),
             color: labelColor || textColor,
             whiteSpace: 'pre-wrap',
             overflowWrap: 'break-word',
@@ -134,6 +137,7 @@ export function TextBlock({
     fontFamily: blockFontCss(fontFamily),
     fontSize: safeFontSize,
     lineHeight: 1.45,
+    ...blockTypographyStyle(typography, safeScale),
     padding: `${8 * safeScale}px ${10 * safeScale}px`,
     outline: 'none',
   }
@@ -155,7 +159,7 @@ export function TextBlock({
       }}
     >
       {showFieldLabel && fieldLabel ? (
-        <div
+        <div data-block-typography
           style={{
             flex: '0 0 auto',
             color: textColor,
@@ -163,6 +167,7 @@ export function TextBlock({
             fontSize: Math.max(8, safeFontSize - 2 * safeScale),
             fontWeight: 600,
             lineHeight: 1.2,
+            ...blockTypographyStyle(typography, safeScale),
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -173,7 +178,7 @@ export function TextBlock({
       ) : null}
 
       {isRuntimeField && isMultiline ? (
-        <textarea
+        <textarea data-block-typography
           className="apptura-editable-text"
           aria-label={fieldLabel || 'Text field'}
           value={currentValue}
@@ -189,7 +194,7 @@ export function TextBlock({
           } as CSSProperties}
         />
       ) : isRuntimeField ? (
-        <input
+        <input data-block-typography
           className="apptura-editable-text"
           aria-label={fieldLabel || 'Text field'}
           type={inputType === 'phone' ? 'tel' : inputType || 'text'}
@@ -203,7 +208,7 @@ export function TextBlock({
           } as CSSProperties}
         />
       ) : (
-        <div
+        <div data-block-typography
           aria-label={fieldLabel || 'Text field'}
           style={{
             ...fieldStyle,

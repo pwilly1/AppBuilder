@@ -1,4 +1,4 @@
-import { blockFontCss } from '../schema/fonts'
+import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import type { CSSProperties, ReactNode } from 'react'
 
 export function getHeroRootStyle(contentScale = 1, contentPadding = 16): CSSProperties {
@@ -37,6 +37,7 @@ export function getHeroHeadlineStyle(
 }
 
 export function HeroLayout({
+  typography = {},
   fontFamily,
   headline,
   headlineSize,
@@ -48,17 +49,19 @@ export function HeroLayout({
   headlineSize?: number
   contentPadding?: number
   textColor?: string
+  typography?: BlockTypographyProps
   fontFamily?: string
   contentScale?: number
 }) {
   return (
     <div style={{ ...getHeroRootStyle(contentScale, contentPadding), fontFamily: blockFontCss(fontFamily) }}>
-      <div style={getHeroHeadlineStyle(headlineSize, contentScale, textColor)}>{headline}</div>
+      <div data-block-typography style={{ ...getHeroHeadlineStyle(headlineSize, contentScale, textColor), ...blockTypographyStyle(typography, contentScale) }}>{headline}</div>
     </div>
   )
 }
 
 export function Hero({
+  typography = {},
   fontFamily,
   headline,
   headlineSize,
@@ -70,8 +73,9 @@ export function Hero({
   headlineSize?: number
   contentPadding?: number
   textColor?: string
+  typography?: BlockTypographyProps
   fontFamily?: string
   contentScale?: number
 }) {
-  return <HeroLayout fontFamily={fontFamily} headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} textColor={textColor} contentScale={contentScale} />
+  return <HeroLayout typography={typography} fontFamily={fontFamily} headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} textColor={textColor} contentScale={contentScale} />
 }

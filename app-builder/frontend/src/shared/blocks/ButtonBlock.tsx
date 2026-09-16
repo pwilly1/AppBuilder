@@ -1,4 +1,4 @@
-import { blockFontCss } from '../schema/fonts'
+import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import { useState } from 'react'
 import type { BlockAction } from '../schema/types'
 import { isActionConfigured } from '../actions/blockActions'
@@ -9,6 +9,7 @@ import { useFormRuntime } from './formRuntime'
 type ButtonStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 export function ButtonBlock({
+  typography = {},
   fontFamily,
   blockId,
   projectId,
@@ -28,6 +29,7 @@ export function ButtonBlock({
   textColor = '#ffffff',
   contentScale = 1,
 }: {
+  typography?: BlockTypographyProps
   fontFamily?: string
   blockId?: string
   projectId?: string
@@ -112,7 +114,7 @@ export function ButtonBlock({
         pointerEvents: previewMode ? 'auto' : 'none',
       }}
     >
-      <button
+      <button data-block-typography
         type="button"
         aria-disabled={!canRun}
         onClick={() => void runAction()}
@@ -125,6 +127,7 @@ export function ButtonBlock({
           fontSize: Math.max(8, Number(fontSize) || 14) * safeScale,
           fontWeight: 700,
           lineHeight: 1.1,
+          ...blockTypographyStyle(typography, safeScale),
           padding: `${Math.max(0, Number(buttonPaddingY) || 0) * safeScale}px ${Math.max(0, Number(buttonPaddingX) || 0) * safeScale}px`,
           maxWidth: '100%',
           overflow: 'hidden',

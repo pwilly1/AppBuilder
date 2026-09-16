@@ -1,5 +1,6 @@
-import { blockFontCss } from '../schema/fonts'
+import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 export function BadgeBlock({
+  typography = {},
   fontFamily,
   text = 'Badge',
   fontSize = 13,
@@ -10,6 +11,7 @@ export function BadgeBlock({
   paddingX = 12,
   paddingY = 6,
 }: {
+  typography?: BlockTypographyProps
   fontFamily?: string
   text?: string
   fontSize?: number
@@ -35,7 +37,7 @@ export function BadgeBlock({
         pointerEvents: 'none',
       }}
     >
-      <span
+      <span data-block-typography
         style={{
           display: 'inline-flex',
           maxWidth: '100%',
@@ -47,6 +49,7 @@ export function BadgeBlock({
           fontSize: Math.max(8, Number(fontSize) || 13),
           fontWeight: 700,
           lineHeight: 1.15,
+          ...blockTypographyStyle(typography),
           padding: `${Math.max(0, Number(paddingY) || 0)}px ${Math.max(0, Number(paddingX) || 0)}px`,
           whiteSpace: 'nowrap',
           overflow: 'hidden',

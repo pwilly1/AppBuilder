@@ -53,12 +53,12 @@ fun BadgeView(block: Block) {
             Text(fontFamily = blockFontFamily(block),
                 text = text.ifBlank { "Badge" },
                 fontSize = previewSp(fontSize),
-                lineHeight = previewSp(fontSize * 1.15f),
-                fontWeight = FontWeight.Bold,
+                lineHeight = previewSp(fontSize * blockLineHeight(block, 1.15f)),
+                fontWeight = blockTextWeight(block, FontWeight.Bold),
                 color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
+                style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), 1f)
             )
         }
     }
@@ -161,12 +161,13 @@ fun CheckboxView(block: Block, formRuntime: FormRuntimeState? = null) {
         }
         Text(fontFamily = blockFontFamily(block),
             text = label.ifBlank { "Checkbox" },
+            modifier = Modifier.weight(1f),
             fontSize = previewSp(fontSize),
-            lineHeight = previewSp(fontSize * 1.2f),
+            lineHeight = previewSp(fontSize * blockLineHeight(block, 1.2f)),
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
+            style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), 1f)
         )
     }
 }
@@ -201,6 +202,7 @@ fun ToggleView(block: Block, formRuntime: FormRuntimeState? = null) {
         contentAlignment = Alignment.TopStart,
     ) {
         Row(
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -221,12 +223,13 @@ fun ToggleView(block: Block, formRuntime: FormRuntimeState? = null) {
             }
             Text(fontFamily = blockFontFamily(block),
                 text = label.ifBlank { "Toggle" },
+                modifier = Modifier.weight(1f),
                 fontSize = previewSp(fontSize),
-                lineHeight = previewSp(fontSize * 1.2f),
+                lineHeight = previewSp(fontSize * blockLineHeight(block, 1.2f)),
                 color = textColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
+                style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), 1f)
             )
         }
     }
@@ -251,21 +254,21 @@ fun ProgressBarView(block: Block) {
                 Text(fontFamily = blockFontFamily(block),
                     text = label.ifBlank { "Progress" },
                     fontSize = previewSp(12f),
-                    lineHeight = previewSp(13.2f),
-                    fontWeight = FontWeight.Bold,
+                    lineHeight = previewSp(12f * blockLineHeight(block, 1.1f)),
+                    fontWeight = blockTextWeight(block, FontWeight.Bold),
                     color = textColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
-                    style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
+                    style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), 1f)
                 )
                 Text(fontFamily = blockFontFamily(block),
                     text = "${value.toInt()}%",
                     fontSize = previewSp(12f),
-                    lineHeight = previewSp(13.2f),
-                    fontWeight = FontWeight.Bold,
+                    lineHeight = previewSp(12f * blockLineHeight(block, 1.1f)),
+                    fontWeight = blockTextWeight(block, FontWeight.Bold),
                     color = textColor,
-                    style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false))
+                    style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), 1f)
                 )
             }
             Box(modifier = Modifier.height(6.dp))

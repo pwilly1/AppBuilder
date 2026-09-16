@@ -1,8 +1,9 @@
-import { blockFontCss } from '../schema/fonts'
+import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import { useEffect } from 'react'
 import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 export function ToggleBlock({
+  typography = {},
   fontFamily,
   blockId,
   label = 'Toggle',
@@ -15,6 +16,7 @@ export function ToggleBlock({
   inactiveColor = '#cbd5e1',
   knobColor = '#ffffff',
 }: {
+  typography?: BlockTypographyProps
   fontFamily?: string
   blockId?: string
   label?: string
@@ -73,6 +75,7 @@ export function ToggleBlock({
           display: 'flex',
           alignItems: 'center',
           gap: 10,
+          width: '100%',
           maxWidth: '100%',
         }}
       >
@@ -100,7 +103,7 @@ export function ToggleBlock({
             }}
           />
         </span>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span data-block-typography style={{ ...blockTypographyStyle(typography), flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {label || 'Toggle'}{required ? ' *' : ''}
         </span>
       </span>

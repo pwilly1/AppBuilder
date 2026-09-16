@@ -229,8 +229,9 @@ fun ButtonView(
                     label
                 },
                 fontSize = previewSp(scaledFontSize),
-                lineHeight = previewSp(scaledFontSize * 1.2f),
-                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                lineHeight = previewSp(scaledFontSize * blockLineHeight(block, 1.1f)),
+                fontWeight = blockTextWeight(block, androidx.compose.ui.text.font.FontWeight.Bold),
+                style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), contentScale),
             )
         }
         if (showsStatus && status == ButtonStatus.SUCCESS) {

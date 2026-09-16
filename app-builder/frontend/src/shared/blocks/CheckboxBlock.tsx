@@ -1,8 +1,9 @@
-import { blockFontCss } from '../schema/fonts'
+import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import { useEffect } from 'react'
 import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 export function CheckboxBlock({
+  typography = {},
   fontFamily,
   blockId,
   label = 'Checkbox',
@@ -15,6 +16,7 @@ export function CheckboxBlock({
   checkColor = '#ffffff',
   borderColor = '#94a3b8',
 }: {
+  typography?: BlockTypographyProps
   fontFamily?: string
   blockId?: string
   label?: string
@@ -83,7 +85,7 @@ export function CheckboxBlock({
       >
         {currentChecked ? '✓' : ''}
       </span>
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <span data-block-typography style={{ ...blockTypographyStyle(typography), flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {label || 'Checkbox'}{required ? ' *' : ''}
       </span>
     </button>

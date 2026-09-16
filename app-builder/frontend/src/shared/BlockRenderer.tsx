@@ -63,5 +63,5 @@ export function BlockRenderer({
   const contentScale = getBlockContentScale(block);
   const action = resolveBlockAction(block);
   const resolvedProps = resolveBlockProps(block, runtimeContext);
-  return Cmp ? <Cmp {...resolvedProps} action={action} blockId={block.id} projectId={projectId} previewMode={previewMode} contentScale={contentScale} runtimeContext={runtimeContext} onNavigate={onNavigate} onSetPageState={onSetPageState}>{children}</Cmp> : null;
+  return Cmp ? <Cmp {...resolvedProps} typography={resolvedProps} action={action} blockId={block.id} projectId={projectId} previewMode={previewMode} contentScale={contentScale} runtimeContext={runtimeContext} onNavigate={onNavigate} onSetPageState={onSetPageState}>{children}</Cmp> : null;
 }

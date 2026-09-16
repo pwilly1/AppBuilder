@@ -36,18 +36,23 @@ The current editor includes:
 - sticky left workspace rail on desktop with independent scrolling for long block/data lists
 - drag-to-place block palette with click-to-add still available
 
-### Block Fonts
+### Block Typography
 
 Hero, Text (including editable fields), Button, Badge, Checkbox, Toggle, and Progress Bar
-offer a Font family dropdown in the inspector. Choices are Default, Lato, Lusitana,
+offer typography controls in the inspector, including bold, italic, underline,
+left/center/right text alignment, line spacing (1-3), and letter spacing (-2 to 10 px).
+These style the text rather than moving the block. Spacing fields apply on blur;
+other controls apply immediately. Choices for font family are Default, Lato, Lusitana,
 and Space Mono. Default preserves the existing platform font; the other choices use
 identical bundled regular/bold font files on web and Android, with no external font service.
 
-Font selection applies immediately as an undoable edit. The editor loads the font and
+Typography changes are undoable edits. The editor loads the font and
 checks the displayed content before applying it. It keeps the current font size and
 grows the box in place only when needed, without moving neighboring blocks or extending
 past the page/container/item bounds. If there is no room, it keeps the old font and
-shows an error. Inline editing uses the selected font too.
+shows an error. Inline editing uses the selected typography too. Existing blocks
+keep their previous defaults until a style is explicitly changed. Web and Android
+read the same optional typography props; italic is synthesized from the bundled fonts.
 
 The schema stores the optional `props.fontFamily` ID (`default`, `lato`, `lusitana`, or
 `spaceMono`). Missing/unknown IDs render with the default. Custom font uploads and

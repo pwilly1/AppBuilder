@@ -1,4 +1,4 @@
-import { blockFontCss } from '../shared/schema/fonts'
+import { blockFontCss, blockTypographyStyle } from '../shared/schema/fonts'
 import { useEffect, useRef, useState, type FocusEventHandler } from 'react'
 import type { Block } from '../shared/schema/types'
 import { getHeroHeadlineStyle, getHeroRootStyle } from '../shared/blocks/Hero'
@@ -161,6 +161,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
             color: String(draft.textColor ?? '#0f172a'),
             fontSize: fontSize * contentScale,
             lineHeight: 1.45,
+            ...blockTypographyStyle(block.props, contentScale),
             width: `calc(100% + ${editWidthCompensationPx}px)`,
             maxWidth: `calc(100% + ${editWidthCompensationPx}px)`,
             whiteSpace: 'pre-wrap',
@@ -206,6 +207,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
           className="outline-none"
           style={{
             ...heroHeadlineStyle,
+            ...blockTypographyStyle(block.props, contentScale),
             background: 'transparent',
             width: `calc(100% + ${editWidthCompensationPx}px)`,
             maxWidth: `calc(100% + ${editWidthCompensationPx}px)`,
@@ -284,6 +286,9 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
               fontFamily: blockFontCss(block.props.fontFamily),
               color: String(draft.textColor ?? '#ffffff'),
               fontSize: scaledFontSize,
+              fontWeight: 700,
+              lineHeight: 1.1,
+              ...blockTypographyStyle(block.props, contentScale),
               minWidth: 0,
               maxWidth: width ? Math.max(1, width - scaledContentPadding * 2 - scaledButtonPaddingX * 2) : undefined,
               whiteSpace: 'nowrap',

@@ -1,4 +1,4 @@
-import { blockFontCss, type BlockFontFamily } from '../shared/schema/fonts'
+import { blockFontCss, blockTypographyStyle, normalizeBlockFont, normalizeTypography, type BlockFontFamily, type BlockTypographyProps } from '../shared/schema/fonts'
 import { getChildOwnerSpan } from '../shared/schema/blockHierarchy'
 import { getBlockContentScale } from '../shared/schema/contentScale'
 import { GRID_COLUMN_COUNT, GRID_DEFAULT_ROW_COUNT, getColumnWidth, type GridMetrics } from '../shared/schema/gridLayout'
@@ -6,11 +6,17 @@ import type { Block, GridPlacement } from '../shared/schema/types'
 import { findFontPlacement } from './fontPlacement'
 
 export async function changeBlockFont(block: Block, pageBlocks: Block[], fontFamily: BlockFontFamily): Promise<Block> {
+  return changeBlockTypography(block, pageBlocks, { fontFamily })
+}
+
+export async function changeBlockTypography(block: Block, pageBlocks: Block[], changes: BlockTypographyProps): Promise<Block> {
+  const props = { ...block.props, ...normalizeTypography(changes), ...(changes.fontFamily === undefined ? {} : { fontFamily: normalizeBlockFont(changes.fontFamily) }) }
+  const fontFamily = normalizeBlockFont(props.fontFamily)
   const source = Array.from(document.querySelectorAll<HTMLElement>('[data-editor-block-content]'))
     .find((node) => node.dataset.editorBlockContent === block.id)
   const grid = block.layout?.grid
   if (!source || !grid || !source.dataset.gridMetrics) {
-    throw new Error('Open this block on the canvas before changing its font.')
+    throw new Error('Open this block on the canvas before changing its text styling.')
   }
   const css = fontFamily === 'default' ? getComputedStyle(document.body).fontFamily : blockFontCss(fontFamily)
   if (fontFamily !== 'default') {
@@ -38,6 +44,12 @@ export async function changeBlockFont(block: Block, pageBlocks: Block[], fontFam
   for (const node of nodes) {
     node.removeAttribute('id')
     if (node.style.fontFamily) node.style.fontFamily = css
+    if (node.hasAttribute('data-block-typography')) {
+      const style = blockTypographyStyle(props, getBlockContentScale(block))
+      Object.assign(node.style, style, {
+        ...(style.letterSpacing === undefined ? {} : { letterSpacing: `${style.letterSpacing}px` }),
+      })
+    }
   }
   // cloneNode does not consistently copy the live value of form controls.
   const originals = source.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input,textarea')
@@ -61,13 +73,13 @@ export async function changeBlockFont(block: Block, pageBlocks: Block[], fontFam
         && (!node.clientHeight || node.scrollHeight <= node.clientHeight + 6),
       )
     })
-    if (!nextGrid) throw new Error('This font needs more room. Move nearby blocks or enlarge the available area, then try again.')
+    if (!nextGrid) throw new Error('This text styling needs more room. Move nearby blocks or enlarge the available area, then try again.')
     const grew = nextGrid.colSpan !== grid.colSpan || nextGrid.rowSpan !== grid.rowSpan
     const scale = getBlockContentScale(block)
     const nextSize = size(nextGrid)
     return {
       ...block,
-      props: { ...block.props, fontFamily },
+      props,
       ...(grew ? {
         layout: {
           ...block.layout, grid: nextGrid,

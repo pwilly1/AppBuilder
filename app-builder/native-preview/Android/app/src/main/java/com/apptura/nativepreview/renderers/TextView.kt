@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,10 +68,11 @@ fun TextView(
         ) {
             Text(fontFamily = blockFontFamily(block),
                 text = initialValue,
+                modifier = Modifier.fillMaxWidth(),
                 color = textColor,
                 fontSize = previewSp(scaledFontSize),
-                lineHeight = previewSp(scaledFontSize * 1.45f),
-                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                lineHeight = previewSp(scaledFontSize * blockLineHeight(block, 1.45f)),
+                style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), contentScale),
             )
         }
         return
@@ -108,12 +110,12 @@ fun TextView(
                 text = fieldLabel,
                 color = labelColor,
                 fontSize = previewSp(labelSize),
-                lineHeight = previewSp(labelSize * 1.2f),
-                fontWeight = FontWeight.SemiBold,
+                lineHeight = previewSp(labelSize * blockLineHeight(block, 1.2f)),
+                fontWeight = blockTextWeight(block, FontWeight.SemiBold),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
-                modifier = Modifier.padding(bottom = (6f * contentScale).dp),
+                style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), contentScale),
+                modifier = Modifier.fillMaxWidth().padding(bottom = (6f * contentScale).dp),
             )
         }
 
@@ -143,11 +145,12 @@ fun TextView(
                         displayValue
                     },
                     color = displayColor,
+                    modifier = Modifier.fillMaxWidth(),
                     fontSize = previewSp(scaledFontSize),
-                    lineHeight = previewSp(scaledFontSize * 1.45f),
+                    lineHeight = previewSp(scaledFontSize * blockLineHeight(block, 1.45f)),
                     maxLines = if (multiline) Int.MAX_VALUE else 1,
                     overflow = if (multiline) TextOverflow.Clip else TextOverflow.Ellipsis,
-                    style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                    style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), contentScale),
                 )
             }
             return@Column
@@ -165,12 +168,12 @@ fun TextView(
                 VisualTransformation.None
             },
             cursorBrush = SolidColor(textColor),
-            textStyle = TextStyle(fontFamily = blockFontFamily(block),
+            textStyle = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block),
                 color = textColor,
                 fontSize = previewSp(scaledFontSize),
-                lineHeight = previewSp(scaledFontSize * 1.45f),
+                lineHeight = previewSp(scaledFontSize * blockLineHeight(block, 1.45f)),
                 platformStyle = PlatformTextStyle(includeFontPadding = false),
-            ),
+            ), contentScale),
             decorationBox = { innerTextField ->
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -179,12 +182,13 @@ fun TextView(
                     if (value.isBlank()) {
                         Text(fontFamily = blockFontFamily(block),
                             text = placeholder,
+                            modifier = Modifier.fillMaxWidth(),
                             color = placeholderColor,
                             fontSize = previewSp(scaledFontSize),
-                            lineHeight = previewSp(scaledFontSize * 1.45f),
+                            lineHeight = previewSp(scaledFontSize * blockLineHeight(block, 1.45f)),
                             maxLines = if (multiline) Int.MAX_VALUE else 1,
                             overflow = if (multiline) TextOverflow.Clip else TextOverflow.Ellipsis,
-                            style = TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)),
+                            style = applyBlockTypography(block, TextStyle(fontFamily = blockFontFamily(block), platformStyle = PlatformTextStyle(includeFontPadding = false)), contentScale),
                         )
                     }
                     innerTextField()

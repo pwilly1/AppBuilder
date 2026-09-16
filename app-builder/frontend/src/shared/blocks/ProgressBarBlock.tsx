@@ -1,4 +1,4 @@
-import { blockFontCss } from '../schema/fonts'
+import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 function clampValue(value: unknown): number {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 0
@@ -6,6 +6,7 @@ function clampValue(value: unknown): number {
 }
 
 export function ProgressBarBlock({
+  typography = {},
   fontFamily,
   label = 'Progress',
   value = 65,
@@ -15,6 +16,7 @@ export function ProgressBarBlock({
   textColor = '#475569',
   borderRadius = 999,
 }: {
+  typography?: BlockTypographyProps
   fontFamily?: string
   label?: string
   value?: number
@@ -43,7 +45,7 @@ export function ProgressBarBlock({
       }}
     >
       {showLabel ? (
-        <div
+        <div data-block-typography
           style={{
             display: 'flex',
             justifyContent: 'space-between',
@@ -52,9 +54,10 @@ export function ProgressBarBlock({
             fontSize: 12,
             fontWeight: 700,
             lineHeight: 1.1,
+            ...blockTypographyStyle(typography),
           }}
         >
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label || 'Progress'}</span>
+          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label || 'Progress'}</span>
           <span>{Math.round(safeValue)}%</span>
         </div>
       ) : null}
