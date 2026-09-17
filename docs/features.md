@@ -36,6 +36,21 @@ The current editor includes:
 - sticky left workspace rail on desktop with independent scrolling for long block/data lists
 - drag-to-place block palette with click-to-add still available
 
+### Text Surfaces and Button Borders
+
+Hero, static Text, and Button blocks have an Appearance inspector section for solid
+or transparent backgrounds, border color/width, corner radius, and padding. Numeric
+settings apply on blur; changes use the same safe-fit check as typography and are
+undoable. If the block cannot grow without a collision, the change is rejected.
+Button inner horizontal/vertical padding remains in Button style; Appearance's
+padding is outside the button. Editable Text retains its existing field style controls.
+
+Static Text surfaces are opt-in (`textSurfaceEnabled`) because older text blocks
+already store background/border values for their optional input mode. They remain
+transparent until enabled. Other styling uses existing shared props, not a second
+style object. Web, inline editing, and Android support these surfaces. Gradients
+and shadows are not included in this pass.
+
 ### Block Typography
 
 Hero, Text (including editable fields), Button, Badge, Checkbox, Toggle, and Progress Bar

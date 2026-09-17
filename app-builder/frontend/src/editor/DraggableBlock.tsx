@@ -215,7 +215,7 @@ export function DraggableBlock({
     const contentNode = contentRef.current
     const contentRoot = contentNode?.firstElementChild as HTMLElement | null
     const resizeContentMinWidth = supportsInlineEdit && !scalesContentWithBox ? measureResizeContentMinWidth(contentRoot) : null
-    const resizeContentMinHeight = block.type === 'button' && !scalesContentWithBox
+    const resizeContentMinHeight = supportsInlineEdit && !scalesContentWithBox
       ? measureResizeContentMinHeight(contentRoot)
       : null
     const contentWidth = Math.ceil(

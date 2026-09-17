@@ -2,6 +2,7 @@
 
 // © 2025 Preston Willis. All rights reserved.
 import type { BlockTypographyProps } from './fonts';
+import type { BlockAppearanceProps } from './blockAppearance';
 
 export type BlockType =
   | 'container'
@@ -189,7 +190,7 @@ export type Block<Props = Record<string, any>> = {
   id: string;
   type: BlockType;
   parentId?: string;
-  props: Props & BlockTypographyProps;
+  props: Props & BlockTypographyProps & BlockAppearanceProps;
   bindings?: BlockBindings;
   layout?: BlockRuntimeLayout;
   render?: BlockRenderMetadata;

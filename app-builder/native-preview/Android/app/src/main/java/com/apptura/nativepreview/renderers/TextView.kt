@@ -53,7 +53,7 @@ fun TextView(
         readTextString(block, "fieldKey", ""),
     )
     val fontSize = readTextFloat(block, "fontSize", 16f).coerceAtLeast(8f)
-    val contentPadding = readTextFloat(block, "contentPadding", 12f).coerceAtLeast(0f)
+    val contentPadding = appearanceNumber(block, "contentPadding", 12f)
     val contentScale = getBlockContentScale(block)
     val scaledFontSize = fontSize * contentScale
     val scaledPadding = contentPadding * contentScale
@@ -64,6 +64,7 @@ fun TextView(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .blockSurface(block, true, contentScale)
                 .padding(scaledPadding.dp),
         ) {
             Text(fontFamily = blockFontFamily(block),

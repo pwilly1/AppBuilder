@@ -4,13 +4,18 @@ import { getBlockContentScale } from '../shared/schema/contentScale'
 import { GRID_COLUMN_COUNT, GRID_DEFAULT_ROW_COUNT, getColumnWidth, type GridMetrics } from '../shared/schema/gridLayout'
 import type { Block, GridPlacement } from '../shared/schema/types'
 import { findFontPlacement } from './fontPlacement'
+import { blockSurfaceStyle, blockPadding, type BlockAppearanceProps } from '../shared/schema/blockAppearance'
 
 export async function changeBlockFont(block: Block, pageBlocks: Block[], fontFamily: BlockFontFamily): Promise<Block> {
   return changeBlockTypography(block, pageBlocks, { fontFamily })
 }
 
 export async function changeBlockTypography(block: Block, pageBlocks: Block[], changes: BlockTypographyProps): Promise<Block> {
-  const props = { ...block.props, ...normalizeTypography(changes), ...(changes.fontFamily === undefined ? {} : { fontFamily: normalizeBlockFont(changes.fontFamily) }) }
+  return changeBlockPresentation(block, pageBlocks, { ...normalizeTypography(changes), ...(changes.fontFamily === undefined ? {} : { fontFamily: normalizeBlockFont(changes.fontFamily) }) })
+}
+
+export async function changeBlockPresentation(block: Block, pageBlocks: Block[], changes: BlockTypographyProps & BlockAppearanceProps): Promise<Block> {
+  const props = { ...block.props, ...changes }
   const fontFamily = normalizeBlockFont(props.fontFamily)
   const source = Array.from(document.querySelectorAll<HTMLElement>('[data-editor-block-content]'))
     .find((node) => node.dataset.editorBlockContent === block.id)
@@ -44,6 +49,14 @@ export async function changeBlockTypography(block: Block, pageBlocks: Block[], c
   for (const node of nodes) {
     node.removeAttribute('id')
     if (node.style.fontFamily) node.style.fontFamily = css
+    if (node.hasAttribute('data-block-surface')) {
+      const surface = blockSurfaceStyle(block.type, props, getBlockContentScale(block))
+      Object.assign(node.style, surface, { borderRadius: `${surface.borderRadius ?? 0}px` })
+      if (block.type === 'text' && props.textSurfaceEnabled !== true) {
+        Object.assign(node.style, { backgroundColor: 'transparent', border: '0px solid transparent' })
+      }
+    }
+    if (node.hasAttribute('data-block-padding')) node.style.padding = `${blockPadding(block.type, props, getBlockContentScale(block))}px`
     if (node.hasAttribute('data-block-typography')) {
       const style = blockTypographyStyle(props, getBlockContentScale(block))
       Object.assign(node.style, style, {

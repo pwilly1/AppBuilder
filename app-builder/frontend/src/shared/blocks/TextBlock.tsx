@@ -1,8 +1,10 @@
+import { blockSurfaceStyle, blockPadding, type BlockAppearanceProps } from '../schema/blockAppearance'
 import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { resolveFieldKey, useFormRuntime } from './formRuntime'
 
 type TextBlockProps = {
+  appearance?: BlockAppearanceProps
   typography?: BlockTypographyProps
   fontFamily?: string
   blockId?: string
@@ -29,6 +31,7 @@ type TextBlockProps = {
 }
 
 export function TextBlock({
+  appearance = {},
   typography = {},
   fontFamily,
   blockId,
@@ -56,7 +59,6 @@ export function TextBlock({
   const formRuntime = useFormRuntime()
   const safeScale = Math.max(0.1, Number(contentScale) || 1)
   const safeFontSize = Math.max(8, Number(fontSize) || 16) * safeScale
-  const safePadding = Math.max(0, Number(contentPadding) || 0) * safeScale
   const safeBorderWidth = Math.max(0, Number(borderWidth) || 0) * safeScale
   const safeRadius = Math.max(0, Number(borderRadius) || 0) * safeScale
   const isMultiline = textInputMode === 'multiline'
@@ -91,14 +93,16 @@ export function TextBlock({
 
   if (!editable) {
     return (
-      <div
+      <div data-block-surface data-block-padding
         style={{
+          ...blockSurfaceStyle('text', appearance, safeScale),
+          height: '100%',
           display: 'flex',
           justifyContent: 'flex-start',
           alignItems: 'flex-start',
           width: '100%',
           boxSizing: 'border-box',
-          padding: safePadding,
+          padding: blockPadding("text", { contentPadding }, safeScale),
           overflow: 'hidden',
         }}
       >
@@ -153,7 +157,7 @@ export function TextBlock({
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
-        padding: safePadding,
+        padding: blockPadding("text", { contentPadding }, safeScale),
         overflow: 'hidden',
         pointerEvents: isRuntimeField ? 'auto' : 'none',
       }}

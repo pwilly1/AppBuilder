@@ -1,4 +1,5 @@
 import { blockFontCss, blockTypographyStyle } from '../shared/schema/fonts'
+import { blockSurfaceStyle, blockPadding, appearanceNumber } from '../shared/schema/blockAppearance'
 import { useEffect, useRef, useState, type FocusEventHandler } from 'react'
 import type { Block } from '../shared/schema/types'
 import { getHeroHeadlineStyle, getHeroRootStyle } from '../shared/blocks/Hero'
@@ -112,14 +113,14 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
 
   if (block.type === 'text') {
     const contentScale = getBlockContentScale(block)
-    const contentPadding = Number(draft.contentPadding ?? 12) || 12
+    const contentPadding = appearanceNumber(draft.contentPadding, 12)
     const fontSize = Number(draft.fontSize ?? 16) || 16
     const editWidthCompensationPx = 4
 
     return (
       <div
         className="absolute inset-0 z-[120] overflow-hidden rounded-[1rem]"
-        style={{ padding: contentPadding * contentScale }}
+        style={{ ...blockSurfaceStyle('text', draft, contentScale), padding: contentPadding * contentScale }}
         onPointerDown={(event) => event.stopPropagation()}
         onBlur={handleOverlayBlur}
       >
@@ -175,7 +176,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
 
   if (block.type === 'hero') {
     const contentScale = getBlockContentScale(block)
-    const contentPadding = Number(lastAcceptedHeroDraftRef.current.contentPadding ?? 16) || 16
+    const contentPadding = appearanceNumber(lastAcceptedHeroDraftRef.current.contentPadding, 16)
     const heroRootStyle = getHeroRootStyle(contentScale, contentPadding)
     const heroHeadlineStyle = getHeroHeadlineStyle(
       Number(lastAcceptedHeroDraftRef.current.headlineSize ?? 28) || 28,
@@ -188,7 +189,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
       <div
         ref={heroEditorRef}
         className="absolute inset-0 z-[120] rounded-[1rem]"
-        style={{ ...heroRootStyle, fontFamily: blockFontCss(block.props.fontFamily) }}
+        style={{ ...heroRootStyle, ...blockSurfaceStyle('hero', draft, contentScale), fontFamily: blockFontCss(block.props.fontFamily) }}
         onPointerDown={(event) => event.stopPropagation()}
         onBlur={handleOverlayBlur}
       >
@@ -220,10 +221,10 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
 
   if (block.type === 'button') {
     const contentScale = getBlockContentScale(block)
-    const contentPadding = Number(draft.contentPadding ?? 12) || 12
-    const buttonPaddingX = Number(draft.buttonPaddingX ?? 14) || 14
-    const buttonPaddingY = Number(draft.buttonPaddingY ?? 10) || 10
-    const borderRadius = Number(draft.borderRadius ?? 10) || 10
+    const contentPadding = blockPadding('button', draft)
+    const buttonPaddingX = appearanceNumber(draft.buttonPaddingX, 14)
+    const buttonPaddingY = appearanceNumber(draft.buttonPaddingY, 10)
+    const borderRadius = appearanceNumber(draft.borderRadius, 10, 999)
     const fontSize = Number(draft.fontSize ?? 14) || 14
     const scaledContentPadding = contentPadding * contentScale
     const scaledButtonPaddingX = buttonPaddingX * contentScale
@@ -242,6 +243,7 @@ export function InlineBlockEditor({ block, width, onCommit, onCancel }: InlineBl
           style={{
             backgroundColor: String(draft.backgroundColor ?? '#2563eb'),
             borderRadius: scaledBorderRadius,
+            ...blockSurfaceStyle('button', draft, contentScale),
             boxSizing: 'border-box',
             maxWidth: '100%',
             minWidth: 0,

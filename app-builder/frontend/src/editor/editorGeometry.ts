@@ -48,12 +48,14 @@ export function measureResizeContentMinHeight(root: HTMLElement | null) {
   const style = window.getComputedStyle(root)
   const paddingTop = Number.parseFloat(style.paddingTop) || 0
   const paddingBottom = Number.parseFloat(style.paddingBottom) || 0
+  const borderTop = Number.parseFloat(style.borderTopWidth) || 0
+  const borderBottom = Number.parseFloat(style.borderBottomWidth) || 0
   const rowGap = Number.parseFloat(style.rowGap || style.gap) || 0
   const childrenHeight = children.reduce(
     (total, child) => total + child.getBoundingClientRect().height,
     0,
   )
-  const height = paddingTop + childrenHeight + rowGap * Math.max(0, children.length - 1) + paddingBottom
+  const height = borderTop + paddingTop + childrenHeight + rowGap * Math.max(0, children.length - 1) + paddingBottom + borderBottom
 
   return height > 0 ? Math.ceil(height) : null
 }

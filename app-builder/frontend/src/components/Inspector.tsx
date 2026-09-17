@@ -11,6 +11,8 @@ import { normalizeRepeaterProps } from '../shared/schema/repeater';
 import BehaviorBuilder from './BehaviorBuilder';
 import { validateBehaviorDraft } from './behaviorBuilderUtils';
 import { FontFamilyControl } from './FontFamilyControl';
+import { appearanceNumber } from '../shared/schema/blockAppearance';
+import { BlockAppearanceControl } from './BlockAppearanceControl';
 import { supportsBlockFont } from '../shared/schema/fonts';
 
 type PageLite = { id: string; title?: string; path?: string };
@@ -717,20 +719,22 @@ export default function Inspector({
     const nextProps = { ...(block!.props as Record<string, any>) };
 
     if (nextBehavior === 'boxOnly' && resizeBehavior === 'scaleContent' && Math.abs(currentContentScale - 1) > 0.001) {
+      if (nextProps.borderWidth !== undefined) nextProps.borderWidth = appearanceNumber(nextProps.borderWidth, 0, 12) * currentContentScale;
+      if (block!.type !== 'button' && nextProps.borderRadius !== undefined) nextProps.borderRadius = appearanceNumber(nextProps.borderRadius, 0, 999) * currentContentScale;
       if (block!.type === 'hero') {
         nextProps.headlineSize = Math.round((Number(nextProps.headlineSize ?? 28) || 28) * currentContentScale);
-        nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 16) || 16) * currentContentScale);
+        nextProps.contentPadding = Math.round(appearanceNumber(nextProps.contentPadding, 16) * currentContentScale);
       }
       if (block!.type === 'text') {
         nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 16) || 16) * currentContentScale);
-        nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
+        nextProps.contentPadding = Math.round(appearanceNumber(nextProps.contentPadding, 12) * currentContentScale);
       }
       if (block!.type === 'button') {
         nextProps.fontSize = Math.round((Number(nextProps.fontSize ?? 14) || 14) * currentContentScale);
-        nextProps.contentPadding = Math.round((Number(nextProps.contentPadding ?? 12) || 12) * currentContentScale);
-        nextProps.buttonPaddingX = Math.round((Number(nextProps.buttonPaddingX ?? 14) || 14) * currentContentScale);
-        nextProps.buttonPaddingY = Math.round((Number(nextProps.buttonPaddingY ?? 10) || 10) * currentContentScale);
-        nextProps.borderRadius = Math.round((Number(nextProps.borderRadius ?? 10) || 10) * currentContentScale);
+        nextProps.contentPadding = Math.round(appearanceNumber(nextProps.contentPadding, 12) * currentContentScale);
+        nextProps.buttonPaddingX = Math.round(appearanceNumber(nextProps.buttonPaddingX, 14) * currentContentScale);
+        nextProps.buttonPaddingY = Math.round(appearanceNumber(nextProps.buttonPaddingY, 10) * currentContentScale);
+        nextProps.borderRadius = Math.round(appearanceNumber(nextProps.borderRadius, 10, 999) * currentContentScale);
       }
     }
 
@@ -784,6 +788,7 @@ export default function Inspector({
       </div>
 
       {supportsBlockFont(block.type) ? <FontFamilyControl key={block.id} block={block} pageBlocks={pageBlocks} onSave={onSave} /> : null}
+      {(block.type === 'hero' || block.type === 'button' || (block.type === 'text' && !block.props.editable)) && <BlockAppearanceControl key={`appearance-${block.id}`} block={block} pageBlocks={pageBlocks} onSave={onSave} />}
       {supportsContentScaling ? (
         <FormSection
           title="Resize behavior"
@@ -1128,16 +1133,8 @@ export default function Inspector({
                 <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
               </div>
               <div className="grid gap-2">
-                <FieldLabel>Background color</FieldLabel>
-                <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('backgroundColor')} />
-              </div>
-              <div className="grid gap-2">
                 <FieldLabel>Text color</FieldLabel>
                 <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Corner radius (px)</FieldLabel>
-                <TextInput type="number" min={0} className="max-w-[120px]" {...register('borderRadius')} />
               </div>
               <div className="grid gap-2">
                 <FieldLabel>Button padding X (px)</FieldLabel>
@@ -1146,10 +1143,6 @@ export default function Inspector({
               <div className="grid gap-2">
                 <FieldLabel>Button padding Y (px)</FieldLabel>
                 <TextInput type="number" min={0} className="max-w-[120px]" {...register('buttonPaddingY')} />
-              </div>
-              <div className="grid gap-2">
-                <FieldLabel>Outer padding (px)</FieldLabel>
-                <TextInput type="number" min={0} className="max-w-[120px]" {...register('contentPadding')} />
               </div>
             </FormSection>
           </>

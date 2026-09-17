@@ -2,6 +2,7 @@ package com.apptura.nativepreview.renderers
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,11 +25,11 @@ fun HeroView(block: Block, runtimeContext: RuntimeContext = RuntimeContext()) {
     )
     val subhead = (block.props["subhead"] as? JsonPrimitive)?.content ?: ""
     val headlineSize = (block.props["headlineSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 28.0
-    val contentPadding = (block.props["contentPadding"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 16.0
+    val contentPadding = appearanceNumber(block, "contentPadding", 16f)
     val textColor = parseHeroColor((block.props["textColor"] as? JsonPrimitive)?.content, Color(0xFF0F172A))
     val contentScale = getBlockContentScale(block)
 
-    Column(modifier = Modifier.fillMaxWidth().padding((contentPadding.toFloat() * contentScale).dp)) {
+    Column(modifier = Modifier.fillMaxSize().blockSurface(block, false, contentScale).padding((contentPadding * contentScale).dp)) {
         val scaledHeadlineSize = headlineSize.toFloat() * contentScale
         Text(fontFamily = blockFontFamily(block),
             text = headline,

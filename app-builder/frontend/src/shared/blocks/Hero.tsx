@@ -1,3 +1,4 @@
+import { blockSurfaceStyle, blockPadding, type BlockAppearanceProps } from '../schema/blockAppearance'
 import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import type { CSSProperties, ReactNode } from 'react'
 
@@ -37,6 +38,7 @@ export function getHeroHeadlineStyle(
 }
 
 export function HeroLayout({
+  appearance = {},
   typography = {},
   fontFamily,
   headline,
@@ -49,18 +51,20 @@ export function HeroLayout({
   headlineSize?: number
   contentPadding?: number
   textColor?: string
+  appearance?: BlockAppearanceProps
   typography?: BlockTypographyProps
   fontFamily?: string
   contentScale?: number
 }) {
   return (
-    <div style={{ ...getHeroRootStyle(contentScale, contentPadding), fontFamily: blockFontCss(fontFamily) }}>
+    <div data-block-surface data-block-padding style={{ ...getHeroRootStyle(contentScale, contentPadding), ...blockSurfaceStyle("hero", appearance, contentScale), padding: blockPadding("hero", { ...appearance, contentPadding }, contentScale), height: "100%", fontFamily: blockFontCss(fontFamily) }}>
       <div data-block-typography style={{ ...getHeroHeadlineStyle(headlineSize, contentScale, textColor), ...blockTypographyStyle(typography, contentScale) }}>{headline}</div>
     </div>
   )
 }
 
 export function Hero({
+  appearance = {},
   typography = {},
   fontFamily,
   headline,
@@ -73,9 +77,10 @@ export function Hero({
   headlineSize?: number
   contentPadding?: number
   textColor?: string
+  appearance?: BlockAppearanceProps
   typography?: BlockTypographyProps
   fontFamily?: string
   contentScale?: number
 }) {
-  return <HeroLayout typography={typography} fontFamily={fontFamily} headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} textColor={textColor} contentScale={contentScale} />
+  return <HeroLayout appearance={appearance} typography={typography} fontFamily={fontFamily} headline={headline} headlineSize={headlineSize} contentPadding={contentPadding} textColor={textColor} contentScale={contentScale} />
 }

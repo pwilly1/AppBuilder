@@ -1,3 +1,4 @@
+import { blockSurfaceStyle, blockPadding, type BlockAppearanceProps } from '../schema/blockAppearance'
 import { blockFontCss, blockTypographyStyle, type BlockTypographyProps } from '../schema/fonts'
 import { useState } from 'react'
 import type { BlockAction } from '../schema/types'
@@ -9,6 +10,7 @@ import { useFormRuntime } from './formRuntime'
 type ButtonStatus = 'idle' | 'submitting' | 'success' | 'error'
 
 export function ButtonBlock({
+  appearance = {},
   typography = {},
   fontFamily,
   blockId,
@@ -29,6 +31,7 @@ export function ButtonBlock({
   textColor = '#ffffff',
   contentScale = 1,
 }: {
+  appearance?: BlockAppearanceProps
   typography?: BlockTypographyProps
   fontFamily?: string
   blockId?: string
@@ -99,7 +102,7 @@ export function ButtonBlock({
   }
 
   return (
-    <div
+    <div data-block-padding
       style={{
         fontFamily: blockFontCss(fontFamily),
         display: 'flex',
@@ -109,12 +112,12 @@ export function ButtonBlock({
         width: '100%',
         height: '100%',
         boxSizing: 'border-box',
-        padding: Math.max(0, Number(contentPadding) || 0) * safeScale,
+        padding: blockPadding("button", { contentPadding }, safeScale),
         overflow: 'hidden',
         pointerEvents: previewMode ? 'auto' : 'none',
       }}
     >
-      <button data-block-typography
+      <button data-block-typography data-block-surface
         type="button"
         aria-disabled={!canRun}
         onClick={() => void runAction()}
@@ -122,6 +125,7 @@ export function ButtonBlock({
           border: 0,
           borderRadius: Math.max(0, Number(borderRadius) || 0) * safeScale,
           backgroundColor: backgroundColor || '#2563eb',
+          ...blockSurfaceStyle('button', { ...appearance, backgroundColor, borderRadius }, safeScale),
           color: textColor || '#ffffff',
           cursor: canRun ? 'pointer' : 'default',
           fontSize: Math.max(8, Number(fontSize) || 14) * safeScale,

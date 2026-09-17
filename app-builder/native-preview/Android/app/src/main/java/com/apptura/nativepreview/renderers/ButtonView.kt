@@ -1,6 +1,7 @@
 package com.apptura.nativepreview.renderers
 
 import android.app.AlertDialog
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,10 +47,12 @@ fun ButtonView(
         || action is BlockAction.LogoutAppUser
     val successMessage = (block.props["successMessage"] as? JsonPrimitive)?.content ?: "Submission received."
     val fontSize = (block.props["fontSize"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 14.0
-    val contentPadding = (block.props["contentPadding"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 12.0
+    val contentPadding = appearanceNumber(block, "contentPadding", 12f)
     val buttonPaddingX = (block.props["buttonPaddingX"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 14.0
     val buttonPaddingY = (block.props["buttonPaddingY"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 10.0
-    val borderRadius = (block.props["borderRadius"] as? JsonPrimitive)?.content?.toDoubleOrNull() ?: 10.0
+    val borderRadius = appearanceNumber(block, "borderRadius", 10f, 999f)
+    val borderWidth = appearanceNumber(block, "borderWidth", 0f, 12f)
+    val borderColor = appearanceColor(block, "borderColor", Color(0xFFCBD5E1))
     val backgroundColor = parseButtonColor((block.props["backgroundColor"] as? JsonPrimitive)?.content, Color(0xFF2563EB))
     val textColor = parseButtonColor((block.props["textColor"] as? JsonPrimitive)?.content, Color.White)
     val contentScale = getBlockContentScale(block)
@@ -178,6 +181,7 @@ fun ButtonView(
             .padding((contentPadding.toFloat() * contentScale).dp)
     ) {
         Button(
+            border = if (borderWidth > 0f) BorderStroke((borderWidth * contentScale).dp, borderColor) else null,
             enabled = when {
                 submitAction != null -> canSubmit && status != ButtonStatus.SUBMITTING
                 isRecordMutationAction -> canMutate && status != ButtonStatus.SUBMITTING
@@ -204,10 +208,10 @@ fun ButtonView(
                 }
             },
             contentPadding = PaddingValues(
-                start = (buttonPaddingX.toFloat() * contentScale).dp,
-                top = (buttonPaddingY.toFloat() * contentScale).dp,
-                end = (buttonPaddingX.toFloat() * contentScale).dp,
-                bottom = (buttonPaddingY.toFloat() * contentScale).dp,
+                start = ((buttonPaddingX.toFloat() + borderWidth) * contentScale).dp,
+                top = ((buttonPaddingY.toFloat() + borderWidth) * contentScale).dp,
+                end = ((buttonPaddingX.toFloat() + borderWidth) * contentScale).dp,
+                bottom = ((buttonPaddingY.toFloat() + borderWidth) * contentScale).dp,
             ),
             shape = RoundedCornerShape((borderRadius.toFloat() * contentScale).dp),
             colors = ButtonDefaults.buttonColors(
