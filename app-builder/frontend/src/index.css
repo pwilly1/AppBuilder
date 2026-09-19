@@ -559,6 +559,47 @@
   box-shadow: none;
 }
 
+.project-cover {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  height: 210px;
+  padding: 1.25rem;
+  border: 1px solid #dbe5f2;
+  border-radius: 1.35rem;
+  text-align: left;
+  color: #162847;
+  background: radial-gradient(ellipse at top right, #dbeafe, transparent 75%), #fffbf5;
+  cursor: pointer;
+}
+
+.project-cover:focus-visible, .project-card-menu > summary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+}
+
+.project-cover-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #1d4ed8;
+}
+
+.project-cover-title, .project-cover-copy {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.project-cover-title { font-size: 1.2rem; line-height: 1.25; font-weight: 700; }
+.project-cover-copy { font-size: 0.8rem; line-height: 1.5; color: #52627a; }
+.project-cover-footer { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: auto; font-size: 0.7rem; color: #52627a; }
+.project-card-menu > summary { cursor: pointer; list-style: none; }
+.project-card-menu > summary::-webkit-details-marker { display: none; }
+
 .app-grid {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 360px;

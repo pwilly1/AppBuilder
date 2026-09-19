@@ -17,7 +17,12 @@ This document describes what Apptura supports today and which product areas are 
 - View projects
 - Create projects
 - Open projects
-- Delete projects
+- Delete projects through the card's More menu, with confirmation
+- Search projects by name, with a clear-search empty state
+- Lightweight project covers use first-page headline/description and page count;
+  these are summaries, not screenshots or live app previews
+- Visible loading and request-error states with a reload action
+- Account settings link; Analytics is marked Coming soon
 - Demo/reviewer-oriented dashboard polish is in progress
 
 ### Editor
