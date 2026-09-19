@@ -71,7 +71,22 @@ function ToggleInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`inspector-toggle ${props.className ?? ''}`} />;
 }
 
-function FormSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function FormSection({ title, description, children, collapsible = false, error }: { title: string; description?: string; children: React.ReactNode; collapsible?: boolean; error?: string | null }) {
+  const disclosure = React.useRef<HTMLDetailsElement>(null);
+  React.useEffect(() => {
+    if (error && disclosure.current) disclosure.current.open = true;
+  }, [error]);
+  if (collapsible) return (
+    <details ref={disclosure} className="inspector-disclosure" onInvalidCapture={() => {
+      if (disclosure.current) disclosure.current.open = true;
+    }}>
+      <summary>{title}</summary>
+      <div className="inspector-disclosure-body">
+        {description ? <p className="text-sm text-slate-500">{description}</p> : null}
+        {children}
+      </div>
+    </details>
+  );
   return (
     <section className="editor-section">
       <div className="mb-3">
@@ -404,7 +419,7 @@ export default function Inspector({
       ?? (selectedCollection?.publicRead ? 'public' : 'none');
 
     return (
-      <FormSection title="Data binding" description={`Choose where this ${propertyLabel} gets its value at runtime.`}>
+      <FormSection collapsible error={textBindingError} title="Data binding" description={`Choose where this ${propertyLabel} gets its value at runtime.`}>
         <div className="grid gap-2">
           <FieldLabel>Value source</FieldLabel>
           <select
@@ -755,10 +770,7 @@ export default function Inspector({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="editor-section-title">Selected block</div>
-            <h4 className="mt-1 text-xl font-semibold text-slate-900">{block.type}</h4>
-            <p className="mt-1 text-sm text-slate-500">Block ID: {block.id}</p>
-            <p className="mt-1 text-sm text-slate-500">Width scale: {rawScaleX.toFixed(2)}x</p>
-            <p className="mt-1 text-sm text-slate-500">Height scale: {rawScaleY.toFixed(2)}x</p>
+            <h4 className="mt-1 text-xl font-semibold text-slate-900">{block.type.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (letter) => letter.toUpperCase())}</h4>
           </div>
           <div className="flex flex-wrap justify-end gap-2">
             {hasCustomScale ? (
@@ -787,40 +799,6 @@ export default function Inspector({
         </div>
       </div>
 
-      {supportsBlockFont(block.type) ? <FontFamilyControl key={block.id} block={block} pageBlocks={pageBlocks} onSave={onSave} /> : null}
-      {(block.type === 'hero' || block.type === 'button' || (block.type === 'text' && !block.props.editable)) && <BlockAppearanceControl key={`appearance-${block.id}`} block={block} pageBlocks={pageBlocks} onSave={onSave} />}
-      {supportsContentScaling ? (
-        <FormSection
-          title="Resize behavior"
-          description="Choose whether resizing changes only the grid box or scales the content inside it too."
-        >
-          <div className="grid gap-2">
-            <button
-              type="button"
-              className={`ghost-btn !justify-start !px-4 !py-3 text-left text-sm ${
-                resizeBehavior === 'boxOnly' ? '!bg-slate-900 !text-white' : ''
-              }`}
-              onClick={() => setResizeBehavior('boxOnly')}
-            >
-              Box only
-            </button>
-            <button
-              type="button"
-              className={`ghost-btn !justify-start !px-4 !py-3 text-left text-sm ${
-                resizeBehavior === 'scaleContent' ? '!bg-slate-900 !text-white' : ''
-              }`}
-              onClick={() => setResizeBehavior('scaleContent')}
-            >
-              Scale content with box
-            </button>
-          </div>
-          {resizeBehavior === 'scaleContent' && block.layout?.scaleBase ? (
-            <p className="text-xs text-slate-500">
-              1x base: {block.layout.scaleBase.colSpan} columns x {block.layout.scaleBase.rowSpan} rows.
-            </p>
-          ) : null}
-        </FormSection>
-      ) : null}
       {isParentBlock ? (
         <FormSection
           title={`${parentBlockLabel} contents`}
@@ -860,7 +838,7 @@ export default function Inspector({
           </button>
         </FormSection>
       ) : null}
-      <form onSubmit={handleSubmit(submit)} className="grid gap-4">
+      <form id="block-properties" onSubmit={handleSubmit(submit)} className="grid gap-4">
         {isParentBlock && (
           <FormSection
             title={`${parentBlockLabel} style`}
@@ -989,7 +967,6 @@ export default function Inspector({
 
         {block.type === 'text' && (
           <>
-            {renderTextBindingControls('text')}
             <FormSection title="Content" description="Set the displayed text or the starting value used by an editable field.">
               <div className="grid gap-2">
                 <FieldLabel>Text</FieldLabel>
@@ -1004,7 +981,8 @@ export default function Inspector({
                 <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
               </div>
             </FormSection>
-            <FormSection title="App input" description="Optionally let app users edit this text and expose its value to actions and submissions.">
+            {renderTextBindingControls('text')}
+            <FormSection collapsible title="App input" description="Optionally let app users edit this text and expose its value to actions and submissions.">
               <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white/80 px-3 py-3 text-sm text-slate-800">
                 <ToggleInput type="checkbox" {...register('editable')} />
                 Editable in app
@@ -1087,7 +1065,6 @@ export default function Inspector({
 
         {block.type === 'hero' && (
           <>
-            {renderTextBindingControls('headline')}
             <FormSection title="Hero copy" description="Control the static headline or fallback shown when a bound value is unavailable.">
               <div className="grid gap-2">
                 <FieldLabel>Headline</FieldLabel>
@@ -1102,6 +1079,7 @@ export default function Inspector({
                 <TextInput type="color" className="h-12 max-w-[120px] p-1" {...register('textColor')} />
               </div>
             </FormSection>
+            {renderTextBindingControls('headline')}
           </>
         )}
 
@@ -1113,6 +1091,7 @@ export default function Inspector({
                 <TextInput {...registerLiveText('label')} />
               </div>
             </FormSection>
+            <FormSection collapsible error={behaviorError} title="Actions" description="Choose what happens when this button is tapped.">
             <BehaviorBuilder
               block={block}
               pages={pages}
@@ -1127,7 +1106,8 @@ export default function Inspector({
               error={behaviorError}
               onClearError={() => setBehaviorError(null)}
             />
-            <FormSection title="Button style" description="Tune the button appearance without changing its action.">
+            </FormSection>
+            <FormSection collapsible title="Button style" description="Tune the button appearance without changing its action.">
               <div className="grid gap-2">
                 <FieldLabel>Font size (px)</FieldLabel>
                 <TextInput type="number" min={8} className="max-w-[120px]" {...register('fontSize')} />
@@ -1582,8 +1562,52 @@ export default function Inspector({
           </>
         )}
 
+      </form>
+      {supportsBlockFont(block.type) ? (
+        <FormSection collapsible title="Style" description="Typography and surface changes apply immediately.">
+      {supportsBlockFont(block.type) ? <FontFamilyControl key={block.id} block={block} pageBlocks={pageBlocks} onSave={onSave} /> : null}
+      {(block.type === 'hero' || block.type === 'button' || (block.type === 'text' && !block.props.editable)) && <BlockAppearanceControl key={`appearance-${block.id}`} block={block} pageBlocks={pageBlocks} onSave={onSave} />}
+        </FormSection>
+      ) : null}
+      <FormSection collapsible title="Advanced" description="Sizing behavior and technical block details.">
+      {supportsContentScaling ? (
+        <FormSection
+          title="Resize behavior"
+          description="Choose whether resizing changes only the grid box or scales the content inside it too."
+        >
+          <div className="grid gap-2">
+            <button
+              type="button"
+              className={`ghost-btn !justify-start !px-4 !py-3 text-left text-sm ${
+                resizeBehavior === 'boxOnly' ? '!bg-slate-900 !text-white' : ''
+              }`}
+              onClick={() => setResizeBehavior('boxOnly')}
+            >
+              Box only
+            </button>
+            <button
+              type="button"
+              className={`ghost-btn !justify-start !px-4 !py-3 text-left text-sm ${
+                resizeBehavior === 'scaleContent' ? '!bg-slate-900 !text-white' : ''
+              }`}
+              onClick={() => setResizeBehavior('scaleContent')}
+            >
+              Scale content with box
+            </button>
+          </div>
+          {resizeBehavior === 'scaleContent' && block.layout?.scaleBase ? (
+            <p className="text-xs text-slate-500">
+              1x base: {block.layout.scaleBase.colSpan} columns x {block.layout.scaleBase.rowSpan} rows.
+            </p>
+          ) : null}
+        </FormSection>
+      ) : null}
+            <p className="mt-1 text-sm text-slate-500">Block ID: {block.id}</p>
+            <p className="mt-1 text-sm text-slate-500">Width scale: {rawScaleX.toFixed(2)}x</p>
+            <p className="mt-1 text-sm text-slate-500">Height scale: {rawScaleY.toFixed(2)}x</p>
+      </FormSection>
         <div className="editor-section flex items-center justify-between gap-3">
-          <button className="btn" type="submit">Save Changes</button>
+          <button className="btn" type="submit" form="block-properties">Save Changes</button>
           {onDelete ? (
             <button
                 type="button"
@@ -1600,7 +1624,7 @@ export default function Inspector({
             </button>
           ) : null}
         </div>
-      </form>
+
     </div>
   );
 }
@@ -1659,6 +1683,5 @@ function formatBindingRecordOption(record: ProjectAppDataRecord, collection?: Ap
 function truncateRecordValue(value: string) {
   return value.length > 48 ? `${value.slice(0, 45)}...` : value;
 }
-
 
 

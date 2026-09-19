@@ -524,6 +524,41 @@
   }
 }
 
+.inspector-disclosure {
+  min-width: 0;
+  border: 1px solid rgba(53, 80, 128, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.inspector-disclosure > summary {
+  padding: 0.9rem 1rem;
+  cursor: pointer;
+  color: #162847;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.inspector-disclosure > summary:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 1rem;
+}
+
+.inspector-disclosure-body {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 1rem 1rem;
+  overflow-wrap: anywhere;
+}
+
+.inspector-disclosure-body > .editor-section {
+  padding: 0.75rem 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .app-grid {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) 360px;

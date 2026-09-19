@@ -36,6 +36,12 @@ The current editor includes:
 - sticky left workspace rail on desktop with independent scrolling for long block/data lists
 - drag-to-place block palette with click-to-add still available
 
+The inspector puts Text/Hero copy and Button labels before secondary settings.
+Data binding, app-input configuration, button actions, typography/appearance, and
+advanced sizing use expandable sections. Block IDs and scale diagnostics live in
+Advanced. Style controls still apply immediately; other form settings use Save
+Changes. Binding/action validation errors reopen their section.
+
 ### Text Surfaces and Button Borders
 
 Hero, static Text, and Button blocks have an Appearance inspector section for solid
@@ -139,6 +145,8 @@ Current layout capabilities:
 ### Preview
 
 - Web preview mode renders the active project page without editor controls.
+- Preview hides both editor sidebars and editing toolbar actions, while keeping
+  Back to Edit and the workspace exit available. App navigation remains active.
 - Android native preview can load backend projects and render the schema with Jetpack Compose.
 - The editor's `Preview on Android` action currently explains local Android Studio setup; it does not launch a public APK or hosted mobile preview.
 

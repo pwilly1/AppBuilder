@@ -639,45 +639,48 @@ export default function EditorLayout(props: Props) {
             <button className="ghost-btn !px-3 !py-2 text-sm" onClick={() => navigate(isDemoMode ? '/' : '/dashboard')}>
               {isDemoMode ? 'Exit Demo' : 'Back to Dashboard'}
             </button>
-            <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={undo} disabled={!canUndo || previewMode}>
-              Undo
-            </button>
-            <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={redo} disabled={!canRedo || previewMode}>
-              Redo
-            </button>
-            {isDemoMode ? (
-              <>
-                <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
-                  Temporary demo
-                </span>
-                {isAuthenticated ? (
-                  <button className="btn" type="button" onClick={() => navigate('/dashboard')}>
-                    Return to dashboard
-                  </button>
-                ) : (
-                  <button className="btn" type="button" onClick={() => navigate('/?mode=signup#auth-panel')}>
-                    Create account to save projects
-                  </button>
-                )}
-              </>
-            ) : (
-              <button className="btn" onClick={saveProject} disabled={isSaving || previewMode}>
-                {isSaving ? 'Saving...' : 'Save'}
+            {!previewMode && <>
+              <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={undo} disabled={!canUndo || previewMode}>
+                Undo
               </button>
-            )}
-            <button
-              type="button"
-              className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50"
-              onClick={aiGeneration.openGeneration}
-              disabled={Boolean(aiGenerationDisabledReason)}
-              title={aiGenerationDisabledReason ?? 'Generate a validated page proposal with AI'}
-            >
-              Generate with AI
-            </button>
+              <button className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50" onClick={redo} disabled={!canRedo || previewMode}>
+                Redo
+              </button>
+              {isDemoMode ? (
+                <>
+                  <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">
+                    Temporary demo
+                  </span>
+                  {isAuthenticated ? (
+                    <button className="btn" type="button" onClick={() => navigate('/dashboard')}>
+                      Return to dashboard
+                    </button>
+                  ) : (
+                    <button className="btn" type="button" onClick={() => navigate('/?mode=signup#auth-panel')}>
+                      Create account to save projects
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button className="btn" onClick={saveProject} disabled={isSaving || previewMode}>
+                  {isSaving ? 'Saving...' : 'Save'}
+                </button>
+              )}
+              <button
+                type="button"
+                className="ghost-btn !px-3 !py-2 text-sm disabled:opacity-50"
+                onClick={aiGeneration.openGeneration}
+                disabled={Boolean(aiGenerationDisabledReason)}
+                title={aiGenerationDisabledReason ?? 'Generate a validated page proposal with AI'}
+              >
+                Generate with AI
+              </button>
+            </>}
+            {previewMode && <span className="editor-pill">App preview</span>}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-200/70 bg-white/45 p-1">
-            <div className="min-w-[150px] px-3 text-right text-xs text-slate-500">
+            {!previewMode && <div className="min-w-[150px] px-3 text-right text-xs text-slate-500">
               {isDemoMode
                 ? 'Interactive demo · changes reset on refresh'
                 : isSaving
@@ -686,7 +689,7 @@ export default function EditorLayout(props: Props) {
                     ? `Saved ${new Date(lastSavedAt).toLocaleTimeString()}`
                     : 'Not saved yet'}
               {!isDemoMode && saveError ? ` | ${saveError}` : null}
-            </div>
+            </div>}
             {activeContainer ? (
               <button
                 type="button"
@@ -710,18 +713,18 @@ export default function EditorLayout(props: Props) {
             >
               {previewMode ? 'Back to Edit' : 'Open Preview'}
             </button>
-            <button
+            {!previewMode && <button
               type="button"
               className="ghost-btn !px-4 !py-3 text-sm"
               onClick={() => setShowAndroidPreviewNote(true)}
             >
               Preview on Android
-            </button>
+            </button>}
           </div>
         </div>
       </div>
 
-      <aside className="sidebar-hidden-mobile">
+      {!previewMode && <aside className="sidebar-hidden-mobile">
         <div className="editor-panel editor-side-panel editor-left-rail rounded-[2rem] p-4">
           <div className="editor-rail-header">
             <div>
@@ -835,13 +838,13 @@ export default function EditorLayout(props: Props) {
             </div>
           </div>
         </div>
-      </aside>
+      </aside>}
 
-      <section className="min-w-0 overflow-auto">
+      <section className={`min-w-0 overflow-auto ${previewMode ? 'col-span-full' : ''}`}>
         <div className="editor-panel rounded-[2rem] p-3">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-[1.35rem] border border-[rgba(53,80,128,0.10)] bg-[#fffcf6]/75 px-4 py-3 shadow-sm">
             <div>
-              <div className="editor-section-title">Canvas</div>
+              <div className="editor-section-title">{previewMode ? 'App preview' : 'Canvas'}</div>
               <h2 className="mt-1 text-lg font-semibold text-slate-900">{currentPageTitle}</h2>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -851,8 +854,10 @@ export default function EditorLayout(props: Props) {
                   {activeContainer.type === 'repeater' ? 'Editing list item' : 'Editing container'}
                 </span>
               ) : null}
-              <span className="editor-pill">{pageSummary}</span>
-              <span className="editor-pill">{blockCount} blocks</span>
+              {!previewMode && <>
+                <span className="editor-pill">{pageSummary}</span>
+                <span className="editor-pill">{blockCount} blocks</span>
+              </>}
             </div>
           </div>
 
@@ -895,7 +900,7 @@ export default function EditorLayout(props: Props) {
         </div>
       </section>
 
-      <aside>
+      {!previewMode && <aside>
         <div className="editor-panel editor-side-panel rounded-[2rem] p-4">
           <div className="editor-section shrink-0">
             <div className="editor-section-title">Inspector</div>
@@ -904,6 +909,7 @@ export default function EditorLayout(props: Props) {
           </div>
           <div className="editor-side-panel-body mt-4">
             <Inspector
+              key={selectedBlock?.id ?? 'empty'}
               block={selectedBlock}
               projectId={projectId}
               pages={pages}
@@ -937,7 +943,7 @@ export default function EditorLayout(props: Props) {
             />
           </div>
         </div>
-      </aside>
+      </aside>}
 
       <AiGenerateDialog
         open={aiGeneration.open}
